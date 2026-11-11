@@ -18,4 +18,7 @@ SECRET_KEY = "dev-only-insecure-key-not-for-production"  # noqa: S105
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
 
+# The admin is a convenience locally and a break-glass surface in production (B-16).
+ENABLE_DJANGO_ADMIN = True
+
 LOGGING["root"]["level"] = "DEBUG" if env_bool("DJANGO_VERBOSE_LOGS", False) else "INFO"  # noqa: F405

@@ -423,7 +423,7 @@ Phase 2 ships the `DocumentAccessLog` event type and the service hook. The docum
 | GET | `/api/v1/audit/events` | `audit.event.read` | Cursor pagination, filters |
 | POST | `/api/v1/audit/exports` | `audit.event.export` | Audited export job |
 
-Error codes are stable and specific, so the SPA can explain a refusal: `SELF_APPROVAL_BLOCKED`, `OUTSIDE_SCOPE`, `DELEGATION_EXPIRED`, `POLICY_MISSING`, `POLICY_AMBIGUOUS`, `NO_ELIGIBLE_APPROVER`, `ACCOUNT_DISABLED`, `MFA_REQUIRED`.
+Error codes are stable and specific, so the SPA can explain a refusal: `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `SESSION_EXPIRED`, `SELF_APPROVAL_BLOCKED`, `OUTSIDE_SCOPE`, `DELEGATION_EXPIRED`, `POLICY_MISSING`, `POLICY_AMBIGUOUS`, `NO_ELIGIBLE_APPROVER`, `ACCOUNT_DISABLED`, `MFA_REQUIRED`.
 
 ---
 
@@ -533,6 +533,8 @@ Every sensitive endpoint covered by a permission test; segregation of duties imp
 ---
 
 ## 11. Work breakdown
+
+**Status (11 November 2026):** W1 and W2 are implemented on the Phase 1 foundation — 40 backend tests cover the user model, departments, login, lockout, sessions, CSRF, password change, reset tokens and the bootstrap commands. W3–W9 await G1.
 
 | # | Work package | Deliverable | Acceptance check | Size |
 | --- | --- | --- | --- | --- |

@@ -27,6 +27,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "apps/*/tests/*" = ["S105", "S106"]
+# Generated migrations are Django's output; reformatting them obscures diffs.
+"apps/*/migrations/*" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

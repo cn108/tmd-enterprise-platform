@@ -1,8 +1,13 @@
 # Runtime dependencies shared by every environment.
 # Versions are pinned to a compatible minor range; the exact resolved set is
-# recorded in requirements/lock.txt once the environment is built.
+# recorded in the environment and reproduced by pip.
 Django>=5.2,<5.3
 djangorestframework>=3.16,<3.17
 drf-spectacular>=0.28,<0.29
 psycopg[binary]>=3.2,<3.3
 python-dotenv>=1.0,<2.0
+
+# Authentication and security primitives (B-18): proven implementations rather
+# than in-house lockout and hashing.
+django-axes>=7.0,<8.0
+argon2-cffi>=25.0,<26.0

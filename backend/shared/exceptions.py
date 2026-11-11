@@ -47,6 +47,21 @@ def _details(detail: Any) -> Any:
     return None
 
 
+def error_response(code: str, message: str, status_code: int, details: Any = None) -> Response:
+    """Build the documented envelope for errors raised outside DRF's flow."""
+    return Response(
+        {
+            "error": {
+                "code": code,
+                "message": message,
+                "details": details,
+                "request_id": get_request_id(),
+            }
+        },
+        status=status_code,
+    )
+
+
 def error_envelope_handler(exc: Exception, context: dict) -> Response:
     """DRF exception handler that always returns the documented envelope."""
     response = drf_exception_handler(exc, context)

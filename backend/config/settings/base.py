@@ -37,11 +37,14 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "drf_spectacular",
+    "axes",
 ]
 
 # Domain modules are added here only when their phase is authorised.
 LOCAL_APPS = [
     "apps.core",
+    "apps.organisation",
+    "apps.identity",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -54,9 +57,15 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.identity.middleware.AbsoluteSessionTimeoutMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# django-axes' middleware is deliberately not used: the backend still refuses
+# locked accounts, and the login view returns our JSON envelope instead of a
+# plain-text 403. The warning asks for the middleware that does that formatting.
+SILENCED_SYSTEM_CHECKS = ["axes.W002"]
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -98,9 +107,47 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REDIS_URL = env_str("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # --- Authentication ---------------------------------------------------------
+AUTH_USER_MODEL = "identity.User"
+
+AUTHENTICATION_BACKENDS = [
+    # django-axes refuses locked accounts; ModelBackend performs the real check.
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
+# PROPOSED defaults (D-36). Configuration values, never constants in views.
+PASSWORD_MIN_LENGTH = env_int("PASSWORD_MIN_LENGTH", 12)
+SESSION_COOKIE_AGE = env_int("SESSION_COOKIE_AGE_SECONDS", 3600)
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_ABSOLUTE_TIMEOUT_SECONDS = env_int("SESSION_ABSOLUTE_TIMEOUT_SECONDS", 43200)
+
+# Lockout: per-account and per-IP counters, so neither scope can be dodged alone.
+AXES_ENABLED = env_bool("AXES_ENABLED", True)
+AXES_FAILURE_LIMIT = env_int("AXES_FAILURE_LIMIT", 5)
+AXES_COOLOFF_TIME = env_int("AXES_COOLOFF_HOURS", 1)
+AXES_LOCKOUT_PARAMETERS = [["ip_address"], ["username"]]
+AXES_RESET_ON_SUCCESS = True
+
+PASSWORD_RESET_TOKEN_TTL_MINUTES = env_int("PASSWORD_RESET_TOKEN_TTL_MINUTES", 60)
+
+# Django admin is a break-glass surface (B-16); off unless explicitly enabled.
+ENABLE_DJANGO_ADMIN = env_bool("ENABLE_DJANGO_ADMIN", False)
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": PASSWORD_MIN_LENGTH},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -120,12 +167,13 @@ REST_FRAMEWORK = {
     # Fail closed: a new endpoint is private unless it says otherwise.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.identity.authentication.SessionAuthentication401",
     ],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "shared.exceptions.error_envelope_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_THROTTLE_RATES": {"password_reset": env_str("PASSWORD_RESET_RATE", "20/hour")},
 }
 
 SPECTACULAR_SETTINGS = {

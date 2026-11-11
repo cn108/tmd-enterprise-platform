@@ -534,7 +534,7 @@ Every sensitive endpoint covered by a permission test; segregation of duties imp
 
 ## 11. Work breakdown
 
-**Status (11 November 2026):** W1 and W2 are implemented on the Phase 1 foundation — 40 backend tests cover the user model, departments, login, lockout, sessions, CSRF, password change, reset tokens and the bootstrap commands. W3–W9 await G1.
+**Status (11 November 2026):** W1 and W2 are implemented on the Phase 1 foundation — 42 backend tests cover the user model, departments, login, lockout, sessions, CSRF, password change, reset tokens and the bootstrap commands. Evidence: `reports/phase-2-w1-w2-completion-report.md`. W3–W9 await G1.
 
 | # | Work package | Deliverable | Acceptance check | Size |
 | --- | --- | --- | --- | --- |

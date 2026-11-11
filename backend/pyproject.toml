@@ -1,0 +1,32 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+pythonpath = ["."]
+testpaths = ["apps"]
+addopts = "-q --strict-markers"
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # import sorting
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "DJ",  # django-specific
+  "S",   # bandit-style security checks
+]
+ignore = [
+  "S101",   # asserts are the point of tests
+  "RUF001", # allow typographic punctuation in docstrings
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/*/tests/*" = ["S105", "S106"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,56 @@
+# --- Secrets and local configuration ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.freebuff/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.log
+
+# --- Django ---
+media/
+staticfiles/
+local_settings.py
+db.sqlite3
+*.sqlite3
+fixtures/*.private.json
+
+# --- Node / Angular ---
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+.eslintcache
+
+# --- Databases, dumps, archives ---
+*.dump
+*.sql.gz
+*.bak
+backups/
+dumps/
+
+# --- Editors / OS ---
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

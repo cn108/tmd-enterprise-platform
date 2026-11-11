@@ -1,0 +1,33 @@
+:root {
+  --tmd-navy: #102038;
+  --tmd-navy-soft: #1d3a5f;
+  --tmd-gold: #e8b64c;
+  --tmd-ink: #182234;
+  --tmd-muted: #5d6b80;
+  --tmd-line: #e2e7ef;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fa;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}

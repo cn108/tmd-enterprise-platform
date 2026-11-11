@@ -1,0 +1,143 @@
+:host {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  color: var(--tmd-ink);
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(120deg, var(--tmd-navy), var(--tmd-navy-soft));
+  color: #fff;
+}
+
+.brand {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--tmd-gold);
+  color: var(--tmd-navy);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.brand__text h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+}
+
+.brand__text p {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: rgb(255 255 255 / 72%);
+}
+
+.phase {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-main {
+  display: grid;
+  flex: 1;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.card {
+  padding: 1.5rem;
+  border: 1px solid var(--tmd-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(16 32 56 / 6%);
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--tmd-navy-soft);
+}
+
+.status {
+  margin: 0 0 0.75rem;
+  font-weight: 600;
+}
+
+.status--ok {
+  color: #1c6b4a;
+}
+
+.status--down {
+  color: #a3352b;
+}
+
+.checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--tmd-line);
+}
+
+.checks li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--tmd-line);
+  font-size: 0.9rem;
+}
+
+.plain-list {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  line-height: 1.7;
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--tmd-muted);
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background: #eef1f6;
+  font-size: 0.85em;
+}
+
+.app-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--tmd-line);
+  font-size: 0.8rem;
+  color: var(--tmd-muted);
+  text-align: center;
+}
+
+.app-footer p {
+  margin: 0;
+}

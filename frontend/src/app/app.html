@@ -33,6 +33,16 @@
   } @else {
     <span class="phase">Secure area</span>
   }
+
+  @if (user()) {
+    <nav class="app-nav" aria-label="Business modules">
+      <a href="/">Dashboard</a>
+      <a href="/master-data">Master data</a>
+      <a href="/procurement">Procurement</a>
+      <a href="/inventory">Inventory</a>
+      <a href="/accounting">Accounting</a>
+    </nav>
+  }
 </header>
 
 <main class="app-content">
@@ -40,5 +50,5 @@
 </main>
 
 <footer class="app-footer">
-  <p>Phase 2 · identity and authentication</p>
+  <p>Phases 3–6 · master data, procurement, inventory and accounting</p>
 </footer>

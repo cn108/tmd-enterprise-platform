@@ -95,3 +95,67 @@ code {
   background: #eef1f6;
   font-size: 0.85em;
 }
+
+.modules {
+  margin-top: 2rem;
+}
+
+.modules > h2 {
+  margin: 0 0 0.9rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--tmd-navy-soft);
+}
+
+.modules__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.module-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  border: 1px solid var(--tmd-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  color: var(--tmd-ink);
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgb(16 32 56 / 6%);
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.module-card:hover {
+  border-color: var(--tmd-gold);
+  transform: translateY(-2px);
+}
+
+.module-card__index {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tmd-muted);
+}
+
+.module-card h3 {
+  margin: 0.35rem 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--tmd-navy);
+}
+
+.module-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--tmd-muted);
+}
+
+.module-card__link {
+  margin-top: 0.9rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--tmd-navy-soft);
+}

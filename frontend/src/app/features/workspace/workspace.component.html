@@ -1,0 +1,75 @@
+<section class="module" aria-labelledby="module-heading">
+  <header class="module__header">
+    <div>
+      <p class="eyebrow">Business module</p>
+      <h1 id="module-heading">{{ config.title }}</h1>
+      <p class="module__intro">{{ config.intro }}</p>
+    </div>
+    <div class="module__meta">
+      <span class="pill">Read-only view</span>
+      <a href="/api/v1/docs/" target="_blank" rel="noreferrer">API reference</a>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <p class="error" role="alert">
+      {{ message }}
+      <button type="button" class="text-button" (click)="reload()">Retry</button>
+    </p>
+  }
+
+  <nav class="tabs" aria-label="Sections">
+    @for (tab of config.tabs; track tab.id) {
+      <button
+        type="button"
+        [class.is-active]="activeTab() === tab.id"
+        (click)="activeTab.set(tab.id)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </nav>
+
+  @if (loading()) {
+    <p class="loading">Loading records…</p>
+  } @else if (activeConfig(); as tab) {
+    <section class="panel" aria-labelledby="section-heading">
+      <div class="panel__head">
+        <h2 id="section-heading">{{ tab.label }}</h2>
+        <span class="count">{{ activeRows().length }} records</span>
+      </div>
+
+      @if (activeRows().length === 0) {
+        <p class="empty">
+          No records yet. Records created through the API will appear here.
+        </p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                @for (column of tab.columns; track column.key) {
+                  <th scope="col">{{ column.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of activeRows(); track $index) {
+                <tr>
+                  @for (column of tab.columns; track column.key) {
+                    <td>{{ format(row[column.key]) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <p class="hint">
+        This view reads the live API. Creating and approving records is still done through the
+        API until the transaction forms are built.
+      </p>
+    </section>
+  }
+</section>

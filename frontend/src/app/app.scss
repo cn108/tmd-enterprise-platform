@@ -112,6 +112,28 @@
   color: #ffe0b0;
 }
 
+.app-nav {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+}
+
+.app-nav a {
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.4rem;
+  color: rgb(255 255 255 / 78%);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.app-nav a:hover {
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
 .app-content {
   display: flex;
   flex: 1;
@@ -119,6 +141,7 @@
 }
 
 .app-footer {
+  margin-top: auto;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--tmd-line);
   font-size: 0.8rem;

@@ -34,16 +34,47 @@
     </section>
 
     <section class="card" aria-labelledby="scope-heading">
-      <h2 id="scope-heading">What exists in this phase</h2>
+      <h2 id="scope-heading">Platform coverage</h2>
       <ul class="plain-list">
-        <li>Sign-in, sign-out and session expiry handling</li>
-        <li>Lockout after repeated failed attempts</li>
-        <li>Administrator-issued password resets</li>
+        <li>Procurement: request → RFQ → order → delivery → receipt</li>
+        <li>Inventory: permanent ledger, reservations, transfers and counts</li>
+        <li>Accounting: balanced journals, periods, closing and reports</li>
+        <li>Controls: approvals, immutable records and derived balances</li>
       </ul>
       <p class="muted">
-        Business modules stay switched off until the discovery decisions are signed. See
-        <code>docs/13-decision-register.md</code>.
+        The APIs are live. Approvals, limits and the chart of accounts remain subject to the
+        decision register; the module pages below are read-only views for now.
       </p>
     </section>
   </div>
+
+  <section class="modules" aria-labelledby="modules-heading">
+    <h2 id="modules-heading">Business modules</h2>
+    <div class="modules__grid">
+      <a class="module-card" href="/master-data">
+        <span class="module-card__index">01</span>
+        <h3>Master data</h3>
+        <p>Suppliers, customers, catalogue, warehouses and projects.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" href="/procurement">
+        <span class="module-card__index">02</span>
+        <h3>Procurement</h3>
+        <p>Purchase requests, orders, quotations and goods receipts.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" href="/inventory">
+        <span class="module-card__index">03</span>
+        <h3>Inventory</h3>
+        <p>Balances, movements, reorder alerts and the stock ledger.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" href="/accounting">
+        <span class="module-card__index">04</span>
+        <h3>Accounting</h3>
+        <p>Chart of accounts, journals and approved posting rules.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+    </div>
+  </section>
 </section>

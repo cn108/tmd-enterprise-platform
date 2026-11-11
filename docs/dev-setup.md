@@ -129,6 +129,7 @@ Production additionally requires `DJANGO_CSRF_TRUSTED_ORIGINS` and sets secure-c
 | `password authentication failed for user "tmd"` | A native PostgreSQL answered on 5432 | Use port 5433 as configured; confirm with `docker port tmd-postgres` |
 | `port is already allocated` | Another container or service holds the port | Override `POSTGRES_PORT` / `REDIS_PORT` |
 | Frontend shows "API not reachable" | Backend not running, or wrong port | Start `runserver 8000`; check the proxy target |
+| `CSRF Failed: Origin checking failed` on sign-out or any POST | The SPA origin (:4200) is not trusted by Django | `DJANGO_CSRF_TRUSTED_ORIGINS` must list the dev server origin; `dev.py` does by default |
 | `relation "..." does not exist` | Migrations not applied | `python manage.py migrate` |
 | Tests cannot create the test database | Database user lacks `CREATEDB` | The compose user is the superuser; do not point local settings at a restricted user |
 

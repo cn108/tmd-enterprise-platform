@@ -171,3 +171,37 @@ def test_absolute_session_timeout_ends_the_session(user, client):
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "session_expired"
+
+
+def _csrf_token(client) -> str:
+    client.get("/api/v1/auth/csrf/")
+    return client.cookies["csrftoken"].value
+
+
+@pytest.mark.django_db
+def test_dev_proxy_origin_is_trusted_for_csrf(user):
+    """The SPA on :4200 proxies to :8000; its Origin must be trusted locally."""
+    client = Client(enforce_csrf_checks=True)
+    sign_in(client)
+    token = _csrf_token(client)
+
+    response = client.post(
+        "/api/v1/auth/logout/",
+        headers={"Origin": "http://127.0.0.1:4200", "X-CSRFToken": token},
+    )
+
+    assert response.status_code == 204
+
+
+@pytest.mark.django_db
+def test_untrusted_origin_is_refused_even_with_a_valid_token(user):
+    client = Client(enforce_csrf_checks=True)
+    sign_in(client)
+    token = _csrf_token(client)
+
+    response = client.post(
+        "/api/v1/auth/logout/",
+        headers={"Origin": "http://evil.example", "X-CSRFToken": token},
+    )
+
+    assert response.status_code == 403

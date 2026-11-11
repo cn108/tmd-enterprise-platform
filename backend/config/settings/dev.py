@@ -18,6 +18,15 @@ SECRET_KEY = "dev-only-insecure-key-not-for-production"  # noqa: S105
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
 
+# The SPA runs on :4200 and proxies /api to :8000, so the browser's Origin
+# differs from the API host. Django refuses that mismatch unless the origin is
+# explicitly trusted. Production serves both from one origin, so this is a
+# development-only concern.
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    "http://localhost:4200,http://127.0.0.1:4200",
+)
+
 # The admin is a convenience locally and a break-glass surface in production (B-16).
 ENABLE_DJANGO_ADMIN = True
 

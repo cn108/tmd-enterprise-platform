@@ -10,7 +10,7 @@ This repository contains the **Phase 0 discovery pack** and the **Phase 1 engine
 | --- | --- |
 | Phase | Phase 2 in progress — W1/W2 (identity and authentication) delivered; W3–W9 await G1 |
 | Code | Django 5.2 + DRF, Angular 22, Docker Compose, CI; custom user model, departments, session auth with lockout and reset tokens, portal sign-in flow |
-| Tests | 40 backend tests, 20 frontend tests, lint and formatting clean, secret scan clean |
+| Tests | 42 backend tests, 20 frontend tests, lint and formatting clean, secret scan clean |
 | Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. Roles, approvals and audit need D-03, D-04, D-17, D-18 |
 | Next phase | W4 — roles and permissions (blocked by D-03/Q-08 and D-04) |
 

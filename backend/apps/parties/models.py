@@ -125,15 +125,17 @@ class TaxRegistration(UserStampedModel):
 class BankAccount(UserStampedModel):
     """Supplier bank details (MAS-02).
 
-    The full account number is write-only through the API; responses expose only
-    the last four digits. Encryption at rest and the audited change workflow
-    (W7 audit trail) are not yet implemented and are recorded as open items.
+    Only ciphertext and the last four digits are stored (B-26). The plaintext
+    number is never persisted and is available only through
+    ``get_account_number()`` for the payment workflow. Records are created and
+    changed only through an approved ``BankAccountChangeRequest``.
     """
 
     supplier = models.ForeignKey(Party, on_delete=models.PROTECT, related_name="bank_accounts")
     bank_name = models.CharField(max_length=120)
     account_name = models.CharField(max_length=150)
-    account_number = models.CharField(max_length=34)
+    account_number_encrypted = models.TextField()
+    account_last4 = models.CharField(max_length=4)
     sort_code = models.CharField(max_length=20, blank=True)
     currency = models.CharField(max_length=3, default="NGN")
     is_active = models.BooleanField(default=True)
@@ -142,11 +144,110 @@ class BankAccount(UserStampedModel):
         ordering = ["supplier__code", "bank_name"]
 
     def __str__(self) -> str:
-        return f"{self.bank_name} ••••{self.account_number[-4:]}"
+        return f"{self.bank_name} {self.masked_account}"
 
     @property
-    def account_last4(self) -> str:
-        return self.account_number[-4:]
+    def masked_account(self) -> str:
+        return f"••••{self.account_last4}"
+
+    def set_account_number(self, raw: str) -> None:
+        from apps.parties.crypto import encrypt_account_number
+
+        value = (raw or "").strip()
+        if not value:
+            raise ValidationError({"account_number": "An account number is required."})
+        self.account_number_encrypted = encrypt_account_number(value)
+        self.account_last4 = value[-4:]
+
+    def get_account_number(self) -> str:
+        from apps.parties.crypto import decrypt_account_number
+
+        return decrypt_account_number(self.account_number_encrypted)
+
+
+class BankAccountChangeRequest(UserStampedModel):
+    """A proposed bank account, approved or rejected by a second person (MAS-02).
+
+    ``bank_account`` is null when the request would create a new account. The
+    request row, its requester, reviewer, timestamps and reason are the audit
+    record until the append-only audit trail (W7) exists.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending approval"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    supplier = models.ForeignKey(
+        Party, on_delete=models.PROTECT, related_name="bank_change_requests"
+    )
+    bank_account = models.ForeignKey(
+        BankAccount,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="change_requests",
+    )
+    proposed_bank_name = models.CharField(max_length=120)
+    proposed_account_name = models.CharField(max_length=150)
+    proposed_account_number_encrypted = models.TextField()
+    proposed_account_last4 = models.CharField(max_length=4)
+    proposed_sort_code = models.CharField(max_length=20, blank=True)
+    proposed_currency = models.CharField(max_length=3, default="NGN")
+    reason = models.CharField(max_length=255)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    reviewed_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "bank account change request"
+        verbose_name_plural = "bank account change requests"
+        permissions = [
+            (
+                "approve_bankaccountchange",
+                "Can approve supplier bank account changes",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.supplier.code} bank change ({self.status})"
+
+    @property
+    def masked_proposed_account(self) -> str:
+        return f"••••{self.proposed_account_last4}"
+
+    def set_proposed_account_number(self, raw: str) -> None:
+        from apps.parties.crypto import encrypt_account_number
+
+        value = (raw or "").strip()
+        if not value:
+            raise ValidationError({"proposed_account_number": "An account number is required."})
+        self.proposed_account_number_encrypted = encrypt_account_number(value)
+        self.proposed_account_last4 = value[-4:]
+
+    def apply_proposed_changes(self) -> BankAccount:
+        account = self.bank_account or BankAccount(supplier=self.supplier)
+        account.bank_name = self.proposed_bank_name
+        account.account_name = self.proposed_account_name
+        account.account_number_encrypted = self.proposed_account_number_encrypted
+        account.account_last4 = self.proposed_account_last4
+        account.sort_code = self.proposed_sort_code
+        account.currency = self.proposed_currency
+        account.updated_by = self.reviewed_by or self.created_by
+        account.save()
+        return account
+
+    def clean(self) -> None:
+        if self.bank_account_id and self.bank_account.supplier_id != self.supplier_id:
+            raise ValidationError("The bank account belongs to a different supplier.")
 
 
 class ComplianceDocument(UserStampedModel):

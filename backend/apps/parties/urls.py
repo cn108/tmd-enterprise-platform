@@ -15,6 +15,11 @@ router.register("addresses", views.AddressViewSet, basename="address")
 router.register("tax-registrations", views.TaxRegistrationViewSet, basename="tax-registration")
 router.register("bank-accounts", views.BankAccountViewSet, basename="bank-account")
 router.register(
+    "bank-account-change-requests",
+    views.BankAccountChangeRequestViewSet,
+    basename="bank-account-change-request",
+)
+router.register(
     "compliance-documents", views.ComplianceDocumentViewSet, basename="compliance-document"
 )
 

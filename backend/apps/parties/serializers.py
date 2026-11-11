@@ -6,6 +6,7 @@ from rest_framework import serializers
 from apps.parties.models import (
     Address,
     BankAccount,
+    BankAccountChangeRequest,
     ComplianceDocument,
     Contact,
     Party,
@@ -136,8 +137,9 @@ class TaxRegistrationSerializer(serializers.ModelSerializer):
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
-    account_number = serializers.CharField(write_only=True, required=False)
-    masked_account = serializers.SerializerMethodField()
+    """Read-only view of an approved account; never exposes the ciphertext."""
+
+    masked_account = serializers.CharField(read_only=True)
 
     class Meta:
         model = BankAccount
@@ -146,7 +148,6 @@ class BankAccountSerializer(serializers.ModelSerializer):
             "supplier",
             "bank_name",
             "account_name",
-            "account_number",
             "masked_account",
             "sort_code",
             "currency",
@@ -154,10 +155,52 @@ class BankAccountSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = fields
 
-    def get_masked_account(self, obj: BankAccount) -> str:
-        return f"••••{obj.account_last4}"
+
+class BankAccountChangeRequestSerializer(serializers.ModelSerializer):
+    proposed_account_number = serializers.CharField(write_only=True, trim_whitespace=True)
+    proposed_masked_account = serializers.CharField(
+        source="masked_proposed_account", read_only=True
+    )
+    requested_by = serializers.SerializerMethodField()
+    reviewed_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BankAccountChangeRequest
+        fields = [
+            "id",
+            "supplier",
+            "bank_account",
+            "proposed_bank_name",
+            "proposed_account_name",
+            "proposed_account_number",
+            "proposed_masked_account",
+            "proposed_sort_code",
+            "proposed_currency",
+            "reason",
+            "status",
+            "requested_by",
+            "reviewed_by",
+            "reviewed_at",
+            "review_note",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "review_note",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_requested_by(self, obj: BankAccountChangeRequest) -> str | None:
+        return obj.created_by.email if obj.created_by else None
+
+    def get_reviewed_by(self, obj: BankAccountChangeRequest) -> str | None:
+        return obj.reviewed_by.email if obj.reviewed_by else None
 
     def validate_supplier(self, value: Party):
         if not value.is_supplier:
@@ -165,11 +208,30 @@ class BankAccountSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        if not self.instance and not attrs.get("account_number"):
+        supplier = attrs.get("supplier")
+        account = attrs.get("bank_account")
+        if account is not None and supplier is not None and account.supplier_id != supplier.pk:
             raise serializers.ValidationError(
-                {"account_number": "An account number is required when creating a bank account."}
+                {"bank_account": "The bank account belongs to a different supplier."}
+            )
+        if not attrs.get("proposed_account_number"):
+            raise serializers.ValidationError(
+                {"proposed_account_number": "An account number is required."}
             )
         return attrs
+
+    def create(self, validated_data):
+        raw = validated_data.pop("proposed_account_number")
+        change = BankAccountChangeRequest(**validated_data)
+        change.set_proposed_account_number(raw)
+        change.save()
+        return change
+
+
+class BankAccountDecisionSerializer(serializers.Serializer):
+    review_note = serializers.CharField(
+        required=False, allow_blank=True, max_length=255, default=""
+    )
 
 
 class ComplianceDocumentSerializer(serializers.ModelSerializer):

@@ -22,6 +22,20 @@ if not ALLOWED_HOSTS:
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
+# --- Bank account encryption (B-26) ----------------------------------------
+from cryptography.fernet import Fernet  # noqa: E402
+
+BANK_ACCOUNT_ENCRYPTION_KEYS = env_list("BANK_ACCOUNT_ENCRYPTION_KEYS")
+if not BANK_ACCOUNT_ENCRYPTION_KEYS:
+    raise RuntimeError(
+        "BANK_ACCOUNT_ENCRYPTION_KEYS must contain at least one Fernet key in production."
+    )
+for _key in BANK_ACCOUNT_ENCRYPTION_KEYS:
+    try:
+        Fernet(_key)
+    except ValueError as exc:
+        raise RuntimeError("BANK_ACCOUNT_ENCRYPTION_KEYS contains an invalid Fernet key.") from exc
+
 # --- Transport and cookie security -----------------------------------------
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

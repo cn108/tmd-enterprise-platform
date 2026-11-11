@@ -15,7 +15,7 @@
 ### Implemented
 
 - **Parties (B-19):** one `Party` record with supplier/customer flags, so a company can be both; contacts, addresses and tax registrations attach to the party. `Supplier` and `Customer` endpoints are separate views over the same table, so a code cannot exist twice. Supplier categories are records, not a hard-coded list; payment terms, credit limit and due-diligence status are client-supplied and nullable — no default is invented.
-- **Bank details (MAS-02):** account numbers are write-only through the API and responses expose only the last four digits. Bank accounts are refused for parties that are not suppliers.
+- **Bank details (MAS-02, B-26, B-27):** account numbers are encrypted at rest with Fernet envelope encryption; only ciphertext and the last four digits are stored, and the API never returns either the plaintext or the ciphertext. Bank accounts are **read-only** through the API and the Django admin: creating or changing one requires a `BankAccountChangeRequest` that names a reason, records the requester, and must be approved by a **different** user holding `parties.approve_bankaccountchange`. Self-approval and unpermissioned approval are refused, and decisions are written to the application log without any account number. Bank accounts are refused for parties that are not suppliers.
 - **Compliance documents:** type, issuer reference, issue/expiry dates, optional document link and a verification record; expiry before issue is refused.
 - **Catalogue (B-20):** one `CatalogueItem` table with `kind` (`product`/`service`), so a SKU is unique across both and price history and specifications have a single owner. Products report `is_stock_tracked`; services cannot enable batch, serial or expiry tracking.
 - **Price history:** effective-dated rows, append-only (no update or delete endpoint), with overlap rejection and a non-negative amount check.
@@ -32,7 +32,7 @@
 
 - **Screens.** The Angular portal still has only sign-in, the dashboard and sign-out. Master data is reachable through the API and Django admin only.
 - **Per-role permissions and record-level visibility.** W4/W5 are blocked by D-03 and D-17, so every master-data endpoint currently requires only an authenticated session. Any signed-in user can create or edit any master record.
-- **Append-only audit trail.** W7 is blocked; bank-detail changes and document downloads are written to the application log, not to a tamper-evident table.
+- **Append-only audit trail.** W7 is blocked; bank-detail decisions and document downloads are written to the application log, and each bank change request permanently records its requester, reviewer and timestamps, but none of this is tamper-evident yet.
 
 ### Files/modules changed
 
@@ -51,15 +51,15 @@ Six new apps, one initial migration each, plus `organisation.0002` adding cost c
 
 | Command | Result |
 | --- | --- |
-| `pytest` (backend) | **90 passed**, exit 0 — 42 existing + 48 new master-data tests |
+| `pytest` (backend) | **98 passed**, exit 0 — 42 existing + 56 new master-data tests |
 | `ruff check .` | All checks passed, exit 0 |
 | `ruff format --check .` | 114 files already formatted, exit 0 |
 | `python manage.py check` | No issues, exit 0 (1 silenced: `axes.W002`) |
 | `python manage.py makemigrations --check --dry-run` | No changes detected, exit 0 |
 
-New tests by module: parties 11, catalogue 12, warehousing 4, projects 8, documents 8, organisation 5.
+New tests by module: parties 19, catalogue 12, warehousing 4, projects 8, documents 8, organisation 5.
 
-What they assert, beyond executing: duplicate codes are a 400 even when submitted in a different case; supplier and customer codes share one namespace; bank numbers never appear in responses; tax registrations are unique per party/scheme/number; expiry before issue/manufacture is refused; SKUs cannot collide across products and services; service items cannot track stock; price periods cannot overlap while consecutive periods are accepted; price rows cannot be updated or deleted; serial/batch uniqueness is per item; a batch from another item is refused; certificates need a target; location codes repeat across warehouses but not within one; project lifecycle transitions are enforced and illegal ones refused; contract revisions number 1, 2 and are immutable; uploads are checksummed, size/type limited, non-replaceable and downloadable only when authenticated; no media URL is routed; document links are unique; every delete is refused with 409.
+What they assert, beyond executing: duplicate codes are a 400 even when submitted in a different case; supplier and customer codes share one namespace; bank numbers never appear in responses; tax registrations are unique per party/scheme/number; expiry before issue/manufacture is refused; SKUs cannot collide across products and services; service items cannot track stock; price periods cannot overlap while consecutive periods are accepted; price rows cannot be updated or deleted; serial/batch uniqueness is per item; a batch from another item is refused; certificates need a target; location codes repeat across warehouses but not within one; project lifecycle transitions are enforced and illegal ones refused; contract revisions number 1, 2 and are immutable; uploads are checksummed, size/type limited, non-replaceable and downloadable only when authenticated; no media URL is routed; document links are unique; every delete is refused with 409. For bank details: direct writes are 405; a change request stores ciphertext rather than plaintext; approval by a second permissioned user creates or updates the account while preserving the masked value; self-approval and approval without the permission are refused; rejection leaves the data untouched; decisions are logged without account numbers; and requesters see only their own requests.
 
 ### Acceptance evidence
 
@@ -85,8 +85,9 @@ What they assert, beyond executing: duplicate codes are a 400 even when submitte
 
 | Risk | Severity | Mitigation / workaround |
 | --- | --- | --- |
-| Any authenticated user can create or edit any master record | High | Roles arrive in W4 (blocked by D-03); until then the API is authenticated-only, and Django admin remains break-glass |
-| Supplier account numbers are stored unencrypted | High | Never returned by the API; encryption at rest and the audited change workflow are required before real data |
+| Any authenticated user can create or edit any master record outside bank details | High | Roles arrive in W4 (blocked by D-03); bank account changes already require the approval permission, but the rest of master data remains authenticated-only |
+| Encryption key custody and rotation are untested operationally | Medium | Keys come from `BANK_ACCOUNT_ENCRYPTION_KEYS`; losing every key makes stored numbers unrecoverable, so custody needs a named owner (D-10/D-12) |
+| The approval permission has to be granted by hand until W4 exists | Medium | A Django permission (`parties.approve_bankaccountchange`) is data, so W4 can map it to roles without code changes; until then an administrator assigns it |
 | Uploaded files are not virus-scanned | Medium | Extension and size limits only; scanning belongs to the production hardening phase |
 | Document category access rules and retention enforcement are not implemented | Medium | Categories and retention metadata exist; enforcement needs W4 and Q-28 |
 | Contract revisions are recorded but never applied to the live contract | Medium | Applying a revision is an approval action in a later phase; the history is preserved now |

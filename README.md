@@ -10,7 +10,7 @@ This repository contains the **Phase 0 discovery pack**, the **Phase 1 engineeri
 | --- | --- |
 | Phase | Phase 2 W1/W2 and Phase 3 master-data APIs delivered; W3–W9 await G1, Phase 3 screens and permissions await W4 |
 | Code | Django 5.2 + DRF, Angular 22, Docker Compose, CI; custom user model, session auth, suppliers/customers, catalogue, warehouses, projects, contracts, cost centres and private documents |
-| Tests | 90 backend tests, 23 frontend tests, lint and formatting clean, secret scan clean |
+| Tests | 98 backend tests, 23 frontend tests, lint and formatting clean, secret scan clean |
 | Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. Roles, approvals and audit need D-03, D-04, D-17, D-18 |
 | Next phase | W4 — roles and permissions (blocked by D-03/Q-08 and D-04); Phase 3 open items need D-02 and Q-14b |
 

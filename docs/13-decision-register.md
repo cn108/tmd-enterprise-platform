@@ -121,6 +121,8 @@ Engineering choices with no business-policy content. They are logged so they are
 | B-23 | Document bytes are immutable and private: no media URL is routed, downloads are authenticated and logged, and a new version supersedes the old | A mutable or publicly reachable file is not a controlled document |
 | B-24 | Master-data endpoints refuse deletion outright and require deactivation | MAS-08 and M-05: referenced records must never vanish; blanket refusal is the conservative default until transactions exist |
 | B-25 | Contract revisions are append-only and are not applied to the live contract automatically | Applying a revision is an approval action for a later phase; history must be preserved now |
+| B-26 | Supplier account numbers are encrypted at rest with Fernet envelope encryption; only ciphertext and the last four digits are stored | A database copy must not expose payment details; MultiFernet lets keys rotate without a schema change |
+| B-27 | Bank accounts are read-only and change only through a two-person `BankAccountChangeRequest` requiring `parties.approve_bankaccountchange`, with self-approval refused and decisions logged | MAS-02 requires elevated permission and an audit trail for bank-detail changes; permissions stay data so W4 can map them to roles |
 
 ## 7. Review routing
 

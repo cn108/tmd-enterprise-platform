@@ -27,6 +27,16 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "http://localhost:4200,http://127.0.0.1:4200",
 )
 
+# Local-only encryption key derivation, so development and tests need no extra
+# secret. Production requires explicit BANK_ACCOUNT_ENCRYPTION_KEYS.
+if not BANK_ACCOUNT_ENCRYPTION_KEYS:  # noqa: F405
+    import base64
+    import hashlib
+
+    BANK_ACCOUNT_ENCRYPTION_KEYS = [
+        base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
+    ]
+
 # The admin is a convenience locally and a break-glass surface in production (B-16).
 ENABLE_DJANGO_ADMIN = True
 

@@ -3,6 +3,7 @@ from django.contrib import admin
 from apps.parties.models import (
     Address,
     BankAccount,
+    BankAccountChangeRequest,
     ComplianceDocument,
     Contact,
     Party,
@@ -45,9 +46,65 @@ class TaxRegistrationAdmin(admin.ModelAdmin):
 
 @admin.register(BankAccount)
 class BankAccountAdmin(admin.ModelAdmin):
-    list_display = ("supplier", "bank_name", "account_last4", "is_active")
-    exclude = ("account_number",)
+    """View-only: changes go through the approved request workflow (B-27)."""
+
+    list_display = ("supplier", "bank_name", "masked_account", "is_active")
     search_fields = ("supplier__code", "bank_name")
+    readonly_fields = (
+        "supplier",
+        "bank_name",
+        "account_name",
+        "account_last4",
+        "sort_code",
+        "currency",
+        "is_active",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BankAccountChangeRequest)
+class BankAccountChangeRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "supplier",
+        "proposed_bank_name",
+        "proposed_account_last4",
+        "status",
+        "created_by",
+        "reviewed_by",
+    )
+    list_filter = ("status",)
+    readonly_fields = (
+        "supplier",
+        "bank_account",
+        "proposed_bank_name",
+        "proposed_account_name",
+        "proposed_account_last4",
+        "proposed_sort_code",
+        "proposed_currency",
+        "reason",
+        "status",
+        "created_by",
+        "reviewed_by",
+        "reviewed_at",
+        "review_note",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ComplianceDocument)

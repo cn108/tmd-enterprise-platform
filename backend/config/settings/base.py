@@ -147,6 +147,11 @@ PASSWORD_RESET_TOKEN_TTL_MINUTES = env_int("PASSWORD_RESET_TOKEN_TTL_MINUTES", 6
 # Django admin is a break-glass surface (B-16); off unless explicitly enabled.
 ENABLE_DJANGO_ADMIN = env_bool("ENABLE_DJANGO_ADMIN", False)
 
+# Supplier bank account numbers are encrypted at rest (B-26). Values are Fernet
+# keys: the first encrypts, all are tried when decrypting so keys can rotate.
+# Empty here; development derives one and production refuses to start without.
+BANK_ACCOUNT_ENCRYPTION_KEYS = env_list("BANK_ACCOUNT_ENCRYPTION_KEYS")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {

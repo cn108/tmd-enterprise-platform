@@ -30,6 +30,7 @@ Only CONFIRMED items may be implemented as company policy. PROPOSED and ASSUMPTI
 | D-11c | Named signatories for migration reconciliation | UNRESOLVED | Management | Phase 13 | Reconciled data has no accountable owner |
 | D-12 | Named support owner and escalation contacts | UNRESOLVED | Management | Phase 12 | No operational owner at go-live |
 | D-13 | Acceptance of out-of-scope list (`02-brd.md` §3.2) | PROPOSED | Management | Phase 1 | Scope creep risk R-08 |
+| D-36 | Session idle timeout, lockout threshold and whether MFA is mandatory for approval roles | UNRESOLVED | Management / IT | Phase 2 | Authentication configuration cannot be finalised; any default would be arbitrary |
 
 ## 2. Business process decisions
 
@@ -105,6 +106,14 @@ Engineering choices with no business-policy content. They are logged so they are
 | B-08 | The API fails closed: `DEFAULT_PERMISSION_CLASSES = IsAuthenticated`, with health endpoints explicitly anonymous | A new endpoint should be private by default, not public by default |
 | B-09 | One JSON error envelope (`code`, `message`, `details`, `request_id`) for API errors and non-DRF 404s | Gives the SPA a single predictable contract to build against |
 | B-10 | No accounting, money or business libraries are installed in Phase 1 | Nothing can be built against them until D-05 and the finance review conclude |
+| B-11 | A custom `identity.User` with email login replaces Django's default user model from the first Phase 2 migration | Retrofitting `AUTH_USER_MODEL` after domain tables exist is expensive; email is how staff log in |
+| B-12 | Session-cookie authentication with CSRF, not bearer tokens in browser storage | Sessions can be revoked instantly on disablement; nothing sensitive sits where XSS can read it |
+| B-13 | Permissions are data with stable codenames; no role-name conditionals in views | The matrix in `05-…` will change; code must not have to |
+| B-14 | Approval policies are versioned, and each request snapshots the policy version it was submitted under | A later limit change must not re-decide an in-flight approval |
+| B-15 | The audit trail is hash-chained and blocked against UPDATE/DELETE by ORM, database trigger and database privilege | Append-only enforced only in Python is a promise, not a control |
+| B-16 | Django admin is disabled in production by default and enabled only as a named, audited break-glass | The admin is a second, less-controlled path to the same data |
+| B-17 | Segregation-of-duties rules are registered checks over immutable document facts, not inline conditionals | Rules span modules (supplier creator vs payment approver) |
+| B-18 | Lockout uses `django-axes` and TOTP uses `django-otp` rather than in-house security primitives | Proven implementations; hand-rolled throttles and TOTP are avoidable vulnerabilities |
 
 ## 7. Review routing
 

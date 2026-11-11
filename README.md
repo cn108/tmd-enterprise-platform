@@ -61,6 +61,7 @@ The sequence agreed with management is run through three review packs, in order,
 14. [`docs/13-decision-register.md`](docs/13-decision-register.md) — every item labelled CONFIRMED / PROPOSED / ASSUMPTION / UNRESOLVED.
 15. [`docs/14-backlog.md`](docs/14-backlog.md) — phased delivery backlog with exit gates.
 16. [`docs/15-migration-and-golive.md`](docs/15-migration-and-golive.md) — migration and cutover plan.
+17. [`docs/16-phase2-access-control-design.md`](docs/16-phase2-access-control-design.md) — Phase 2 design: identity, permissions, approval engine, audit trail and its test plan.
 
 ## Rules this project runs under
 

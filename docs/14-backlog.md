@@ -23,6 +23,7 @@
 **Requirements:** ADM-01…ADM-11, S-01…S-11, AUD-01, AUD-02, NFR-05
 **Scope:** user lifecycle, authentication, password reset, lockout, session controls; roles/permissions/departments; approval policy data model + maker-checker + delegation; append-only audit service; permission matrix test suite; negative tests (unauthorised access, cross-department, disabled account, privilege escalation, self-approval).
 **Exit gate:** every sensitive endpoint covered by permission tests; segregation-of-duties rules proven impossible to bypass by API; audit events written for all sensitive actions.
+**Design:** [`16-phase2-access-control-design.md`](16-phase2-access-control-design.md) — schema, enforcement layers, approval algorithm, audit integrity, API surface and the matrix test plan.
 **Size:** L. **Blocked by:** D-03, D-04, D-17, D-18.
 
 ## Phase 3 — Master data

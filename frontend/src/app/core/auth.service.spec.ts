@@ -95,15 +95,54 @@ describe('AuthService', () => {
     request.flush(TEST_USER);
   });
 
-  it('clears the session on logout even when the request fails', () => {
+  it('clears the session once the server confirms sign-out', () => {
     service.login('ama@example.com', 'secret').subscribe();
     http.expectOne('/api/v1/auth/login/').flush(TEST_USER);
 
-    service.logout().subscribe();
+    let completed = false;
+    service.logout().subscribe({ complete: () => (completed = true) });
     http
       .expectOne('/api/v1/auth/logout/')
-      .flush(null, { status: 401, statusText: 'Unauthorized' });
+      .flush(null, { status: 204, statusText: 'No Content' });
 
+    expect(completed).toBe(true);
+    expect(service.user()).toBeNull();
+  });
+
+  it('keeps the session and reports the failure when sign-out is refused', () => {
+    service.login('ama@example.com', 'secret').subscribe();
+    http.expectOne('/api/v1/auth/login/').flush(TEST_USER);
+
+    let failure: unknown;
+    service.logout().subscribe({ error: (error: unknown) => (failure = error) });
+    http.expectOne('/api/v1/auth/logout/').flush(
+      {
+        error: {
+          code: 'permission_denied',
+          message: 'CSRF verification failed.',
+          details: null,
+          request_id: 'req-2',
+        },
+      },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    expect(failure).toBeDefined();
+    expect(service.user()?.email).toBe('ama@example.com');
+    expect(service.isAuthenticated()).toBe(true);
+  });
+
+  it('treats an already-ended session as a successful sign-out', () => {
+    service.login('ama@example.com', 'secret').subscribe();
+    http.expectOne('/api/v1/auth/login/').flush(TEST_USER);
+
+    let failure: unknown;
+    service.logout().subscribe({ error: (error: unknown) => (failure = error) });
+    http
+      .expectOne('/api/v1/auth/logout/')
+      .flush(UNAUTHENTICATED, { status: 401, statusText: 'Unauthorized' });
+
+    expect(failure).toBeUndefined();
     expect(service.user()).toBeNull();
   });
 

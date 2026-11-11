@@ -23,6 +23,7 @@
 - **Bootstrap commands:** `create_initial_admin` refuses to run when any user exists, forces a password change at first login, and reads the password from `INITIAL_ADMIN_PASSWORD` or a prompt rather than an argument; `issue_password_reset` prints the raw token once and never stores it.
 - **Lockout (B-18):** `django-axes` with per-account **and** per-IP counters, 5 failures, 1-hour cool-off, reset on success. The middleware that would reformat errors is deliberately omitted, so locked logins still return the project's JSON envelope (`axes.W002` silenced with a comment explaining why).
 - **Django admin (B-16):** disabled unless `ENABLE_DJANGO_ADMIN=True`.
+- **Honest sign-out:** the portal clears local state only when the server confirms the session ended (`204`) or reports it already gone (`401`). Any other failure keeps the user signed in, re-enables the button and shows the reason, so a refused sign-out can no longer look like a successful one.
 - **Portal:** sign-in screen with labelled, keyboard-usable fields and inline error handling; dashboard showing the authenticated user, department and live readiness; `SessionStore` (signals only, no `HttpClient`, to avoid an interceptor↔service↔`HttpClient` DI cycle); `authInterceptor` sending cookies and clearing a dead session **without redirecting**; `authGuard`/`guestGuard` owning routing with a `returnUrl`; an app initializer that fetches the CSRF cookie and resolves an existing session before the first guard runs.
 
 ### Files/modules changed
@@ -52,7 +53,7 @@ Two domain migrations, both new: `organisation.0001_initial` (departments) and `
 | `ruff format --check .` | 49 files already formatted, exit 0 |
 | `python manage.py check` | No issues, exit 0 (1 silenced: `axes.W002`, justified in settings) |
 | `python manage.py makemigrations --check --dry-run` | No changes detected, exit 0 |
-| `npm test -- --watch=false` | **20 passed** (5 files), exit 0 |
+| `npm test -- --watch=false` | **23 passed** (5 files), exit 0 |
 | `npm run lint` | All files pass linting, exit 0 |
 | `npm run build` | Production build succeeded, exit 0 |
 | `python scripts/check_secrets.py` | Passed: no tracked secrets or forbidden files, exit 0 |
@@ -88,6 +89,8 @@ Cause: the SPA runs on `:4200` and proxies `/api` to `:8000`, so the browser's `
 
 Fix: `CSRF_TRUSTED_ORIGINS` for the two loopback origins in `dev.py`, the variable in `.env.example`, a troubleshooting row in `docs/dev-setup.md`, and two regression tests — a trusted origin succeeds with a valid token, an untrusted origin is refused even with one. Production serves SPA and API from one origin, so this was development-specific; any future split-origin deployment must set the same list.
 
+The portal no longer hides this class of failure: it keeps the session, re-enables the button and shows the server's reason. Tests cover the confirmed (`204`), refused (`403`) and already-ended (`401`) cases.
+
 ### Unresolved decisions
 
 | ID | Decision | Owner | Impact if unanswered |
@@ -103,7 +106,6 @@ Fix: `CSRF_TRUSTED_ORIGINS` for the two loopback origins in `dev.py`, the variab
 
 | Risk | Severity | Mitigation / workaround |
 | --- | --- | --- |
-| The portal clears local session state even when the sign-out request fails, so a user can believe they signed out while the server session lives | Medium | Session still ends at the 1-hour idle or 12-hour absolute limit; the browser error should be surfaced rather than swallowed in W8 |
 | No automated browser end-to-end test: this report's browser evidence is a manual session | Medium | API behaviour is covered by 42 tests; the joined-up flow should be automated before W8 grows the UI |
 | The CI workflow still has not executed on GitHub — no remote repository | Medium | Every job's commands pass locally; the first push must be watched, not assumed green |
 | `must_change_password` is advisory: it is returned to the SPA but no route forces the change yet | Low | Flag is set by both bootstrap commands; enforcement belongs to the access-administration UI (W8) |

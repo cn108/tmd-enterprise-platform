@@ -1,6 +1,6 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, firstValueFrom, of, tap } from 'rxjs';
+import { Observable, catchError, firstValueFrom, of, tap, throwError } from 'rxjs';
 
 import { AuthenticatedUser } from './auth.models';
 import { SessionStore } from './session.store';
@@ -36,11 +36,24 @@ export class AuthService {
       .pipe(tap((user) => this.session.setUser(user)));
   }
 
-  /** Clears local state even if the request fails (an expired session cannot be revoked again). */
+  /**
+   * Ends the server session, then clears local state.
+   *
+   * Local state is cleared only when the server confirms the session ended, or
+   * when it reports the session was already gone. Any other failure keeps the
+   * user signed in and is rethrown: telling someone they signed out while the
+   * session is still live on the server is a security-relevant lie.
+   */
   logout(): Observable<void> {
     return this.http.post<void>(`${AUTH_BASE}/logout/`, {}).pipe(
-      catchError(() => of(void 0)),
       tap(() => this.session.setAnonymous()),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          this.session.setAnonymous();
+          return of(void 0);
+        }
+        return throwError(() => error);
+      }),
     );
   }
 

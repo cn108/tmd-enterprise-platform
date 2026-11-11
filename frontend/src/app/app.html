@@ -15,7 +15,20 @@
           {{ signedIn.email }}{{ signedIn.department ? ' · ' + signedIn.department : '' }}
         </span>
       </div>
-      <button type="button" class="session__signout" (click)="signOut()">Sign out</button>
+      <button
+        type="button"
+        class="session__signout"
+        [disabled]="signingOut()"
+        [attr.aria-busy]="signingOut()"
+        (click)="signOut()"
+      >
+        {{ signingOut() ? 'Signing out…' : 'Sign out' }}
+      </button>
+      @if (signOutError(); as message) {
+        <p class="session__error" role="alert">
+          {{ message }} You are still signed in.
+        </p>
+      }
     </div>
   } @else {
     <span class="phase">Secure area</span>

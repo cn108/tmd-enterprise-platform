@@ -1,7 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app';
@@ -62,5 +63,41 @@ describe('App shell', () => {
     button.click();
 
     expect(logout).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the user signed in and reports a failed sign-out', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    logout.mockReturnValueOnce(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 403,
+            error: {
+              error: {
+                code: 'permission_denied',
+                message: 'CSRF verification failed.',
+                details: null,
+                request_id: 'req-3',
+              },
+            },
+          }),
+      ),
+    );
+
+    userSignal.set(TEST_USER);
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector('.session__signout') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.session__name').textContent).toContain(
+      'Ama Okafor',
+    );
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('CSRF verification failed.');
+    expect(alert.textContent).toContain('still signed in');
   });
 });

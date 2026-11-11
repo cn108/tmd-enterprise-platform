@@ -48,6 +48,7 @@
 **Scope:** immutable stock movements (receipt, put-away, transfer, reservation, issue, return, adjustment, count); on-hand/available/reserved/in-transit/damaged/quarantined views; batch/serial/expiry fields where enabled; valuation per approved method; stocktake workflow with variance approval; reorder levels; project issue with cost-code capture; reconciliation of balances to movements.
 **Exit gate:** concurrent issues cannot oversell; balances equal movement sums at every location; valuation report reconciles; full movement history traceable.
 **Size:** XL. **Blocked by:** D-06, Q-18, Q-19.
+**Status (11 November 2026):** backend ledger delivered — immutable signed movements, derived balances, direct receipts and GRN integration, multi-warehouse transfers, reservations with project allocation, project issues, returns, reasoned adjustments, damaged-stock write-offs, stock counts with variance posting, reorder alerts, and FIFO/weighted-average valuation through an explicitly recorded policy. No valuation method is seeded, negative stock is refused, and no damaged/quarantine/in-transit buckets or supplier returns exist. No screens, role matrix or accounting postings. Report: [`reports/phase-5-inventory-report.md`](reports/phase-5-inventory-report.md).
 
 ## Phase 6 — General ledger and posting engine
 

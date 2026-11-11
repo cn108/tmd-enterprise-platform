@@ -253,6 +253,12 @@ def receive_goods(order: PurchaseOrder, actor, received_at, lines_data, notes: s
         )
 
     _decide_order_status(order)
+
+    # Accepted quantities for warehouse destinations enter the stock ledger.
+    # Direct project/other-location deliveries stay procurement facts.
+    from apps.inventory.services import post_goods_receipt
+
+    post_goods_receipt(receipt)
     return receipt
 
 

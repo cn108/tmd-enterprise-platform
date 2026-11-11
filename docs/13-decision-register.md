@@ -114,6 +114,13 @@ Engineering choices with no business-policy content. They are logged so they are
 | B-16 | Django admin is disabled in production by default and enabled only as a named, audited break-glass | The admin is a second, less-controlled path to the same data |
 | B-17 | Segregation-of-duties rules are registered checks over immutable document facts, not inline conditionals | Rules span modules (supplier creator vs payment approver) |
 | B-18 | Lockout uses `django-axes` and TOTP uses `django-otp` rather than in-house security primitives | Proven implementations; hand-rolled throttles and TOTP are avoidable vulnerabilities |
+| B-19 | One `Party` table holds suppliers and customers with role flags; contacts, addresses and tax registrations attach to the party | A company can be both; the shared fields are identical; codes stay unique across roles |
+| B-20 | One `CatalogueItem` table with a `kind` of product or service, plus append-only effective-dated prices | A SKU must not exist twice across the two kinds; price history needs one owner |
+| B-21 | Batch/serial/expiry traceability is a per-item flag, default off; batches, serials and certificates are recorded without stock quantities | Q-17 is unanswered; tracking nothing is the safe default, and quantities belong to the Phase 5 ledger |
+| B-22 | Cost centres have an optional parent and optional department, and no codes are seeded | Q-14b is unanswered; flat and hierarchical structures must both be valid |
+| B-23 | Document bytes are immutable and private: no media URL is routed, downloads are authenticated and logged, and a new version supersedes the old | A mutable or publicly reachable file is not a controlled document |
+| B-24 | Master-data endpoints refuse deletion outright and require deactivation | MAS-08 and M-05: referenced records must never vanish; blanket refusal is the conservative default until transactions exist |
+| B-25 | Contract revisions are append-only and are not applied to the live contract automatically | Applying a revision is an approval action for a later phase; history must be preserved now |
 
 ## 7. Review routing
 

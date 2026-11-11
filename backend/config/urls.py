@@ -23,6 +23,12 @@ urlpatterns = [
     path("api/v1/health/", HealthView.as_view(), name="api-health"),
     path("api/v1/health/ready/", ReadinessView.as_view(), name="health-ready-api"),
     path("api/v1/auth/", include("apps.identity.urls")),
+    path("api/v1/", include("apps.organisation.urls")),
+    path("api/v1/", include("apps.parties.urls")),
+    path("api/v1/", include("apps.catalogue.urls")),
+    path("api/v1/", include("apps.warehousing.urls")),
+    path("api/v1/", include("apps.projects.urls")),
+    path("api/v1/", include("apps.documents.urls")),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

@@ -45,6 +45,11 @@ LOCAL_APPS = [
     "apps.core",
     "apps.organisation",
     "apps.identity",
+    "apps.parties",
+    "apps.catalogue",
+    "apps.warehousing",
+    "apps.projects",
+    "apps.documents",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -161,6 +166,17 @@ USE_TZ = True
 # --- Static files -----------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Uploaded documents are private. MEDIA_URL is intentionally not routed in
+# urls.py, so files are reachable only through the authenticated download
+# endpoint (DOC-01).
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+DOCUMENT_MAX_UPLOAD_BYTES = env_int("DOCUMENT_MAX_UPLOAD_BYTES", 10 * 1024 * 1024)
+DOCUMENT_ALLOWED_EXTENSIONS = env_list(
+    "DOCUMENT_ALLOWED_EXTENSIONS",
+    ".pdf,.png,.jpg,.jpeg,.webp,.docx,.xlsx,.csv,.txt",
+)
 
 # --- API --------------------------------------------------------------------
 REST_FRAMEWORK = {

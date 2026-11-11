@@ -56,6 +56,7 @@
 **Scope:** approved chart of accounts; periods and period controls; journal/journal lines with balance constraints; central posting service with rule-driven mappings, idempotency and atomicity; reversal and correction; trial balance, GL detail, income statement, balance sheet from approved mappings; opening balance import.
 **Exit gate:** automated tests prove every posting balances, duplicates are blocked, posted journals are immutable, reversals traceable, locked periods enforced, subledgers reconcile to control accounts.
 **Size:** XL. **Blocked by:** D-05 (hard blocker), D-19…D-23, D-26.
+**Status (11 November 2026):** backend engine delivered — configurable chart of accounts with separate approval, fiscal years and periods, balanced double-entry journals with submit/approve/post, adjustments, linked single reversals, opening balances, configurable and approved posting rules for financial events, period closing to retained earnings, trial balance, general ledger, income statement and balance sheet. No account or rule is seeded, multi-currency and period reopening are absent, and automatic posting from procurement/inventory/projects/invoicing/payments/assets awaits the approved posting matrix. No screens or database-level immutability trigger. Report: [`reports/phase-6-accounting-report.md`](reports/phase-6-accounting-report.md).
 
 ## Phase 7 — Accounts payable and invoice issuance
 

@@ -2,17 +2,17 @@
 
 Internal, project-centred procurement, inventory and financial management platform for **Tico McDon Limited (TMD)**, Nigeria. Reporting currency: **NGN**.
 
-This repository contains the **Phase 0 discovery pack**, the **Phase 1 engineering foundation**, Phase 2 identity and authentication, Phase 3 master-data APIs, the Phase 4 procurement lifecycle API, and the Phase 5 inventory ledger API. No billing, general ledger or tax logic exists yet.
+This repository contains the **Phase 0 discovery pack**, the **Phase 1 engineering foundation**, Phase 2 identity and authentication, Phase 3 master-data APIs, the Phase 4 procurement lifecycle API, the Phase 5 inventory ledger API, and the Phase 6 financial accounting engine API. No billing, tax or accounts-payable logic exists yet.
 
 ## Current status
 
 | Item | State |
 | --- | --- |
-| Phase | Phase 2 W1/W2, Phase 3 master-data APIs, Phase 4 procurement and Phase 5 inventory APIs delivered; W3–W9 await G1, and no business screens exist |
-| Code | Django 5.2 + DRF, Angular 22, Docker Compose, CI; custom user model, session auth, suppliers/customers, catalogue, warehouses, projects, contracts, cost centres, private documents, purchase requests → RFQ → quotation → PO → delivery schedule → GRN, and an immutable stock ledger with receipts, transfers, reservations, issues, returns, adjustments, damage, counts, reorder alerts and FIFO/weighted-average valuation |
-| Tests | 151 backend tests, 23 frontend tests, lint and formatting clean, secret scan clean |
-| Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. Roles, approval limits, valuation method and audit need D-03, D-04, D-06/Q-18, D-17, D-18 |
-| Next phase | W4 — roles and permissions (blocked by D-03/Q-08 and D-04); Phase 6 general ledger is hard-blocked by D-05 |
+| Phase | Phase 2 W1/W2, Phase 3 master-data APIs, Phase 4 procurement, Phase 5 inventory and Phase 6 accounting APIs delivered; W3–W9 await G1, and no business screens exist |
+| Code | Django 5.2 + DRF, Angular 22, Docker Compose, CI; custom user model, session auth, suppliers/customers, catalogue, warehouses, projects, contracts, cost centres, private documents, purchase requests → RFQ → quotation → PO → delivery schedule → GRN, an immutable stock ledger, and a double-entry accounting engine with configurable accounts, periods, approved journals, posting rules, reversals, opening balances, closing and financial statements |
+| Tests | 180 backend tests, 23 frontend tests, lint and formatting clean, secret scan clean |
+| Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. Roles, approval limits, valuation method, chart of accounts/posting matrix and audit need D-03, D-04, D-05/Q-22, D-06/Q-18, D-17, D-18 |
+| Next phase | W4 — roles and permissions (blocked by D-03/Q-08 and D-04); Phase 6 production use awaits the accountant-approved D-05/Q-22 chart and posting matrix; Phase 7 needs D-07 and D-08 |
 
 ## Quickstart
 

@@ -49,6 +49,7 @@ LOCAL_APPS = [
     "apps.catalogue",
     "apps.warehousing",
     "apps.projects",
+    "apps.procurement",
     "apps.documents",
 ]
 

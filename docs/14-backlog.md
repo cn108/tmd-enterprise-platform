@@ -40,6 +40,7 @@
 **Scope:** purchase requests with budget references and destination; approval workflow; RFQ/quotations/comparison/recommendation; PO generation, revision, approval, issue, cancellation; delivery schedules; site acceptance and warehouse GRN with accepted/rejected quantities; partial deliveries, shortages, substitutions, damage, backorders, supplier returns; three-way match producing exceptions.
 **Exit gate:** full lifecycle tested for direct purchase, warehouse replenishment and split/partial delivery; over-receipt blocked without approved tolerance; rejected quantities never increase available stock.
 **Size:** XL. **Blocked by:** D-04, D-14, D-15, Q-15…Q-20b.
+**Status (11 November 2026):** backend lifecycle delivered — destinations, purchase requests and approval, RFQs and invited suppliers, quotations, comparison and selection, PO generation and approval, delivery schedules with split destinations, GRNs with accepted/rejected/damaged quantities, partial deliveries and closure. Approval is permission-only with no thresholds because D-04 is unsigned; over-receipt is refused because Q-17b gives no tolerance; accepted receipts do not yet post stock (Phase 5). No screens, role matrix or PO amendments. Report: [`reports/phase-4-procurement-report.md`](reports/phase-4-procurement-report.md).
 
 ## Phase 5 — Inventory and stock ledger
 

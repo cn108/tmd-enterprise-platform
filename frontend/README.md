@@ -2,7 +2,16 @@
 
 Angular 22 workspace for the TMD internal portal.
 
-**Phase 1 scope:** application shell only. It reports the backend's readiness status and states plainly that no business modules are enabled. There are no procurement, inventory, billing or ledger screens yet, because those depend on decisions still open in `../docs/13-decision-register.md`.
+**Current scope:** application shell plus the Phase 2 sign-in flow — session bootstrap, CSRF handling, 401 interception, route guards, a login page and sign-out. There are still no procurement, inventory, billing or ledger screens, because those depend on decisions open in `../docs/13-decision-register.md`.
+
+## Routes
+
+| Path | Guard | Purpose |
+| --- | --- | --- |
+| `/login` | `guestGuard` | Sign-in form; a signed-in visitor is sent to the dashboard |
+| `/` | `authGuard` | Signed-in dashboard; anonymous visitors are sent to `/login?returnUrl=…` |
+
+Session state lives in `core/session.store.ts` (signals only). `AuthService` performs the HTTP work, and `authInterceptor` clears a dead session on any 401 without creating a dependency cycle.
 
 ## Commands
 

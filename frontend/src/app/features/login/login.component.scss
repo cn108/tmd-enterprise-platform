@@ -1,0 +1,128 @@
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 2rem 1.25rem;
+}
+
+.login__card {
+  width: min(26rem, 100%);
+  padding: 2rem;
+  border: 1px solid var(--tmd-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(16 32 56 / 8%);
+}
+
+.login__header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.login__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--tmd-navy);
+  color: var(--tmd-gold);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.login__header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--tmd-navy);
+}
+
+.login__header p {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--tmd-muted);
+}
+
+.login__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border-left: 3px solid #a3352b;
+  background: #fdf1ef;
+  color: #7f2a22;
+  font-size: 0.88rem;
+}
+
+.field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.field__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tmd-ink);
+}
+
+.field input {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #c9d2df;
+  border-radius: 0.45rem;
+  font: inherit;
+  color: var(--tmd-ink);
+}
+
+.field input:focus-visible {
+  border-color: var(--tmd-navy-soft);
+  outline: 2px solid rgb(29 58 95 / 25%);
+  outline-offset: 1px;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: #a3352b;
+}
+
+.field__error {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: #a3352b;
+}
+
+.login__submit {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: var(--tmd-navy);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login__submit:hover:not(:disabled) {
+  background: var(--tmd-navy-soft);
+}
+
+.login__submit:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.login__submit:focus-visible {
+  outline: 2px solid var(--tmd-gold);
+  outline-offset: 2px;
+}
+
+.login__help {
+  margin: 1.25rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--tmd-muted);
+  text-align: center;
+}

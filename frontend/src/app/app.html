@@ -2,52 +2,30 @@
   <div class="brand">
     <span class="brand__mark">TMD</span>
     <div class="brand__text">
-      <h1>{{ title() }}</h1>
+      <h1>TMD Platform</h1>
       <p>Tico McDon Limited · procurement, inventory and financial management</p>
     </div>
   </div>
-  <span class="phase">Phase 1 · foundation</span>
+
+  @if (user(); as signedIn) {
+    <div class="session">
+      <div class="session__who">
+        <span class="session__name">{{ signedIn.full_name }}</span>
+        <span class="session__meta">
+          {{ signedIn.email }}{{ signedIn.department ? ' · ' + signedIn.department : '' }}
+        </span>
+      </div>
+      <button type="button" class="session__signout" (click)="signOut()">Sign out</button>
+    </div>
+  } @else {
+    <span class="phase">Secure area</span>
+  }
 </header>
 
-<main class="app-main">
-  <section class="card" aria-labelledby="status-heading">
-    <h2 id="status-heading">System status</h2>
-
-    @if (readiness(); as status) {
-      <p class="status status--ok">API reachable — {{ status.status }}</p>
-      <ul class="checks">
-        @for (entry of status.checks | keyvalue; track entry.key) {
-          <li>
-            <span>{{ entry.key }}</span>
-            <strong>{{ entry.value }}</strong>
-          </li>
-        }
-      </ul>
-    } @else if (apiUnreachable()) {
-      <p class="status status--down">
-        API not reachable. Start the backend on <code>127.0.0.1:8000</code>.
-      </p>
-    } @else {
-      <p class="status">Checking…</p>
-    }
-  </section>
-
-  <section class="card" aria-labelledby="scope-heading">
-    <h2 id="scope-heading">What exists in this phase</h2>
-    <ul class="plain-list">
-      <li>Repository layout, environment separation and CI pipeline</li>
-      <li>PostgreSQL and Redis running locally in containers</li>
-      <li>Health endpoints, structured logs and generated API documentation</li>
-    </ul>
-    <p class="muted">
-      Business modules stay switched off until the discovery decisions are signed. See
-      <code>docs/13-decision-register.md</code>.
-    </p>
-  </section>
+<main class="app-content">
+  <router-outlet />
 </main>
 
 <footer class="app-footer">
-  <p>Phase 1 build · no business logic enabled</p>
+  <p>Phase 2 · identity and authentication</p>
 </footer>
-
-<router-outlet />

@@ -1,0 +1,49 @@
+<section class="dashboard" aria-labelledby="dashboard-heading">
+  <div class="dashboard__intro">
+    <h1 id="dashboard-heading">Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}</h1>
+    <p>You are signed in to the TMD internal platform.</p>
+  </div>
+
+  @if (auth.user()?.must_change_password) {
+    <p class="notice" role="status">
+      Your password was set by an administrator. Ask them for a reset link before you start work.
+    </p>
+  }
+
+  <div class="dashboard__grid">
+    <section class="card" aria-labelledby="status-heading">
+      <h2 id="status-heading">System status</h2>
+
+      @if (readiness(); as status) {
+        <p class="status status--ok">API reachable — {{ status.status }}</p>
+        <ul class="checks">
+          @for (entry of status.checks | keyvalue; track entry.key) {
+            <li>
+              <span>{{ entry.key }}</span>
+              <strong>{{ entry.value }}</strong>
+            </li>
+          }
+        </ul>
+      } @else if (apiUnreachable()) {
+        <p class="status status--down">
+          API not reachable. Start the backend on <code>127.0.0.1:8000</code>.
+        </p>
+      } @else {
+        <p class="status">Checking…</p>
+      }
+    </section>
+
+    <section class="card" aria-labelledby="scope-heading">
+      <h2 id="scope-heading">What exists in this phase</h2>
+      <ul class="plain-list">
+        <li>Sign-in, sign-out and session expiry handling</li>
+        <li>Lockout after repeated failed attempts</li>
+        <li>Administrator-issued password resets</li>
+      </ul>
+      <p class="muted">
+        Business modules stay switched off until the discovery decisions are signed. See
+        <code>docs/13-decision-register.md</code>.
+      </p>
+    </section>
+  </div>
+</section>

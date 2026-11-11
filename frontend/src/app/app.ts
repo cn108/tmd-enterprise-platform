@@ -1,26 +1,23 @@
-import { KeyValuePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 
-import { HealthService, Readiness } from './core/health.service';
+import { AuthService } from './core/auth.service';
 
 @Component({
-  imports: [RouterOutlet, KeyValuePipe],
+  imports: [RouterOutlet],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',
 })
 export class App {
-  private readonly health = inject(HealthService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
-  protected readonly title = signal('TMD Platform');
-  protected readonly readiness = signal<Readiness | null>(null);
-  protected readonly apiUnreachable = signal(false);
+  protected readonly user = this.auth.user;
 
-  constructor() {
-    this.health.check().subscribe({
-      next: (status) => this.readiness.set(status),
-      error: () => this.apiUnreachable.set(true),
+  protected signOut(): void {
+    this.auth.logout().subscribe(() => {
+      void this.router.navigateByUrl('/login');
     });
   }
 }

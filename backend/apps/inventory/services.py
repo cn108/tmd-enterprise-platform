@@ -18,7 +18,9 @@ from django.db import transaction
 from django.db.models import F, Sum
 from django.utils import timezone
 
+from apps.accounting.services import enqueue_financial_event
 from apps.catalogue.models import CatalogueItem
+from apps.core.models import create_audit_event
 from apps.inventory.models import (
     ZERO,
     InventoryPolicy,
@@ -92,9 +94,20 @@ def valuation_method() -> str:
     return method
 
 
+def valuation_method_for(item: CatalogueItem) -> str:
+    """Traceable items are costed by specific identification; others by policy."""
+
+    method = valuation_method()
+    if method == InventoryPolicy.Method.FIFO:
+        return method
+    if item.tracks_batches or item.tracks_serials:
+        return InventoryPolicy.Method.SPECIFIC_IDENTIFICATION
+    return method
+
+
 def set_policy(method: str, actor, note: str = "") -> InventoryPolicy:
     if method not in InventoryPolicy.Method.values:
-        raise Conflict("Choose FIFO or weighted average.")
+        raise Conflict("Choose FIFO, weighted average or specific identification.")
     record = policy()
     if (
         record.valuation_method
@@ -164,10 +177,16 @@ def _assert_available(item, warehouse, quantity: Decimal) -> None:
         )
 
 
-def _consume_fifo(item, warehouse, quantity: Decimal):
+def _consume_fifo(item, warehouse, quantity: Decimal, *, batch=None, serial=None):
     layers = list(
         StockLayer.objects.select_for_update()
-        .filter(item=item, warehouse=warehouse, remaining_quantity__gt=0)
+        .filter(
+            item=item,
+            warehouse=warehouse,
+            remaining_quantity__gt=0,
+            **({"movement__batch": batch} if batch is not None else {}),
+            **({"movement__serial": serial} if serial is not None else {}),
+        )
         .order_by("id")
     )
     need = quantity
@@ -209,9 +228,17 @@ def _consume_weighted_average(item, warehouse, quantity: Decimal):
     return unit_cost, total, []
 
 
-def _consume(item, warehouse, quantity: Decimal):
-    if valuation_method() == InventoryPolicy.Method.FIFO:
-        return _consume_fifo(item, warehouse, quantity)
+def _consume(item, warehouse, quantity: Decimal, *, batch=None, serial=None):
+    method = valuation_method_for(item)
+    if method == InventoryPolicy.Method.FIFO:
+        return _consume_fifo(item, warehouse, quantity, batch=batch, serial=serial)
+    if method == InventoryPolicy.Method.SPECIFIC_IDENTIFICATION:
+        if batch is None and serial is None:
+            raise Conflict(
+                "A traceable item must be issued with its batch or serial number "
+                "so its cost can be identified."
+            )
+        return _consume_fifo(item, warehouse, quantity, batch=batch, serial=serial)
     return _consume_weighted_average(item, warehouse, quantity)
 
 
@@ -259,7 +286,9 @@ def _post_movement(
     elif movement_type in OUTBOUND:
         if check_available:
             _assert_available(item, warehouse, quantity)
-        unit_cost, movement_value, consumptions = _consume(item, warehouse, quantity)
+        unit_cost, movement_value, consumptions = _consume(
+            item, warehouse, quantity, batch=batch, serial=serial
+        )
         signed_quantity = -quantity
     else:  # pragma: no cover - guarded by the choices
         raise Conflict("Unknown movement type.")
@@ -310,6 +339,18 @@ def _post_movement(
                 unit_cost=layer_cost,
                 value=layer_value,
             )
+    create_audit_event(
+        actor=actor,
+        action="stock.movement",
+        entity_type="inventory.stockmovement",
+        entity_id=movement.pk,
+        after={
+            "number": movement.number,
+            "type": movement.movement_type,
+            "quantity": str(movement.quantity),
+            "value_delta": str(movement.value_delta),
+        },
+    )
     return movement
 
 
@@ -434,7 +475,7 @@ def post_goods_receipt(receipt) -> None:
         line = entry["line"]
         if StockMovement.objects.filter(goods_receipt_line=line).exists():
             continue
-        _post_movement(
+        movement = _post_movement(
             StockMovement.Type.RECEIPT,
             entry["item"],
             entry["destination"].warehouse,
@@ -444,6 +485,16 @@ def post_goods_receipt(receipt) -> None:
             movement_date=receipt.received_at,
             actor=receipt.received_by,
             goods_receipt_line=line,
+        )
+        enqueue_financial_event(
+            code="E-02",
+            source_type="procurement.goodsreceiptline",
+            source_id=line.pk,
+            event_date=receipt.received_at,
+            amount=abs(movement.value_delta),
+            description=f"Goods received before invoice: {receipt.number}",
+            party=receipt.order.supplier,
+            payload={"receipt": receipt.number, "order": receipt.order.number},
         )
 
 
@@ -627,6 +678,17 @@ def post_issue(
         line.unit_cost = movement.unit_cost
         line.value = abs(movement.value_delta)
         line.save(update_fields=["unit_cost", "value", "updated_at"])
+        if project is not None:
+            enqueue_financial_event(
+                code="E-04",
+                source_type="inventory.stockissueline",
+                source_id=line.pk,
+                event_date=issue.issued_at.date(),
+                amount=abs(movement.value_delta),
+                description=f"Stock issued to project: {issue.number}",
+                project=project,
+                cost_centre=cost_centre,
+            )
         if reservation is not None:
             reservation.quantity_fulfilled += quantity
             if reservation.quantity_remaining <= 0:
@@ -736,6 +798,16 @@ def post_adjustment(*, reason: str, lines, actor) -> StockAdjustment:
         line.unit_cost = movement.unit_cost
         line.value = abs(movement.value_delta)
         line.save(update_fields=["unit_cost", "value", "updated_at"])
+        enqueue_financial_event(
+            code="E-16",
+            source_type="inventory.stockadjustmentline",
+            source_id=line.pk,
+            event_date=adjustment.adjusted_at.date(),
+            amount=abs(movement.value_delta),
+            description=f"Stock adjustment: {adjustment.number}",
+            direction=("gain" if direction == StockAdjustmentLine.Direction.INCREASE else "loss"),
+            payload={"reason": adjustment.reason},
+        )
     return adjustment
 
 
@@ -782,6 +854,16 @@ def post_damage(*, reason: str, lines, actor) -> StockDamage:
         line.unit_cost = movement.unit_cost
         line.value = abs(movement.value_delta)
         line.save(update_fields=["unit_cost", "value", "updated_at"])
+        enqueue_financial_event(
+            code="E-16",
+            source_type="inventory.stockdamageline",
+            source_id=line.pk,
+            event_date=document.recorded_at.date(),
+            amount=abs(movement.value_delta),
+            description=f"Damaged stock written off: {document.number}",
+            direction="loss",
+            payload={"reason": document.reason},
+        )
     return document
 
 
@@ -868,6 +950,17 @@ def post_count(count: StockCount, actor) -> StockCount:
                 count_line=line,
             )
             line.unit_cost = movement.unit_cost
+        if variance:
+            enqueue_financial_event(
+                code="E-16",
+                source_type="inventory.stockcountline",
+                source_id=line.pk,
+                event_date=timezone.localdate(),
+                amount=abs(movement.value_delta),
+                description=f"Stock count variance: {count.number}",
+                direction="gain" if variance > 0 else "loss",
+                payload={"variance": str(variance)},
+            )
         line.save(
             update_fields=[
                 "system_quantity",

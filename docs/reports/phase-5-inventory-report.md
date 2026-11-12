@@ -110,6 +110,12 @@ Phase 6 general ledger is the natural consumer of these movements but is hard-bl
 
 ---
 
+## Addendum — 11 November 2026 (session 2)
+
+Every ledger document now has a portal screen: direct receipts, transfers with dispatch/receive/cancel, issues, returns, adjustments, damaged-stock write-offs, stock counts with posting, reservations with release, reorder levels and alerts, balances, movements, and a valuation report. The earlier "movement screens outstanding" gap is closed.
+
+Still outstanding: an approved valuation method (D-06/Q-18) without which issue and valuation refuse, damaged/quarantine/in-transit buckets (Q-19), supplier returns, and automatic accounting postings from stock events. The module remains **PARTIAL**.
+
 ## Rules applied to this report
 
 - No financial feature is reported as production-ready; none was built.

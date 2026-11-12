@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,6 +15,9 @@ from apps.accounting.models import (
     Account,
     AccountingPeriod,
     AccountingSettings,
+    AccountRole,
+    AccountRoleMapping,
+    FinancialEvent,
     FiscalYear,
     JournalEntry,
     OpeningBalance,
@@ -21,7 +26,10 @@ from apps.accounting.models import (
 from apps.accounting.serializers import (
     AccountingPeriodSerializer,
     AccountingSettingsSerializer,
+    AccountRoleMappingSerializer,
+    AccountRoleSerializer,
     AccountSerializer,
+    FinancialEventSerializer,
     FiscalYearSerializer,
     JournalCreateSerializer,
     JournalReverseSerializer,
@@ -40,12 +48,17 @@ from apps.accounting.services import (
     close_period,
     configure_retained_earnings,
     create_journal,
+    create_monthly_periods,
     financial_statements,
     general_ledger,
     post_event,
+    post_financial_event,
     post_journal,
     post_opening_balance,
+    process_pending_financial_events,
+    reopen_period,
     reverse_journal,
+    review_posting,
     submit_journal,
     trial_balance,
 )
@@ -61,10 +74,21 @@ CREATE_JOURNAL = "accounting.create_journal"
 APPROVE_JOURNAL = "accounting.approve_journal"
 POST_JOURNAL = "accounting.post_journal"
 REVERSE_JOURNAL = "accounting.reverse_journal"
+REOPEN_PERIOD = "accounting.reopen_period"
 MANAGE_OPENING = "accounting.manage_openingbalance"
 MANAGE_RULES = "accounting.manage_postingrules"
 APPROVE_RULE = "accounting.approve_postingrule"
 CONFIGURE = "accounting.configure_accounting"
+
+
+class AccountingReadMixin:
+    """Reading the ledger is a financial permission, not a login right."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method in SAFE_METHODS:
+            model = self.queryset.model
+            _require(request, f"{model._meta.app_label}.view_{model._meta.model_name}")
 
 
 def _require(request, permission: str) -> None:
@@ -103,7 +127,7 @@ def _date_param(raw: str, name: str) -> date:
         raise ValueError(f"{name} must be an ISO date (YYYY-MM-DD).") from exc
 
 
-class AccountViewSet(NoDeleteViewSet):
+class AccountViewSet(AccountingReadMixin, NoDeleteViewSet):
     queryset = Account.objects.select_related("parent", "approved_by").all()
     serializer_class = AccountSerializer
     search_fields = ("code", "name")
@@ -126,7 +150,60 @@ class AccountViewSet(NoDeleteViewSet):
         return Response(AccountSerializer(account).data)
 
 
-class FiscalYearViewSet(NoDeleteViewSet):
+class AccountRoleViewSet(AccountingReadMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = AccountRole.objects.all()
+    serializer_class = AccountRoleSerializer
+    search_fields = ("code", "name")
+
+
+class AccountRoleMappingViewSet(AccountingReadMixin, viewsets.ModelViewSet):
+    queryset = AccountRoleMapping.objects.select_related("role", "account", "approved_by").all()
+    serializer_class = AccountRoleMappingSerializer
+    search_fields = ("role__code", "account__code")
+
+    def create(self, request, *args, **kwargs):
+        _require(request, MANAGE_ACCOUNTS)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _require(request, MANAGE_ACCOUNTS)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        return error_response(
+            "delete_not_permitted",
+            "Mappings are deactivated, not deleted, so posting history keeps its basis.",
+            status.HTTP_409_CONFLICT,
+        )
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        _require(request, APPROVE_ACCOUNT)
+        mapping = self.get_object()
+        if mapping.approved_at is not None:
+            return error_response(
+                "invalid_state", "This mapping is already approved.", status.HTTP_409_CONFLICT
+            )
+        if mapping.created_by_id == request.user.pk:
+            return error_response(
+                "segregation_of_duties",
+                "The person who created the mapping cannot approve it.",
+                status.HTTP_409_CONFLICT,
+            )
+        if not mapping.account.is_approved or not mapping.account.is_active:
+            return error_response(
+                "invalid_state",
+                "Approve the mapped account and keep it active before approving the mapping.",
+                status.HTTP_409_CONFLICT,
+            )
+        mapping.approved_by = request.user
+        mapping.approved_at = timezone.now()
+        mapping.updated_by = request.user
+        mapping.save(update_fields=["approved_by", "approved_at", "updated_by", "updated_at"])
+        return Response(AccountRoleMappingSerializer(mapping).data)
+
+
+class FiscalYearViewSet(AccountingReadMixin, NoDeleteViewSet):
     queryset = FiscalYear.objects.all()
     serializer_class = FiscalYearSerializer
     search_fields = ("code", "name")
@@ -139,11 +216,24 @@ class FiscalYearViewSet(NoDeleteViewSet):
         _require(request, MANAGE_FISCAL_YEARS)
         return super().update(request, *args, **kwargs)
 
+    @action(detail=True, methods=["post"], url_path="create-periods")
+    def create_periods(self, request, pk=None):
+        _require(request, MANAGE_PERIODS)
+        periods = create_monthly_periods(self.get_object(), request.user)
+        return Response(AccountingPeriodSerializer(periods, many=True).data)
 
-class AccountingPeriodViewSet(NoDeleteViewSet):
+
+class AccountingPeriodViewSet(AccountingReadMixin, NoDeleteViewSet):
     queryset = AccountingPeriod.objects.select_related("fiscal_year", "closed_by").all()
     serializer_class = AccountingPeriodSerializer
     search_fields = ("name", "fiscal_year__code")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         _require(request, MANAGE_PERIODS)
@@ -169,8 +259,19 @@ class AccountingPeriodViewSet(NoDeleteViewSet):
             return _conflict(exc)
         return Response(AccountingPeriodSerializer(period).data)
 
+    @action(detail=True, methods=["post"], url_path="reopen")
+    def reopen_period(self, request, pk=None):
+        _require(request, REOPEN_PERIOD)
+        reason = (request.data.get("reason") or "").strip()
+        try:
+            period = reopen_period(self.get_object(), request.user, reason)
+        except Conflict as exc:
+            return _conflict(exc)
+        return Response(AccountingPeriodSerializer(period).data)
+
 
 class JournalViewSet(
+    AccountingReadMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -185,6 +286,15 @@ class JournalViewSet(
         "reversal_of",
         "posting_rule",
     ).prefetch_related("lines")
+    search_fields = ("number", "description", "reason")
+    ordering_fields = ("number", "status", "journal_date", "created_at", "posted_at")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = (self.request.query_params.get("status") or "").strip()
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
     def get_serializer_class(self):
         return JournalCreateSerializer if self.action == "create" else JournalSerializer
@@ -245,6 +355,7 @@ class JournalViewSet(
 
 
 class OpeningBalanceViewSet(
+    AccountingReadMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -277,12 +388,15 @@ class OpeningBalanceViewSet(
 
 
 class PostingRuleViewSet(
+    AccountingReadMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
     queryset = PostingRule.objects.select_related("approved_by").prefetch_related("lines")
+    search_fields = ("code", "name", "description")
+    ordering_fields = ("code", "name", "created_at", "approved_at")
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -319,6 +433,38 @@ class PostingRuleViewSet(
         return Response(JournalSerializer(journal).data, status=status.HTTP_201_CREATED)
 
 
+class FinancialEventViewSet(AccountingReadMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = FinancialEvent.objects.select_related(
+        "journal", "project", "cost_centre", "party", "posted_by"
+    ).all()
+    serializer_class = FinancialEventSerializer
+    ordering_fields = ("event_date", "code", "status", "created_at")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        code = (self.request.query_params.get("code") or "").strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if code:
+            queryset = queryset.filter(code=code)
+        return queryset
+
+    @action(detail=False, methods=["post"], url_path="process")
+    def process(self, request):
+        _require(request, POST_JOURNAL)
+        return Response(process_pending_financial_events(request.user))
+
+    @action(detail=True, methods=["post"])
+    def post(self, request, pk=None):
+        _require(request, POST_JOURNAL)
+        try:
+            event = post_financial_event(self.get_object(), request.user)
+        except Conflict as exc:
+            return _conflict(exc)
+        return Response(FinancialEventSerializer(event).data)
+
+
 class AccountingSettingsView(APIView):
     def get(self, request):
         return Response(AccountingSettingsSerializer(AccountingSettings.load()).data)
@@ -337,9 +483,19 @@ class AccountingSettingsView(APIView):
             return _conflict(exc)
         return Response(AccountingSettingsSerializer(settings).data)
 
+    def post(self, request):
+        _require(request, CONFIGURE)
+        notes = (request.data.get("notes") or "").strip()
+        try:
+            settings = review_posting(request.user, notes)
+        except Conflict as exc:
+            return _conflict(exc)
+        return Response(AccountingSettingsSerializer(settings).data)
+
 
 class TrialBalanceView(APIView):
     def get(self, request):
+        _require(request, "accounting.view_account")
         period_id = request.query_params.get("period")
         as_of_raw = request.query_params.get("as_of")
         if not period_id and not as_of_raw:
@@ -361,6 +517,7 @@ class TrialBalanceView(APIView):
 
 class FinancialStatementsView(APIView):
     def get(self, request):
+        _require(request, "accounting.view_account")
         start_raw = request.query_params.get("start")
         end_raw = request.query_params.get("end")
         if not start_raw or not end_raw:
@@ -379,6 +536,7 @@ class FinancialStatementsView(APIView):
 
 class GeneralLedgerView(APIView):
     def get(self, request):
+        _require(request, "accounting.view_account")
         account_id = request.query_params.get("account")
         if not account_id:
             return _bad_request("Supply an account.")

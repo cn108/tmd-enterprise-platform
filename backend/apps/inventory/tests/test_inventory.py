@@ -7,9 +7,10 @@ from uuid import uuid4
 
 import pytest
 from django.contrib.auth.models import Permission
+from django.db import DatabaseError, connection, transaction
 from rest_framework.test import APIClient
 
-from apps.catalogue.models import CatalogueItem
+from apps.catalogue.models import CatalogueItem, SerialNumber
 from apps.identity.models import User
 from apps.inventory.models import InventoryPolicy, ReorderLevel, StockMovement
 from apps.parties.models import Party
@@ -136,7 +137,7 @@ class TestReceiptsAndBalances:
         assert balance["reserved"] == "0.0000"
         assert balance["available"] == "10.0000"
         assert balance["value"] == "1000.00"
-        movements = auth_client.get("/api/v1/stock-movements/").json()
+        movements = auth_client.get("/api/v1/stock-movements/").json()["results"]
         assert movements[0]["movement_type"] == "receipt"
         assert movements[0]["quantity"] == "10.0000"
         assert movements[0]["value_delta"] == "1000.00"
@@ -247,6 +248,66 @@ class TestIssues:
         assert body["lines"][0]["value"] == "400.00"
         assert row_for(auth_client, warehouse, item)["on_hand"] == "6.0000"
         assert StockMovement.objects.get(movement_type="project_issue").project_id == project.pk
+
+    def test_traceable_item_uses_specific_identification_over_weighted_average(self):
+        configure("weighted_average")
+        warehouse = make_warehouse()
+        item = make_item("SERIAL-ITEM")
+        item.tracks_serials = True
+        item.save(update_fields=["tracks_serials"])
+        first = SerialNumber.objects.create(item=item, serial="SN-1")
+        second = SerialNumber.objects.create(item=item, serial="SN-2")
+        receiver = grant("receive_stock")
+        for serial, cost in ((first, "100"), (second, "200")):
+            response = receiver.post(
+                "/api/v1/stock-receipts/",
+                {
+                    "warehouse": warehouse.pk,
+                    "received_at": "2026-12-01",
+                    "lines": [
+                        {
+                            "item": item.pk,
+                            "quantity": "1",
+                            "unit_cost": cost,
+                            "serial": serial.pk,
+                        }
+                    ],
+                },
+                format="json",
+            )
+            assert response.status_code == 201, response.content
+
+        response = grant("issue_stock").post(
+            "/api/v1/stock-issues/",
+            {
+                "lines": [
+                    {
+                        "item": item.pk,
+                        "warehouse": warehouse.pk,
+                        "quantity": "1",
+                        "serial": first.pk,
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201, response.content
+        assert response.json()["lines"][0]["value"] == "100.00"
+
+    def test_stock_movements_are_immutable_at_the_database(self):
+        configure("fifo")
+        warehouse = make_warehouse()
+        receive(grant("receive_stock"), warehouse, make_item(), "1", "10")
+        movement = StockMovement.objects.get()
+
+        with pytest.raises(DatabaseError):
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE inventory_stockmovement SET quantity = 99 WHERE id = %s",
+                        [movement.pk],
+                    )
 
     def test_issue_consumes_a_reservation(self, auth_client):
         configure("fifo")
@@ -589,12 +650,12 @@ class TestReorderAlerts:
 
         alerts = auth_client.get("/api/v1/reorder-alerts/").json()
 
-        assert len(alerts) == 1
-        assert alerts[0]["shortfall"] == "0.0000"
+        assert alerts["count"] == 1
+        assert alerts["rows"][0]["shortfall"] == "0.0000"
 
         ReorderLevel.objects.filter(pk=level.pk).update(minimum_quantity=Decimal("4"))
 
-        assert auth_client.get("/api/v1/reorder-alerts/").json() == []
+        assert auth_client.get("/api/v1/reorder-alerts/").json()["rows"] == []
 
     def test_reorder_level_is_not_deleted(self, auth_client):
         level = ReorderLevel.objects.create(

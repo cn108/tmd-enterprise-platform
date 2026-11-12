@@ -1,0 +1,6 @@
+Date,Description,Reference,Debit,Credit,Balance
+2026-10-01,Customer receipt INV-1001,RCPT-1001,,150000.00,650000.00
+2026-10-02,Supplier payment INV-2001,PAY-2001,90000.00,,560000.00
+2026-10-03,Bank charge,CHG-OCT,2500.00,,557500.00
+2026-10-04,Customer receipt INV-1001,RCPT-1001,,150000.00,707500.00
+2026-10-05,Interest earned,INT-OCT,,1200.00,708700.00

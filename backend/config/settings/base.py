@@ -52,7 +52,12 @@ LOCAL_APPS = [
     "apps.procurement",
     "apps.accounting",
     "apps.inventory",
+    "apps.invoicing",
     "apps.documents",
+    "apps.banking",
+    "apps.services",
+    "apps.leasing",
+    "apps.reporting",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -196,6 +201,14 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "shared.exceptions.error_envelope_handler",
+    # Consistent list contract (spec 4.4): paginated, searchable and orderable
+    # unless a view opts out. Report APIViews return their own bounded rows.
+    "DEFAULT_PAGINATION_CLASS": "shared.pagination.StandardPagination",
+    "PAGE_SIZE": 25,
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DEFAULT_THROTTLE_RATES": {"password_reset": env_str("PASSWORD_RESET_RATE", "20/hour")},
 }

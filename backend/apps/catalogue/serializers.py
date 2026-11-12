@@ -112,11 +112,14 @@ class CatalogueItemSerializer(CodedSerializerMixin, serializers.ModelSerializer)
 
 
 class ItemPriceSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+
     class Meta:
         model = ItemPrice
         fields = [
             "id",
             "item",
+            "item_code",
             "currency",
             "amount",
             "effective_from",
@@ -156,11 +159,14 @@ class ItemPriceSerializer(serializers.ModelSerializer):
 
 
 class TechnicalSpecificationSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+
     class Meta:
         model = TechnicalSpecification
         fields = [
             "id",
             "item",
+            "item_code",
             "name",
             "value",
             "unit",
@@ -172,11 +178,14 @@ class TechnicalSpecificationSerializer(serializers.ModelSerializer):
 
 
 class ItemBatchSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+
     class Meta:
         model = ItemBatch
         fields = [
             "id",
             "item",
+            "item_code",
             "batch_number",
             "manufactured_on",
             "expires_on",
@@ -195,11 +204,14 @@ class ItemBatchSerializer(serializers.ModelSerializer):
 
 
 class SerialNumberSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+
     class Meta:
         model = SerialNumber
         fields = [
             "id",
             "item",
+            "item_code",
             "serial",
             "batch",
             "notes",
@@ -218,11 +230,14 @@ class SerialNumberSerializer(serializers.ModelSerializer):
 
 
 class CertificateSerializer(serializers.ModelSerializer):
+    item_code = serializers.SerializerMethodField()
+
     class Meta:
         model = Certificate
         fields = [
             "id",
             "item",
+            "item_code",
             "batch",
             "serial",
             "document",
@@ -236,6 +251,9 @@ class CertificateSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+
+    def get_item_code(self, obj: Certificate) -> str | None:
+        return obj.item.code if obj.item_id else None
 
     def validate(self, attrs):
         item = attrs.get("item", getattr(self.instance, "item", None))

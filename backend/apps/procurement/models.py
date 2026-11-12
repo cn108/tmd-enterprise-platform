@@ -270,6 +270,7 @@ class PurchaseOrder(UserStampedModel):
     )
     destination = models.ForeignKey(Destination, on_delete=models.PROTECT, related_name="orders")
     currency = models.CharField(max_length=3, default="NGN")
+    revision = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     submitted_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey(

@@ -578,3 +578,114 @@ class TestReceiving:
 
         again = client.post(f"/api/v1/purchase-orders/{order.pk}/receive/", payload, format="json")
         assert again.status_code == 409
+
+
+class TestOrderAmendment:
+    def _draft_order(self, auth_client):
+        destination = Destination.objects.create(kind="warehouse", warehouse=make_warehouse())
+        approved = make_approved_request(auth_client, destination.pk, make_item())
+        response = auth_client.post(
+            "/api/v1/purchase-orders/",
+            {
+                "supplier": make_supplier().pk,
+                "request": approved["id"],
+                "destination": destination.pk,
+                "lines": [
+                    {"item": make_item("ITEM-AM1").pk, "quantity": "2", "unit_price": "10.000000"}
+                ],
+            },
+            format="json",
+        )
+        assert response.status_code == 201, response.content
+        return response.json(), approved
+
+    def test_draft_lines_are_replaced_and_revision_rises(self, auth_client):
+        order, _ = self._draft_order(auth_client)
+
+        response = auth_client.patch(
+            f"/api/v1/purchase-orders/{order['id']}/",
+            {
+                "lines": [
+                    {"item": make_item("ITEM-P2").pk, "quantity": "5", "unit_price": "12.500000"}
+                ]
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200, response.content
+        assert response.json()["revision"] == 2
+        assert response.json()["total_value"] == "62.50"
+        assert len(response.json()["lines"]) == 1
+
+    def test_submitted_order_cannot_be_amended(self, auth_client):
+        order, _ = self._draft_order(auth_client)
+        auth_client.post(f"/api/v1/purchase-orders/{order['id']}/submit/")
+
+        response = auth_client.patch(
+            f"/api/v1/purchase-orders/{order['id']}/",
+            {
+                "lines": [
+                    {
+                        "item": make_item("ITEM-P3").pk,
+                        "quantity": "1",
+                        "unit_price": "1.000000",
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert PurchaseOrder.objects.get(pk=order["id"]).revision == 1
+
+
+class TestProvisionalApprovalThreshold:
+    def test_order_at_five_million_needs_two_distinct_approvers(self, auth_client):
+        from django.core.management import call_command
+
+        call_command("apply_provisional_governance")
+        destination = Destination.objects.create(kind="warehouse", warehouse=make_warehouse())
+        approved = make_approved_request(auth_client, destination.pk, make_item())
+        order = auth_client.post(
+            "/api/v1/purchase-orders/",
+            {
+                "supplier": make_supplier().pk,
+                "request": approved["id"],
+                "destination": destination.pk,
+                "lines": [
+                    {
+                        "item": make_item("ITEM-HIGH").pk,
+                        "quantity": "1",
+                        "unit_price": "5000000.000000",
+                    }
+                ],
+            },
+            format="json",
+        ).json()
+        auth_client.post(f"/api/v1/purchase-orders/{order['id']}/submit/")
+        first = grant(
+            User.objects.create_user(email="first-approver@example.com", full_name="First"),
+            "approve_purchaseorder",
+        )
+        second = grant(
+            User.objects.create_user(email="second-approver@example.com", full_name="Second"),
+            "approve_purchaseorder",
+        )
+        first_client = APIClient()
+        first_client.force_authenticate(user=first)
+        second_client = APIClient()
+        second_client.force_authenticate(user=second)
+
+        one = first_client.post(f"/api/v1/purchase-orders/{order['id']}/approve/")
+        assert one.status_code == 200, one.content
+        assert one.json()["status"] == "submitted"
+        assert one.json()["approvals_required"] == 2
+        assert one.json()["approvals_recorded"] == 1
+
+        again = first_client.post(f"/api/v1/purchase-orders/{order['id']}/approve/")
+        assert again.status_code == 409
+
+        two = second_client.post(f"/api/v1/purchase-orders/{order['id']}/approve/")
+        assert two.status_code == 200, two.content
+        assert two.json()["status"] == "approved"
+        assert two.json()["approvals_recorded"] == 2

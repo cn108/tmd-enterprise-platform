@@ -106,6 +106,16 @@ Phase 7 (accounts payable) is the natural consumer of the engine but is blocked 
 
 ---
 
+## Addendum — 11 November 2026 (session 2)
+
+The accounting surface is now interactive: chart maintenance with separate approval, fiscal years, periods and closing, journals through submit/approve/post/reverse, opening balances, posting-rule authoring and approval, and a report workspace for trial balance, general ledger, income statement and balance sheet. A PostgreSQL trigger now makes posted journals and their lines immutable even to raw SQL; the suite proves the refusal with direct ORM writes.
+
+Still outstanding: the accountant-approved chart and posting matrix (D-05/Q-22), W4 role assignment, multi-currency, period reopening, automatic postings from source modules, and idempotency keys. Production posting remains **BLOCKED** until those are supplied and signed. The module remains **PARTIAL**.
+
+## Addendum — 12 November 2026 (session 3)
+
+The provisional decisions are now configured: 19 account roles, role-based posting-rule lines, effective-dated approved mappings, monthly period generation, controlled reopen and the E-02/E-04/E-16 outbox. **No account or mapping has been supplied**, so role-based rules cannot be approved and automatic posting remains blocked. Opening balances and the Finance Controller posting review are also outstanding. The full status is in [`configuration-report-2026-11-12.md`](configuration-report-2026-11-12.md).
+
 ## Rules applied to this report
 
 - No financial feature is reported as production-ready; none was built.

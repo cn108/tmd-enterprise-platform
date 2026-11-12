@@ -1,0 +1,212 @@
+<section class="module" aria-labelledby="reports-heading">
+  <header class="module__header no-print">
+    <div>
+      <p class="eyebrow">Management information</p>
+      <h1 id="reports-heading">Reporting workspace</h1>
+      <p class="module__intro">
+        Formal statements are calculated by the server from posted journal lines. Operational
+        reports state their document basis; commitments are never presented as expenses.
+      </p>
+    </div>
+    <div class="header-actions">
+      @if (canExport()) {
+        <button mat-stroked-button type="button" (click)="exportReport('csv')">
+          Export CSV (Excel)
+        </button>
+        <button mat-stroked-button type="button" (click)="exportReport('pdf')">Export PDF</button>
+      }
+      <button mat-button type="button" (click)="print()">Print</button>
+      <a href="/api/v1/docs/" target="_blank" rel="noreferrer">API reference</a>
+    </div>
+  </header>
+
+  <nav class="tabs no-print" aria-label="Report type">
+    @for (item of visibleTabs(); track item.id) {
+      <button
+        type="button"
+        [class.is-active]="tab() === item.id"
+        [attr.aria-current]="tab() === item.id ? 'page' : null"
+        (click)="selectTab(item.id)"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </nav>
+
+  @if (!visibleTabs().length) {
+    <p class="warnings" role="status">
+      Your account does not have reporting access. Ask an administrator for
+      <code>reporting.view_reporting</code>; financial statements additionally require
+      <code>reporting.view_financialreporting</code>.
+    </p>
+  }
+
+  <section class="context">
+    <div>
+      <h2>{{ currentTab().label }}</h2>
+      <p>{{ currentTab().description }}</p>
+    </div>
+    <span class="period">Reporting period: {{ asOfLabel() }} · NGN</span>
+  </section>
+
+  <section class="panel no-print">
+    <div class="parameters">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>From</mat-label>
+        <input matInput type="date" [(ngModel)]="start" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>To</mat-label>
+        <input matInput type="date" [(ngModel)]="end" />
+      </mat-form-field>
+
+      @if (tab() === 'ledger') {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+          <mat-label>General ledger account (optional)</mat-label>
+          <mat-select [(ngModel)]="accountId">
+            <mat-option [value]="null">Trial balance and journal register only</mat-option>
+            @for (account of accounts(); track account['id']) {
+              <mat-option [value]="account['id']">
+                {{ account['code'] }} — {{ account['name'] }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Ledger from</mat-label>
+          <input matInput type="date" [(ngModel)]="glStart" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Ledger to</mat-label>
+          <input matInput type="date" [(ngModel)]="glEnd" />
+        </mat-form-field>
+      }
+
+      <button mat-flat-button type="button" (click)="run()" [disabled]="loading()">
+        {{ loading() ? 'Running…' : 'Run report' }}
+      </button>
+    </div>
+
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Running report" />
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+  </section>
+
+  @if (warnings().length) {
+    <section class="warnings" aria-labelledby="warnings-heading">
+      <h2 id="warnings-heading">Data completeness warnings</h2>
+      <ul>
+        @for (warning of warnings(); track warning) {
+          <li>{{ warning }}</li>
+        }
+      </ul>
+      <p>
+        Figures affected by these warnings are not represented as complete. Missing accounting
+        mapping is not estimated.
+      </p>
+    </section>
+  }
+
+  @if (metrics().length) {
+    <section class="metrics" aria-label="Summary metrics">
+      @for (metric of metrics(); track metric.label) {
+        <article class="metric" [class]="'metric metric--' + (metric.tone ?? 'actual')">
+          <p class="metric__label">{{ metric.label }}</p>
+          <p class="metric__value">{{ metric.value }}</p>
+          <p class="metric__note">{{ metric.note }}</p>
+          @if (metric.link) {
+            <a [routerLink]="metric.link">Open supporting module →</a>
+          }
+        </article>
+      }
+    </section>
+  }
+
+  @if (bars().length) {
+    <section class="chart panel" aria-labelledby="chart-heading">
+      <div class="panel__head">
+        <div>
+          <h2 id="chart-heading">Period comparison</h2>
+          <p class="chart__period">{{ asOfLabel() }} · values in NGN or record counts</p>
+        </div>
+        <span class="chart__hint">Select a bar for its exact value</span>
+      </div>
+      <div class="bars" role="group" aria-label="Interactive comparison chart">
+        @for (bar of bars(); track bar.label) {
+          <button
+            type="button"
+            class="bar"
+            [attr.title]="bar.label + ': ' + bar.display"
+            [attr.aria-label]="bar.label + ': ' + bar.display"
+            (click)="selectBar(bar)"
+          >
+            <span class="bar__label">{{ bar.label }}</span>
+            <span class="bar__track">
+              <span class="bar__fill" [style.width.%]="bar.percent"></span>
+            </span>
+            <span class="bar__value">{{ bar.display }}</span>
+          </button>
+        }
+      </div>
+      @if (barDetail(); as detail) {
+        <p class="chart__detail" role="status">{{ detail }}</p>
+      }
+    </section>
+  }
+
+  @if (!loading() && !error() && !metrics().length && !sections().length) {
+    <p class="empty">No report rows for this selection.</p>
+  }
+
+  @for (section of sections(); track section.title) {
+    <article class="report panel">
+      <div class="panel__head">
+        <h2>{{ section.title }}</h2>
+        <span class="count">
+          {{ section.rows.length }} row{{ section.rows.length === 1 ? '' : 's' }}
+        </span>
+      </div>
+      @if (section.note) {
+        <p class="section-note">{{ section.note }}</p>
+      }
+      @if (section.rows.length === 0) {
+        <p class="empty">No records for this selection.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <caption class="visually-hidden">{{ section.title }}</caption>
+            <thead>
+              <tr>
+                @for (column of section.columns; track column.key) {
+                  <th scope="col">{{ column.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of visibleRows(section.rows); track $index) {
+                <tr>
+                  @for (column of section.columns; track column.key) {
+                    <td>{{ cell(row, column) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (section.rows.length > 250) {
+          <p class="count">
+            Showing the first 250 rows. Narrow the date range or export the complete report.
+          </p>
+        }
+      }
+    </article>
+  }
+
+  <p class="footnote">
+    Amounts are Nigerian Naira unless a row states another currency. Dashboard values update only
+    when this report is run; refresh after posting new journals or approving source documents.
+  </p>
+</section>

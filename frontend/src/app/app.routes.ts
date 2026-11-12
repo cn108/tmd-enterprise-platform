@@ -48,5 +48,56 @@ export const routes: Routes = [
     data: { module: 'accounting' },
     loadComponent: workspace,
   },
+  {
+    path: 'invoicing',
+    title: 'Invoices and payments · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'invoicing' },
+    loadComponent: workspace,
+  },
+  {
+    path: 'banking',
+    title: 'Banking and reconciliation · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'banking' },
+    loadComponent: workspace,
+  },
+  {
+    path: 'projects',
+    title: 'Projects and costing · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'projects' },
+    loadComponent: workspace,
+  },
+  {
+    path: 'services',
+    title: 'Engineering services · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'services' },
+    loadComponent: workspace,
+  },
+  {
+    path: 'leasing',
+    title: 'Equipment leasing · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'leasing' },
+    loadComponent: workspace,
+  },
+  {
+    path: 'reports',
+    title: 'Reports · TMD Platform',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/reports.component').then((m) => m.ReportsComponent),
+  },
+  {
+    path: 'administration',
+    title: 'Administration · TMD Platform',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/administration/administration.component').then(
+        (m) => m.AdministrationComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :root {
   --tmd-navy: #102038;
   --tmd-navy-soft: #1d3a5f;
@@ -5,6 +7,23 @@
   --tmd-ink: #182234;
   --tmd-muted: #5d6b80;
   --tmd-line: #e2e7ef;
+  --tmd-danger: #a3352b;
+}
+
+html {
+  // The one Material theme for the portal. Component styles are Material's;
+  // the TMD colour variables above are used by the existing shell.
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: 'Segoe UI',
+      density: 0,
+    )
+  );
+  color-scheme: light;
 }
 
 *,
@@ -30,4 +49,5 @@ body {
     sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  color: var(--tmd-ink);
 }

@@ -16,7 +16,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from shared.models import CodedModel, UserStampedModel
+from shared.models import CodedModel, TimeStampedModel, UserStampedModel
 
 ZERO = Decimal("0")
 
@@ -77,6 +77,63 @@ class Account(CodedModel):
             ancestor = ancestor.parent
 
 
+class AccountRole(CodedModel):
+    """A stable accounting role; the accountant maps it to a real account."""
+
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = "account role"
+        verbose_name_plural = "account roles"
+
+    def __str__(self) -> str:
+        return f"{self.code} — {self.name}"
+
+
+class AccountRoleMapping(UserStampedModel):
+    """An effective-dated mapping from a role to an approved account."""
+
+    role = models.ForeignKey(AccountRole, on_delete=models.PROTECT, related_name="mappings")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="role_mappings")
+    effective_from = models.DateField()
+    effective_to = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    approved_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["role__code", "-effective_from"]
+        verbose_name = "account role mapping"
+        verbose_name_plural = "account role mappings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["role", "effective_from"], name="unique_role_mapping_start"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(effective_to__isnull=True)
+                | models.Q(effective_to__gte=models.F("effective_from")),
+                name="role_mapping_end_after_start",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.role.code} → {self.account.code}"
+
+    def clean(self) -> None:
+        if self.account_id and not self.account.is_approved:
+            raise ValidationError({"account": "The mapped account must be approved first."})
+        if self.account_id and not self.account.is_active:
+            raise ValidationError({"account": "The mapped account must be active."})
+
+
 class FiscalYear(UserStampedModel):
     """A client-supplied financial year; no year or period is seeded (D-05)."""
 
@@ -117,6 +174,15 @@ class AccountingPeriod(UserStampedModel):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    reopened_at = models.DateTimeField(null=True, blank=True)
+    reopened_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    reopen_reason = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering = ["-start_date"]
@@ -130,6 +196,7 @@ class AccountingPeriod(UserStampedModel):
         permissions = [
             ("manage_periods", "Can maintain accounting periods"),
             ("close_period", "Can close an accounting period"),
+            ("reopen_period", "Can reopen a closed accounting period"),
         ]
 
     def __str__(self) -> str:
@@ -395,6 +462,7 @@ class PostingRule(UserStampedModel):
     code = models.CharField(max_length=60, unique=True)
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
+    event_type = models.CharField(max_length=20, blank=True)
     is_active = models.BooleanField(default=True)
     approved_by = models.ForeignKey(
         "identity.User",
@@ -430,7 +498,18 @@ class PostingRuleLine(models.Model):
     rule = models.ForeignKey(PostingRule, on_delete=models.CASCADE, related_name="lines")
     line_number = models.PositiveSmallIntegerField()
     account = models.ForeignKey(
-        Account, on_delete=models.PROTECT, related_name="posting_rule_lines"
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="posting_rule_lines",
+    )
+    account_role = models.ForeignKey(
+        AccountRole,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="posting_rule_lines",
     )
     direction = models.CharField(max_length=6, choices=Direction.choices)
     amount_key = models.CharField(max_length=60)
@@ -438,11 +517,86 @@ class PostingRuleLine(models.Model):
     class Meta:
         ordering = ["rule", "line_number"]
         constraints = [
-            models.UniqueConstraint(fields=["rule", "line_number"], name="unique_rule_line_number")
+            models.UniqueConstraint(fields=["rule", "line_number"], name="unique_rule_line_number"),
+            models.CheckConstraint(
+                condition=(models.Q(account__isnull=False, account_role__isnull=True))
+                | (models.Q(account__isnull=True, account_role__isnull=False)),
+                name="posting_rule_line_has_one_target",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.rule_id}: {self.direction} {self.amount_key}"
+
+
+class FinancialEvent(TimeStampedModel):
+    """An outbox entry for a financial event awaiting rule configuration."""
+
+    class Code(models.TextChoices):
+        E02 = "E-02", "Goods received before invoice"
+        E04 = "E-04", "Stock issued to a project"
+        E16 = "E-16", "Stock adjustment, count or damage"
+        E21 = "E-21", "Opening balances"
+        E22 = "E-22", "Period reopen adjustment"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending configuration"
+        POSTED = "posted", "Posted"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    code = models.CharField(max_length=8, choices=Code.choices)
+    source_type = models.CharField(max_length=60)
+    source_id = models.PositiveBigIntegerField()
+    event_date = models.DateField()
+    amount = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
+    description = models.CharField(max_length=255, blank=True)
+    direction = models.CharField(max_length=8, blank=True)
+    project = models.ForeignKey(
+        "projects.Project", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    cost_centre = models.ForeignKey(
+        "organisation.CostCentre",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    party = models.ForeignKey(
+        "parties.Party", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    journal = models.OneToOneField(
+        JournalEntry,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="financial_event",
+    )
+    error = models.CharField(max_length=255, blank=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "financial event"
+        verbose_name_plural = "financial events"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["code", "source_type", "source_id"],
+                name="unique_financial_event_source",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} {self.source_type}:{self.source_id} ({self.status})"
 
 
 class AccountingSettings(models.Model):
@@ -455,6 +609,15 @@ class AccountingSettings(models.Model):
         on_delete=models.PROTECT,
         related_name="+",
     )
+    posting_reviewed_at = models.DateTimeField(null=True, blank=True)
+    posting_reviewed_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    posting_review_notes = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
         "identity.User",

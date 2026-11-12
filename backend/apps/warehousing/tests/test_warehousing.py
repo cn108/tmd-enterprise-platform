@@ -47,7 +47,10 @@ def test_is_active_filter_excludes_deactivated_records(auth_client):
     Warehouse.objects.create(code="WH-1", name="Main")
     Warehouse.objects.create(code="WH-2", name="Closed", is_active=False)
 
-    codes = [row["code"] for row in auth_client.get("/api/v1/warehouses/?is_active=false").json()]
+    codes = [
+        row["code"]
+        for row in auth_client.get("/api/v1/warehouses/?is_active=false").json()["results"]
+    ]
 
     assert codes == ["WH-2"]
 

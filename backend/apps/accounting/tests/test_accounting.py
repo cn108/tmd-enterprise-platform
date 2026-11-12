@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import pytest
 from django.contrib.auth.models import Permission
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -17,6 +18,7 @@ from apps.accounting.models import (
     AccountingSettings,
     FiscalYear,
     JournalEntry,
+    JournalLine,
 )
 from apps.identity.models import User
 from apps.projects.models import Project
@@ -154,7 +156,7 @@ def post_event(rule: dict, amounts: dict, *, reference: str = "EV-1") -> object:
 class TestChartOfAccounts:
     def test_no_chart_of_accounts_is_seeded(self, auth_client):
         assert Account.objects.count() == 0
-        assert auth_client.get("/api/v1/accounts/").json() == []
+        assert auth_client.get("/api/v1/accounts/").json()["results"] == []
 
     def test_account_codes_are_normalised_and_approval_requires_a_second_user(self):
         creator = granted("manage_accounts", "approve_account")
@@ -316,6 +318,26 @@ class TestJournalLifecycle:
         )
         assert read.delete(f"/api/v1/journals/{journal['id']}/").status_code == 405
         assert JournalEntry.objects.get(pk=journal["id"]).status == "posted"
+
+    def test_database_refuses_raw_changes_to_a_posted_journal(self):
+        _, period = make_period()
+        cash = make_account("CASH")
+        equity = make_account("EQUITY", "equity")
+        journal = make_journal(period, [line(cash, debit="100"), line(equity, credit="100")])
+
+        with pytest.raises(DatabaseError), transaction.atomic():
+            JournalEntry.objects.filter(pk=journal["id"]).update(description="Tampered")
+        with pytest.raises(DatabaseError), transaction.atomic():
+            JournalLine.objects.filter(journal_id=journal["id"]).delete()
+        with pytest.raises(DatabaseError), transaction.atomic():
+            JournalLine.objects.create(
+                journal_id=journal["id"],
+                line_number=99,
+                account=cash,
+                debit=Decimal("1.00"),
+            )
+
+        assert JournalEntry.objects.get(pk=journal["id"]).description == "Test journal"
 
     def test_adjustment_journal_needs_a_reason(self):
         _, period = make_period()
@@ -756,3 +778,28 @@ class TestSettings:
         assert good.status_code == 200, good.content
         assert good.json()["retained_earnings_account"] == equity.pk
         assert AccountingSettings.load().retained_earnings_account_id == equity.pk
+
+
+def test_financial_views_require_accounting_permission():
+    employee = User.objects.create_user(
+        email="unprivileged@example.com", full_name="Unprivileged Employee"
+    )
+    client = APIClient()
+    client.force_authenticate(user=employee)
+
+    assert client.get("/api/v1/accounts/").status_code == 403
+    assert client.get("/api/v1/trial-balance/?as_of=2026-01-31").status_code == 403
+    assert (
+        client.get("/api/v1/financial-statements/?start=2026-01-01&end=2026-01-31").status_code
+        == 403
+    )
+
+    employee.user_permissions.add(Permission.objects.get(codename="view_account"))
+    employee = User.objects.get(pk=employee.pk)
+    client.force_authenticate(user=employee)
+    assert client.get("/api/v1/accounts/").status_code == 200
+    assert client.get("/api/v1/trial-balance/?as_of=2026-01-31").status_code == 200
+    assert (
+        client.get("/api/v1/financial-statements/?start=2026-01-01&end=2026-01-31").status_code
+        == 200
+    )

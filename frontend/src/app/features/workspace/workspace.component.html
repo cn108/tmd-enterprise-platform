@@ -6,10 +6,26 @@
       <p class="module__intro">{{ config.intro }}</p>
     </div>
     <div class="module__meta">
-      <span class="pill">Read-only view</span>
       <a href="/api/v1/docs/" target="_blank" rel="noreferrer">API reference</a>
     </div>
   </header>
+
+  <nav class="tabs" aria-label="Sections">
+    @for (tab of config.tabs; track tab.id) {
+      <button
+        type="button"
+        [class.is-active]="activeTab() === tab.id"
+        [attr.aria-current]="activeTab() === tab.id ? 'page' : null"
+        (click)="selectTab(tab.id)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </nav>
+
+  @if (notice(); as message) {
+    <p class="notice" role="status">{{ message }}</p>
+  }
 
   @if (error(); as message) {
     <p class="error" role="alert">
@@ -18,58 +34,154 @@
     </p>
   }
 
-  <nav class="tabs" aria-label="Sections">
-    @for (tab of config.tabs; track tab.id) {
-      <button
-        type="button"
-        [class.is-active]="activeTab() === tab.id"
-        (click)="activeTab.set(tab.id)"
-      >
-        {{ tab.label }}
-      </button>
-    }
-  </nav>
-
-  @if (loading()) {
-    <p class="loading">Loading records…</p>
-  } @else if (activeConfig(); as tab) {
-    <section class="panel" aria-labelledby="section-heading">
-      <div class="panel__head">
-        <h2 id="section-heading">{{ tab.label }}</h2>
-        <span class="count">{{ activeRows().length }} records</span>
-      </div>
-
-      @if (activeRows().length === 0) {
-        <p class="empty">
-          No records yet. Records created through the API will appear here.
-        </p>
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                @for (column of tab.columns; track column.key) {
-                  <th scope="col">{{ column.label }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of activeRows(); track $index) {
-                <tr>
-                  @for (column of tab.columns; track column.key) {
-                    <td>{{ format(row[column.key]) }}</td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-
-      <p class="hint">
-        This view reads the live API. Creating and approving records is still done through the
-        API until the transaction forms are built.
-      </p>
-    </section>
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Applying action" />
   }
+
+  <section class="panel" aria-labelledby="section-heading">
+    <div class="panel__head">
+      <h2 id="section-heading">{{ resource().label }}</h2>
+      <div class="panel__tools">
+        @if (resource().filters?.length) {
+          @for (filter of resource().filters; track filter.key) {
+            <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+              <mat-label>{{ filter.label }}</mat-label>
+              <mat-select
+                [value]="filterValues()[filter.key] ?? ''"
+                (selectionChange)="setFilter(filter.key, $event.value)"
+              >
+                <mat-option value="">All</mat-option>
+                @for (option of filter.options; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+        }
+        @if (resource().serverSearch) {
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>Search {{ resource().label }}</mat-label>
+            <input
+              #searchInput
+              matInput
+              type="search"
+              [value]="search()"
+              (input)="onSearch(searchInput.value)"
+            />
+          </mat-form-field>
+        }
+
+        @if (resource().create) {
+          <button
+            mat-flat-button
+            type="button"
+            (click)="create()"
+            [disabled]="!allowed(resource().permission)"
+          >
+            New {{ resource().singular }}
+          </button>
+        }
+        <button mat-button type="button" (click)="reload()">Refresh</button>
+      </div>
+    </div>
+
+    @if (resource().create && !allowed(resource().permission)) {
+      <p class="permission">
+        Writing here requires the <code>{{ resource().permission }}</code> permission, which your
+        account does not have. The API rejects the request regardless of the interface.
+      </p>
+    }
+
+    @if (loading()) {
+      <p class="loading">Loading records…</p>
+    } @else if (rows().length === 0) {
+      <p class="empty">
+        {{ search() ? 'No records match this search.' : 'No records yet.' }}
+      </p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">
+            {{ resource().label }}
+          </caption>
+          <thead>
+            <tr>
+              @for (column of resource().columns; track column.key) {
+                <th
+                  scope="col"
+                  [attr.aria-sort]="resource().serverSort === false ? 'none' : ariaSort(column)"
+                >
+                  @if (resource().serverSort === false) {
+                    {{ column.label }}
+                  } @else {
+                    <button type="button" class="sort" (click)="sortBy(column)">
+                      {{ column.label }}
+                      <span aria-hidden="true">{{
+                        sortKey() === column.key ? (sortDir() === 'asc' ? '▲' : '▼') : ''
+                      }}</span>
+                    </button>
+                  }
+                </th>
+              }
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track $index) {
+              <tr>
+                @for (column of resource().columns; track column.key) {
+                  <td>{{ cell(row, column) }}</td>
+                }
+                <td class="row-actions">
+                  <button mat-button type="button" (click)="view(row)">View</button>
+                  @if ((resource().downloadPath && row['id']) || row['download_path']) {
+                    <button mat-button type="button" (click)="download(row)">Download</button>
+                  }
+                  @if (resource().previewPath && row['id']) {
+                    <button mat-button type="button" (click)="preview(row)">Preview PDF</button>
+                  }
+                  @if (resource().edit && canEdit(row) && allowed(resource().permission)) {
+                    <button mat-button type="button" (click)="edit(row)">Edit</button>
+                  }
+                  @if (resource().deactivate && row['is_active'] === true) {
+                    <button mat-button type="button" (click)="deactivate(row)">Deactivate</button>
+                  }
+                  @for (action of actionsFor(row); track action.id) {
+                    <button mat-stroked-button type="button" (click)="runAction(row, action)">
+                      {{ action.label }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <mat-paginator
+        [length]="count()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        [showFirstLastButtons]="true"
+        (page)="onPage($event)"
+        aria-label="Select page"
+      />
+      <p class="count">{{ count() }} {{ count() === 1 ? 'record' : 'records' }}</p>
+    }
+
+    @if (blockedActions().length > 0) {
+      <p class="permission">
+        Not available to your account:
+        @for (action of blockedActions(); track action.id) {
+          <span class="permission__item"
+            >{{ action.label }} (needs <code>{{ action.permission }}</code>)</span
+          >
+        }
+      </p>
+    }
+
+    @if (resource().note; as note) {
+      <p class="hint">{{ note }}</p>
+    }
+  </section>
 </section>

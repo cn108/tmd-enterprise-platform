@@ -1,7 +1,10 @@
 <section class="dashboard" aria-labelledby="dashboard-heading">
   <div class="dashboard__intro">
-    <h1 id="dashboard-heading">Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}</h1>
-    <p>You are signed in to the TMD internal platform.</p>
+    <p class="eyebrow">Tico McDon Limited</p>
+    <h1 id="dashboard-heading">
+      Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}
+    </h1>
+    <p>Live operational view. Every figure below is read from the API.</p>
   </div>
 
   @if (auth.user()?.must_change_password) {
@@ -33,46 +36,115 @@
       }
     </section>
 
-    <section class="card" aria-labelledby="scope-heading">
-      <h2 id="scope-heading">Platform coverage</h2>
-      <ul class="plain-list">
-        <li>Procurement: request → RFQ → order → delivery → receipt</li>
-        <li>Inventory: permanent ledger, reservations, transfers and counts</li>
-        <li>Accounting: balanced journals, periods, closing and reports</li>
-        <li>Controls: approvals, immutable records and derived balances</li>
-      </ul>
-      <p class="muted">
-        The APIs are live. Approvals, limits and the chart of accounts remain subject to the
-        decision register; the module pages below are read-only views for now.
-      </p>
+    <section class="card" aria-labelledby="access-heading">
+      <h2 id="access-heading">Your access</h2>
+
+      @if (permissions().length > 0) {
+        <p class="muted">Permissions assigned to your account:</p>
+        <ul class="permissions">
+          @for (permission of permissions(); track permission) {
+            <li><code>{{ permission }}</code></li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">
+          No roles or permissions are assigned to your account yet. Records you can read are
+          available; approvals, posting and stock-posting actions are refused by the API until an
+          administrator assigns your role.
+        </p>
+      }
+
+      @if (auth.user()?.roles?.length) {
+        <p class="muted">Roles: {{ auth.user()?.roles?.join(', ') }}</p>
+      }
     </section>
   </div>
+
+  <section class="queues" aria-labelledby="queues-heading">
+    <div class="queues__head">
+      <h2 id="queues-heading">Work queues</h2>
+      <button type="button" class="link-button" (click)="reloadQueues()">Refresh</button>
+    </div>
+
+    @if (queuesError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    @if (queuesLoading()) {
+      <p class="muted">Loading queues…</p>
+    } @else if (queues().length > 0) {
+      <ul class="queue-list">
+        @for (queue of queues(); track queue.id) {
+          <li class="queue">
+            <span class="queue__count">{{ queue.count ?? '—' }}</span>
+            <div class="queue__body">
+              <span class="queue__label">{{ queue.label }}</span>
+              <p class="muted">{{ queue.description }}</p>
+            </div>
+            @if (queue.count === null) {
+              <span class="queue__blocked">Unavailable</span>
+            } @else if (queue.count === 0) {
+              <span class="queue__clear">Clear</span>
+            } @else if (mayAct(queue.permission)) {
+              <a class="queue__link" [routerLink]="queue.link">Open</a>
+            } @else {
+              <span class="queue__blocked">Requires {{ queue.permission }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
 
   <section class="modules" aria-labelledby="modules-heading">
     <h2 id="modules-heading">Business modules</h2>
     <div class="modules__grid">
-      <a class="module-card" href="/master-data">
+      <a class="module-card" routerLink="/master-data">
         <span class="module-card__index">01</span>
         <h3>Master data</h3>
         <p>Suppliers, customers, catalogue, warehouses and projects.</p>
         <span class="module-card__link">Open module →</span>
       </a>
-      <a class="module-card" href="/procurement">
+      <a class="module-card" routerLink="/procurement">
         <span class="module-card__index">02</span>
         <h3>Procurement</h3>
         <p>Purchase requests, orders, quotations and goods receipts.</p>
         <span class="module-card__link">Open module →</span>
       </a>
-      <a class="module-card" href="/inventory">
+      <a class="module-card" routerLink="/inventory">
         <span class="module-card__index">03</span>
         <h3>Inventory</h3>
         <p>Balances, movements, reorder alerts and the stock ledger.</p>
         <span class="module-card__link">Open module →</span>
       </a>
-      <a class="module-card" href="/accounting">
+      <a class="module-card" routerLink="/accounting">
         <span class="module-card__index">04</span>
         <h3>Accounting</h3>
         <p>Chart of accounts, journals and approved posting rules.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" routerLink="/banking">
+        <span class="module-card__index">05</span>
+        <h3>Banking</h3>
+        <p>Statement import, matching, reconciliations and petty cash.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" routerLink="/projects">
+        <span class="module-card__index">06</span>
+        <h3>Projects</h3>
+        <p>Budgets, commitments, project costs and profitability.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" routerLink="/services">
+        <span class="module-card__index">07</span>
+        <h3>Services</h3>
+        <p>Engineering and maintenance work orders, HSE and reports.</p>
+        <span class="module-card__link">Open module →</span>
+      </a>
+      <a class="module-card" routerLink="/leasing">
+        <span class="module-card__index">08</span>
+        <h3>Equipment leasing</h3>
+        <p>Equipment register, rental agreements, dispatch, returns and utilisation.</p>
         <span class="module-card__link">Open module →</span>
       </a>
     </div>

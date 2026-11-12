@@ -12,6 +12,7 @@ from django.db.models import Q
 from rest_framework import status, viewsets
 
 from shared.exceptions import error_response
+from shared.permissions import ModelPermission
 
 
 class NoDeleteViewSet(viewsets.ModelViewSet):
@@ -43,7 +44,13 @@ class MasterDataViewSet(NoDeleteViewSet):
             is_active = active.strip().lower() in {"1", "true", "yes", "on"}
             queryset = queryset.filter(is_active=is_active)
 
-        term = (self.request.query_params.get("q") or "").strip()
+        # Both spellings are accepted: `q` is the original portal parameter and
+        # `search` is DRF's convention used by the new screens.
+        term = (
+            self.request.query_params.get("q")
+            or self.request.query_params.get("search")
+            or ""
+        ).strip()
         if term:
             query = Q()
             for field in self.search_fields:
@@ -51,3 +58,11 @@ class MasterDataViewSet(NoDeleteViewSet):
             queryset = queryset.filter(query)
 
         return queryset
+
+
+class ProtectedMasterDataViewSet(MasterDataViewSet):
+    permission_classes = [ModelPermission]
+
+
+class ProtectedNoDeleteViewSet(NoDeleteViewSet):
+    permission_classes = [ModelPermission]

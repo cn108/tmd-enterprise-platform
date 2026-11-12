@@ -1,8 +1,17 @@
 .dashboard {
   width: 100%;
-  max-width: 60rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tmd-muted);
 }
 
 .dashboard__intro h1 {
@@ -94,6 +103,116 @@ code {
   border-radius: 0.25rem;
   background: #eef1f6;
   font-size: 0.85em;
+}
+
+.queues {
+  margin-top: 2rem;
+}
+
+.queues__head {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.queues__head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--tmd-navy-soft);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tmd-navy-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.queue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--tmd-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.queue {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--tmd-line);
+}
+
+.queue:last-child {
+  border-bottom: 0;
+}
+
+.queue__count {
+  min-width: 2.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--tmd-navy);
+  text-align: right;
+}
+
+.queue__body {
+  flex: 1;
+}
+
+.queue__label {
+  display: block;
+  font-weight: 600;
+  color: var(--tmd-ink);
+}
+
+.queue__body .muted {
+  margin: 0.15rem 0 0;
+}
+
+.queue__link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tmd-navy-soft);
+}
+
+.queue__clear {
+  font-size: 0.8rem;
+  color: #1c6b4a;
+}
+
+.queue__blocked {
+  max-width: 14rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #6b5320;
+  text-align: right;
+}
+
+.permissions {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+}
+
+.error {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--tmd-danger);
+  background: #fdf1ef;
+  color: #7f2a22;
+  font-size: 0.9rem;
 }
 
 .modules {

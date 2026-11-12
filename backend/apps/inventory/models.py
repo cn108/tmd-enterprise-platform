@@ -30,8 +30,9 @@ class InventoryPolicy(models.Model):
     class Method(models.TextChoices):
         FIFO = "fifo", "FIFO"
         WEIGHTED_AVERAGE = "weighted_average", "Weighted average"
+        SPECIFIC_IDENTIFICATION = "specific_identification", "Specific identification"
 
-    valuation_method = models.CharField(max_length=20, choices=Method.choices, blank=True)
+    valuation_method = models.CharField(max_length=30, choices=Method.choices, blank=True)
     note = models.TextField(blank=True)
     approved_by = models.ForeignKey(
         "identity.User",

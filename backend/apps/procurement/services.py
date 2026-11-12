@@ -11,6 +11,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.approvals import ApprovalError, register_approval
 from apps.procurement.models import (
     ZERO,
     DeliverySchedule,
@@ -45,6 +46,18 @@ def approve_request(request: PurchaseRequest, approver) -> PurchaseRequest:
         raise StateConflict("Only a submitted request can be approved.")
     if request.requester_id == approver.pk:
         raise StateConflict("A request cannot be approved by its own requester.")
+    try:
+        outcome = register_approval(
+            document_type="purchase_request",
+            document_id=request.pk,
+            approver=approver,
+            amount=0,
+            creators={request.requester_id, request.created_by_id},
+        )
+    except ApprovalError as exc:
+        raise StateConflict(str(exc)) from exc
+    if not outcome.final:
+        return request
     request.status = PurchaseRequest.Status.APPROVED
     request.approved_by = approver
     request.approved_at = timezone.now()
@@ -130,6 +143,18 @@ def approve_order(order: PurchaseOrder, approver) -> PurchaseOrder:
         raise StateConflict("Only a submitted order can be approved.")
     if order.request.requester_id == approver.pk:
         raise StateConflict("The requester cannot approve the resulting order.")
+    try:
+        outcome = register_approval(
+            document_type="purchase_order",
+            document_id=order.pk,
+            approver=approver,
+            amount=order.total_value,
+            creators={order.request.requester_id, order.created_by_id},
+        )
+    except ApprovalError as exc:
+        raise StateConflict(str(exc)) from exc
+    if not outcome.final:
+        return order
     order.status = PurchaseOrder.Status.APPROVED
     order.approved_by = approver
     order.approved_at = timezone.now()

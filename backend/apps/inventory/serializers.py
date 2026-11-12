@@ -92,14 +92,18 @@ class StockMovementSerializer(serializers.ModelSerializer):
 
 
 class StockReceiptLineSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+
     class Meta:
         model = StockReceiptLine
-        fields = ["id", "item", "quantity", "unit_cost", "batch", "serial"]
+        fields = ["id", "item", "item_code", "quantity", "unit_cost", "batch", "serial"]
 
 
 class StockReceiptSerializer(serializers.ModelSerializer):
     lines = StockReceiptLineSerializer(many=True, read_only=True)
     received_by = serializers.SerializerMethodField()
+    warehouse_code = serializers.SerializerMethodField()
+    supplier_name = serializers.SerializerMethodField()
 
     class Meta:
         model = StockReceipt
@@ -107,7 +111,9 @@ class StockReceiptSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "warehouse",
+            "warehouse_code",
             "supplier",
+            "supplier_name",
             "received_at",
             "reference",
             "notes",
@@ -118,6 +124,12 @@ class StockReceiptSerializer(serializers.ModelSerializer):
 
     def get_received_by(self, obj: StockReceipt) -> str:
         return obj.received_by.email
+
+    def get_warehouse_code(self, obj: StockReceipt) -> str | None:
+        return obj.warehouse.code if obj.warehouse_id else None
+
+    def get_supplier_name(self, obj: StockReceipt) -> str | None:
+        return obj.supplier.legal_name if obj.supplier_id else None
 
 
 class StockReceiptLineInputSerializer(serializers.Serializer):
@@ -156,6 +168,8 @@ class StockTransferLineSerializer(serializers.ModelSerializer):
 
 class StockTransferSerializer(serializers.ModelSerializer):
     lines = StockTransferLineSerializer(many=True, read_only=True)
+    from_warehouse_code = serializers.CharField(source="from_warehouse.code", read_only=True)
+    to_warehouse_code = serializers.CharField(source="to_warehouse.code", read_only=True)
 
     class Meta:
         model = StockTransfer
@@ -163,8 +177,10 @@ class StockTransferSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "from_warehouse",
+            "from_warehouse_code",
             "from_location",
             "to_warehouse",
+            "to_warehouse_code",
             "to_location",
             "notes",
             "status",
@@ -224,6 +240,7 @@ class StockIssueLineSerializer(serializers.ModelSerializer):
 class StockIssueSerializer(serializers.ModelSerializer):
     lines = StockIssueLineSerializer(many=True, read_only=True)
     issued_by = serializers.SerializerMethodField()
+    project_code = serializers.SerializerMethodField()
 
     class Meta:
         model = StockIssue
@@ -231,6 +248,7 @@ class StockIssueSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "project",
+            "project_code",
             "cost_centre",
             "recipient",
             "notes",
@@ -241,6 +259,9 @@ class StockIssueSerializer(serializers.ModelSerializer):
 
     def get_issued_by(self, obj: StockIssue) -> str:
         return obj.issued_by.email
+
+    def get_project_code(self, obj: StockIssue) -> str | None:
+        return obj.project.code if obj.project_id else None
 
 
 class StockIssueLineInputSerializer(serializers.Serializer):
@@ -476,6 +497,7 @@ class StockCountSerializer(serializers.ModelSerializer):
     lines = StockCountLineSerializer(many=True, read_only=True)
     counted_by = serializers.SerializerMethodField()
     posted_by = serializers.SerializerMethodField()
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
 
     class Meta:
         model = StockCount
@@ -483,6 +505,7 @@ class StockCountSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "warehouse",
+            "warehouse_code",
             "notes",
             "status",
             "counted_by",
@@ -558,12 +581,17 @@ class StockReservationSerializer(serializers.ModelSerializer):
 
 
 class ReorderLevelSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
     class Meta:
         model = ReorderLevel
         fields = [
             "id",
             "item",
+            "item_code",
             "warehouse",
+            "warehouse_code",
             "minimum_quantity",
             "reorder_quantity",
             "is_active",

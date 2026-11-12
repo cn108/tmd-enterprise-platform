@@ -8,9 +8,12 @@ from rest_framework.response import Response
 from apps.procurement.models import (
     DeliverySchedule,
     Destination,
+    GoodsReceiptLine,
     GoodsReceiptNote,
     PurchaseOrder,
+    PurchaseOrderLine,
     PurchaseRequest,
+    PurchaseRequestLine,
     RequestForQuotation,
     RfqSupplier,
     SupplierQuote,
@@ -20,8 +23,11 @@ from apps.procurement.serializers import (
     DeliveryScheduleSerializer,
     DestinationSerializer,
     GoodsReceiptCreateSerializer,
+    GoodsReceiptLineReadSerializer,
     GoodsReceiptNoteSerializer,
+    PurchaseOrderLineSerializer,
     PurchaseOrderSerializer,
+    PurchaseRequestLineSerializer,
     PurchaseRequestSerializer,
     RequestForQuotationSerializer,
     RfqSupplierSerializer,
@@ -62,11 +68,46 @@ class DestinationViewSet(NoDeleteViewSet):
     serializer_class = DestinationSerializer
 
 
+class PurchaseRequestLineViewSet(viewsets.ReadOnlyModelViewSet):
+    """Lines of a request, for quotation entry. Filter with ``?request=``."""
+
+    serializer_class = PurchaseRequestLineSerializer
+
+    def get_queryset(self):
+        queryset = PurchaseRequestLine.objects.select_related("item", "uom", "cost_centre")
+        request_id = (self.request.query_params.get("request") or "").strip()
+        if request_id:
+            queryset = queryset.filter(request_id=request_id)
+        return queryset
+
+
+class PurchaseOrderLineViewSet(viewsets.ReadOnlyModelViewSet):
+    """Lines of an order, for delivery scheduling. Filter with ``?order=``."""
+
+    serializer_class = PurchaseOrderLineSerializer
+
+    def get_queryset(self):
+        queryset = PurchaseOrderLine.objects.select_related("item", "uom", "cost_centre")
+        order_id = (self.request.query_params.get("order") or "").strip()
+        if order_id:
+            queryset = queryset.filter(order_id=order_id)
+        return queryset
+
+
 class PurchaseRequestViewSet(NoDeleteViewSet):
     queryset = PurchaseRequest.objects.select_related(
         "requester", "department", "destination"
     ).prefetch_related("lines")
     serializer_class = PurchaseRequestSerializer
+    search_fields = ("number", "justification", "requester__email", "destination__location_name")
+    ordering_fields = ("number", "status", "required_by", "created_at", "submitted_at")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = (self.request.query_params.get("status") or "").strip()
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
@@ -98,6 +139,13 @@ class PurchaseRequestViewSet(NoDeleteViewSet):
 class RequestForQuotationViewSet(NoDeleteViewSet):
     queryset = RequestForQuotation.objects.select_related("request").prefetch_related("invitations")
     serializer_class = RequestForQuotationSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
     @action(detail=True, methods=["post"])
     def issue(self, request, pk=None):
@@ -140,8 +188,17 @@ class SupplierSelectionViewSet(
 class PurchaseOrderViewSet(NoDeleteViewSet):
     queryset = PurchaseOrder.objects.select_related(
         "supplier", "request", "destination"
-    ).prefetch_related("lines")
+    ).prefetch_related("lines__schedules")
     serializer_class = PurchaseOrderSerializer
+    search_fields = ("number", "supplier__legal_name", "request__number")
+    ordering_fields = ("number", "status", "created_at", "submitted_at", "issued_at")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = (self.request.query_params.get("status") or "").strip()
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
@@ -203,3 +260,24 @@ class GoodsReceiptNoteViewSet(viewsets.ReadOnlyModelViewSet):
         "lines"
     )
     serializer_class = GoodsReceiptNoteSerializer
+    search_fields = ("number", "order__number")
+    ordering_fields = ("number", "received_at", "created_at")
+
+
+class GoodsReceiptLineViewSet(viewsets.ReadOnlyModelViewSet):
+    """Accepted receipt lines available for supplier-invoice matching."""
+
+    serializer_class = GoodsReceiptLineReadSerializer
+
+    def get_queryset(self):
+        queryset = GoodsReceiptLine.objects.select_related("receipt", "order_line", "schedule")
+        receipt = (self.request.query_params.get("receipt") or "").strip()
+        order = (self.request.query_params.get("order") or "").strip()
+        order_line = (self.request.query_params.get("order_line") or "").strip()
+        if receipt:
+            queryset = queryset.filter(receipt_id=receipt)
+        if order:
+            queryset = queryset.filter(receipt__order_id=order)
+        if order_line:
+            queryset = queryset.filter(order_line_id=order_line)
+        return queryset

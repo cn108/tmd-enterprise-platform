@@ -48,7 +48,7 @@ def test_supplier_list_excludes_customers(auth_client):
     Party.objects.create(code="CUS-1", legal_name="Buyer Ltd", is_customer=True)
     Party.objects.create(code="SUP-1", legal_name="Vendor Ltd", is_supplier=True)
 
-    codes = [row["code"] for row in auth_client.get("/api/v1/suppliers/").json()]
+    codes = [row["code"] for row in auth_client.get("/api/v1/suppliers/").json()["results"]]
 
     assert codes == ["SUP-1"]
 
@@ -71,8 +71,15 @@ def test_customer_credit_fields_are_stored(auth_client):
 
 
 def grant_bank_approver(user: User) -> User:
-    permission = Permission.objects.get(codename="approve_bankaccountchange")
-    user.user_permissions.add(permission)
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            codename__in=[
+                "approve_bankaccountchange",
+                "view_bankaccount",
+                "view_bankaccountchangerequest",
+            ]
+        )
+    )
     return User.objects.get(pk=user.pk)
 
 
@@ -168,7 +175,7 @@ def test_approval_creates_the_bank_account(auth_client, user):
     assert "0123456789" not in account.account_number_encrypted
     assert account.get_account_number() == "0123456789"
 
-    listed = approver_client.get("/api/v1/bank-accounts/").json()
+    listed = approver_client.get("/api/v1/bank-accounts/").json()["results"]
     assert listed[0]["masked_account"] == "••••6789"
     assert "0123456789" not in str(listed)
 
@@ -271,18 +278,46 @@ def test_requests_are_visible_only_to_the_requester(auth_client):
     supplier = make_supplier()
     propose_bank_change(auth_client, supplier)
     stranger = User.objects.create_user(email="stranger@example.com", full_name="Stranger")
+    stranger.user_permissions.add(
+        Permission.objects.get(codename="view_bankaccountchangerequest")
+    )
     client = APIClient()
     client.force_authenticate(user=stranger)
 
-    assert client.get("/api/v1/bank-account-change-requests/").json() == []
+    assert client.get("/api/v1/bank-account-change-requests/").json()["results"] == []
 
     approver = grant_bank_approver(
         User.objects.create_user(email="seer@example.com", full_name="Seer")
     )
     seer = APIClient()
     seer.force_authenticate(user=approver)
-    assert len(seer.get("/api/v1/bank-account-change-requests/").json()) == 1
+    assert len(seer.get("/api/v1/bank-account-change-requests/").json()["results"]) == 1
 
+
+def test_master_data_requires_model_permissions():
+    supplier = make_supplier()
+    employee = User.objects.create_user(email="employee@example.com", full_name="Employee")
+    client = APIClient()
+    client.force_authenticate(user=employee)
+
+    assert client.get("/api/v1/suppliers/").status_code == 403
+    assert (
+        client.patch(
+            f"/api/v1/suppliers/{supplier.pk}/", {"legal_name": "Changed"}, format="json"
+        ).status_code
+        == 403
+    )
+
+    employee.user_permissions.add(Permission.objects.get(codename="view_party"))
+    employee = User.objects.get(pk=employee.pk)
+    client.force_authenticate(user=employee)
+    assert client.get("/api/v1/suppliers/").status_code == 200
+    assert (
+        client.patch(
+            f"/api/v1/suppliers/{supplier.pk}/", {"legal_name": "Changed"}, format="json"
+        ).status_code
+        == 403
+    )
 
 def test_tax_registration_duplicate_is_refused(auth_client):
     supplier = make_supplier()

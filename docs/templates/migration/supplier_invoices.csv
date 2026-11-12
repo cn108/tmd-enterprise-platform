@@ -1,0 +1,2 @@
+supplier_code,supplier_invoice_number,invoice_date,due_date,currency,subtotal,vat_total,wht_total,total,amount_paid,po_number
+SAMPLE-SUP-001,SUP-INV-SAMPLE-001,2026-01-05,2026-02-04,NGN,1000.00,75.00,0.00,1075.00,0.00,

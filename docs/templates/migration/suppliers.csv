@@ -1,0 +1,2 @@
+code,legal_name,trading_name,supplier_category,payment_terms_days,default_currency,due_diligence_status,email,phone,is_active
+SAMPLE-SUP-001,Sample Supplier Ltd,Sample Supplier,MATERIALS,30,NGN,pending,supplier@example.invalid,+2340000000000,true

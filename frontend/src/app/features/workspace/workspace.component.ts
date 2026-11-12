@@ -1,293 +1,420 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { Observable, forkJoin, map } from 'rxjs';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { Subject, debounceTime } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/auth.models';
-
-type Row = Record<string, unknown>;
-
-interface Column {
-  key: string;
-  label: string;
-}
-
-interface Tab {
-  id: string;
-  label: string;
-  endpoint: string;
-  columns: Column[];
-}
-
-interface ModuleConfig {
-  title: string;
-  intro: string;
-  tabs: Tab[];
-}
-
-type ModuleKey = 'master-data' | 'procurement' | 'inventory' | 'accounting';
-
-const MODULES: Record<ModuleKey, ModuleConfig> = {
-  'master-data': {
-    title: 'Master data',
-    intro:
-      'Suppliers, customers, catalogue items, warehouses and projects. These records feed every procurement, stock and accounting transaction.',
-    tabs: [
-      {
-        id: 'suppliers',
-        label: 'Suppliers',
-        endpoint: '/api/v1/suppliers/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'legal_name', label: 'Supplier' },
-          { key: 'is_active', label: 'Active' },
-        ],
-      },
-      {
-        id: 'customers',
-        label: 'Customers',
-        endpoint: '/api/v1/customers/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'legal_name', label: 'Customer' },
-          { key: 'is_active', label: 'Active' },
-        ],
-      },
-      {
-        id: 'catalogue',
-        label: 'Catalogue',
-        endpoint: '/api/v1/catalogue-items/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'name', label: 'Item' },
-          { key: 'kind', label: 'Kind' },
-        ],
-      },
-      {
-        id: 'warehouses',
-        label: 'Warehouses',
-        endpoint: '/api/v1/warehouses/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'name', label: 'Warehouse' },
-          { key: 'site_name', label: 'Site' },
-        ],
-      },
-      {
-        id: 'projects',
-        label: 'Projects',
-        endpoint: '/api/v1/projects/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'name', label: 'Project' },
-          { key: 'status', label: 'Status' },
-        ],
-      },
-    ],
-  },
-  procurement: {
-    title: 'Procurement',
-    intro:
-      'The purchase lifecycle from request to receipt, including quotations, approvals, split destinations and partial deliveries.',
-    tabs: [
-      {
-        id: 'requests',
-        label: 'Purchase requests',
-        endpoint: '/api/v1/purchase-requests/',
-        columns: [
-          { key: 'number', label: 'Number' },
-          { key: 'status', label: 'Status' },
-          { key: 'requester', label: 'Requester' },
-          { key: 'required_by', label: 'Required by' },
-        ],
-      },
-      {
-        id: 'orders',
-        label: 'Purchase orders',
-        endpoint: '/api/v1/purchase-orders/',
-        columns: [
-          { key: 'number', label: 'Number' },
-          { key: 'status', label: 'Status' },
-          { key: 'supplier', label: 'Supplier' },
-          { key: 'total_value', label: 'Total' },
-        ],
-      },
-      {
-        id: 'receipts',
-        label: 'Goods receipts',
-        endpoint: '/api/v1/goods-receipts/',
-        columns: [
-          { key: 'number', label: 'GRN' },
-          { key: 'order', label: 'Order' },
-          { key: 'received_at', label: 'Received' },
-          { key: 'received_by', label: 'Received by' },
-        ],
-      },
-    ],
-  },
-  inventory: {
-    title: 'Inventory',
-    intro:
-      'The permanent stock ledger. Balances are derived from recorded movements, never typed over.',
-    tabs: [
-      {
-        id: 'balances',
-        label: 'Balances',
-        endpoint: '/api/v1/stock-balances/',
-        columns: [
-          { key: 'item_code', label: 'Item' },
-          { key: 'warehouse_code', label: 'Warehouse' },
-          { key: 'on_hand', label: 'On hand' },
-          { key: 'reserved', label: 'Reserved' },
-          { key: 'available', label: 'Available' },
-          { key: 'value', label: 'Value (NGN)' },
-        ],
-      },
-      {
-        id: 'movements',
-        label: 'Movements',
-        endpoint: '/api/v1/stock-movements/',
-        columns: [
-          { key: 'number', label: 'Number' },
-          { key: 'movement_type', label: 'Type' },
-          { key: 'item_code', label: 'Item' },
-          { key: 'warehouse_code', label: 'Warehouse' },
-          { key: 'quantity', label: 'Quantity' },
-          { key: 'reference', label: 'Reference' },
-        ],
-      },
-      {
-        id: 'alerts',
-        label: 'Reorder alerts',
-        endpoint: '/api/v1/reorder-alerts/',
-        columns: [
-          { key: 'item_code', label: 'Item' },
-          { key: 'warehouse_code', label: 'Warehouse' },
-          { key: 'minimum_quantity', label: 'Minimum' },
-          { key: 'on_hand', label: 'On hand' },
-          { key: 'shortfall', label: 'Shortfall' },
-        ],
-      },
-    ],
-  },
-  accounting: {
-    title: 'Accounting',
-    intro:
-      'The double-entry engine: chart of accounts, journals and the approved posting rules that turn business events into balanced entries.',
-    tabs: [
-      {
-        id: 'accounts',
-        label: 'Chart of accounts',
-        endpoint: '/api/v1/accounts/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'name', label: 'Account' },
-          { key: 'account_type', label: 'Type' },
-          { key: 'is_approved', label: 'Approved' },
-        ],
-      },
-      {
-        id: 'journals',
-        label: 'Journals',
-        endpoint: '/api/v1/journals/',
-        columns: [
-          { key: 'number', label: 'Number' },
-          { key: 'journal_date', label: 'Date' },
-          { key: 'description', label: 'Description' },
-          { key: 'status', label: 'Status' },
-          { key: 'total_debit', label: 'Debit' },
-          { key: 'total_credit', label: 'Credit' },
-        ],
-      },
-      {
-        id: 'rules',
-        label: 'Posting rules',
-        endpoint: '/api/v1/posting-rules/',
-        columns: [
-          { key: 'code', label: 'Code' },
-          { key: 'name', label: 'Rule' },
-          { key: 'is_active', label: 'Active' },
-          { key: 'approved_at', label: 'Approved' },
-        ],
-      },
-    ],
-  },
-};
-
-function isRow(value: unknown): value is Row {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function normalize(body: unknown): Row[] {
-  if (Array.isArray(body)) {
-    return body.filter(isRow);
-  }
-  if (isRow(body) && Array.isArray(body['rows'])) {
-    return body['rows'].filter(isRow);
-  }
-  return [];
-}
+import { AuthService } from '../../core/auth.service';
+import { ConfirmDialogComponent, ConfirmResult } from './confirm-dialog.component';
+import { RecordDetailComponent } from './record-detail.component';
+import { RecordFormComponent, RecordFormData } from './record-form.component';
+import { ResourceApi } from './resource-api.service';
+import {
+  ActionConfig,
+  ColumnConfig,
+  MODULES,
+  ModuleKey,
+  Row,
+  ResourceConfig,
+  columnText,
+  formatValue,
+} from './workspace-config';
 
 @Component({
   selector: 'app-workspace',
+  imports: [
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatPaginatorModule,
+    MatProgressBarModule,
+    MatSelectModule,
+  ],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.scss',
 })
 export class WorkspaceComponent {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(ResourceApi);
+  private readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
 
   private readonly key = this.route.snapshot.data['module'] as ModuleKey;
+  private readonly search$ = new Subject<void>();
+
   protected readonly config = MODULES[this.key];
   protected readonly activeTab = signal(this.config.tabs[0].id);
-  protected readonly records = signal<Record<string, Row[]>>({});
+  protected readonly rows = signal<Row[]>([]);
+  protected readonly count = signal(0);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  protected readonly notice = signal<string | null>(null);
+  protected readonly search = signal('');
+  protected readonly sortKey = signal<string | null>(null);
+  protected readonly sortDir = signal<'asc' | 'desc'>('asc');
+  protected readonly pageIndex = signal(0);
+  protected readonly pageSize = signal(25);
+  protected readonly busy = signal(false);
+  protected readonly filterValues = signal<Record<string, string>>({});
 
-  protected readonly activeConfig = computed(() =>
-    this.config.tabs.find((tab) => tab.id === this.activeTab()),
+  protected readonly resource = computed<ResourceConfig>(
+    () => this.config.tabs.find((tab) => tab.id === this.activeTab()) ?? this.config.tabs[0],
   );
-  protected readonly activeRows = computed(() => this.records()[this.activeTab()] ?? []);
+
+  protected readonly permissions = computed(() => this.auth.user()?.permissions ?? []);
+
+  /** Server ordering is only sent where the endpoint supports `ordering`. */
+  private readonly ordering = computed<string | undefined>(() => {
+    if (this.resource().serverSort === false) {
+      return undefined;
+    }
+    const key = this.sortKey();
+    if (!key) {
+      return undefined;
+    }
+    return this.sortDir() === 'asc' ? key : `-${key}`;
+  });
+
+  /** Actions the signed-in user may not perform, shown once rather than as dead buttons. */
+  protected readonly blockedActions = computed(() =>
+    (this.resource().actions ?? []).filter((action) => !this.allowed(action.permission)),
+  );
 
   constructor() {
+    this.search$
+      .pipe(debounceTime(300), takeUntilDestroyed())
+      .subscribe(() => {
+        if (this.resource().serverSearch) {
+          this.pageIndex.set(0);
+          this.load();
+        }
+      });
     this.load();
+  }
+
+  protected allowed(permission?: string): boolean {
+    if (!permission) {
+      return true;
+    }
+    return this.permissions().includes(permission);
+  }
+
+  protected selectTab(id: string): void {
+    if (id === this.activeTab()) {
+      return;
+    }
+    this.activeTab.set(id);
+    this.search.set('');
+    this.sortKey.set(null);
+    this.filterValues.set({});
+    this.pageIndex.set(0);
+    this.notice.set(null);
+    this.load();
+  }
+
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    this.search$.next();
+  }
+
+  protected onPage(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.load();
+  }
+
+  protected setFilter(key: string, value: string): void {
+    this.filterValues.update((current) => ({ ...current, [key]: value }));
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  protected sortBy(column: ColumnConfig): void {
+    if (this.resource().serverSort === false) {
+      return;
+    }
+    if (this.sortKey() === column.key) {
+      this.sortDir.set(this.sortDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortKey.set(column.key);
+      this.sortDir.set('asc');
+    }
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  protected ariaSort(column: ColumnConfig): 'ascending' | 'descending' | 'none' {
+    if (this.sortKey() !== column.key) {
+      return 'none';
+    }
+    return this.sortDir() === 'asc' ? 'ascending' : 'descending';
   }
 
   protected reload(): void {
     this.load();
   }
 
-  protected format(value: unknown): string {
-    if (value === null || value === undefined || value === '') {
-      return '—';
+  protected clearSearch(): void {
+    this.search.set('');
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  protected cell(row: Row, column: ColumnConfig): string {
+    return columnText(row, column);
+  }
+
+  protected create(): void {
+    const resource = this.resource();
+    if (!resource.create || !this.allowed(resource.permission)) {
+      return;
     }
-    if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
+    this.openForm({ resource });
+  }
+
+  protected edit(row: Row): void {
+    const resource = this.resource();
+    if (!resource.edit || !this.canEdit(row) || !this.allowed(resource.permission)) {
+      return;
     }
-    if (typeof value === 'string' || typeof value === 'number') {
-      return String(value);
+    this.openForm({ resource, row });
+  }
+
+  protected canEdit(row: Row): boolean {
+    const statuses = this.resource().editableStatuses;
+    if (!statuses) {
+      return true;
     }
-    return '—';
+    return typeof row['status'] === 'string' && statuses.includes(row['status']);
+  }
+
+  protected view(row: Row): void {
+    const id = row['id'];
+    if (typeof id !== 'number') {
+      this.openDetail(row);
+      return;
+    }
+    this.api.detail(this.resource().endpoint, id).subscribe({
+      next: (record) => this.openDetail(record),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
+    });
+  }
+
+  protected download(row: Row): void {
+    const direct = row['download_path'];
+    if (typeof direct === 'string' && direct) {
+      window.open(direct, '_blank', 'noopener');
+      return;
+    }
+    const path = this.resource().downloadPath;
+    const id = row['id'];
+    if (!path || typeof id !== 'number') {
+      return;
+    }
+    window.open(`${this.resource().endpoint}${id}/${path}/`, '_blank', 'noopener');
+  }
+
+  protected preview(row: Row): void {
+    const path = this.resource().previewPath;
+    const id = row['id'];
+    if (!path || typeof id !== 'number') {
+      return;
+    }
+    window.open(`${this.resource().endpoint}${id}/${path}/`, '_blank', 'noopener');
+  }
+
+  protected deactivate(row: Row): void {
+    const resource = this.resource();
+    const id = row['id'];
+    if (!resource.deactivate || typeof id !== 'number') {
+      return;
+    }
+    const label = formatValue(row['code'] ?? row['number'] ?? id);
+    this.confirm({
+      title: `Deactivate ${resource.singular}`,
+      message: `${label} will be marked inactive. Existing documents keep their reference; records are never deleted.`,
+      confirmLabel: 'Deactivate',
+    }).subscribe((result) => {
+      if (!result) {
+        return;
+      }
+      this.busy.set(true);
+      this.api.update(resource.endpoint, id, { is_active: false }).subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.notice.set(`${label} deactivated.`);
+          this.load();
+        },
+        error: (error: unknown) => {
+          this.busy.set(false);
+          this.error.set(apiErrorMessage(error));
+        },
+      });
+    });
+  }
+
+  protected runAction(row: Row, action: ActionConfig): void {
+    if (!this.allowed(action.permission)) {
+      return;
+    }
+    const id = row['id'];
+    if (typeof id !== 'number') {
+      return;
+    }
+    if (action.fields || action.lines) {
+      this.dialog
+        .open<RecordFormComponent, RecordFormData, Row | null>(RecordFormComponent, {
+          data: {
+            resource: this.resource(),
+            row,
+            action: {
+              path: action.path,
+              label: action.label,
+              fields: action.fields ?? [],
+              lines: action.lines,
+            },
+          },
+          width: '56rem',
+          maxWidth: '95vw',
+          autoFocus: 'first-tabbable',
+          disableClose: true,
+        })
+        .afterClosed()
+        .subscribe((saved) => {
+          if (!saved) {
+            return;
+          }
+          this.notice.set(action.success);
+          this.load();
+        });
+      return;
+    }
+    this.confirm({
+      title: action.label,
+      message: action.confirm,
+      confirmLabel: action.label,
+      reason: action.reason,
+    }).subscribe((result) => {
+      if (!result) {
+        return;
+      }
+      const body = action.reason
+        ? { [action.reason.key ?? 'reason']: result.reason }
+        : {};
+      this.busy.set(true);
+      this.api.action(this.resource().endpoint, id, action.path, body).subscribe({
+        next: (response) => {
+          this.busy.set(false);
+          const recorded = response['approvals_recorded'];
+          const required = response['approvals_required'];
+          if (
+            typeof recorded === 'number' &&
+            typeof required === 'number' &&
+            recorded < required
+          ) {
+            this.notice.set(
+              `Approval recorded (${recorded} of ${required}). Another independent approver is required.`,
+            );
+          } else {
+            this.notice.set(action.success);
+          }
+          this.load();
+        },
+        error: (error: unknown) => {
+          this.busy.set(false);
+          this.error.set(apiErrorMessage(error));
+        },
+      });
+    });
+  }
+
+  protected actionsFor(row: Row): ActionConfig[] {
+    const status = row['status'];
+    return (this.resource().actions ?? []).filter(
+      (action) =>
+        this.allowed(action.permission) &&
+        (action.statuses === undefined ||
+          (typeof status === 'string' && action.statuses.includes(status))),
+    );
+  }
+
+  protected hasActions(): boolean {
+    return (this.resource().actions ?? []).some((action) => this.allowed(action.permission));
   }
 
   private load(): void {
+    const resource = this.resource();
     this.loading.set(true);
     this.error.set(null);
-    const requests: Record<string, Observable<Row[]>> = {};
-    for (const tab of this.config.tabs) {
-      requests[tab.id] = this.http
-        .get<unknown>(tab.endpoint)
-        .pipe(map((body) => normalize(body)));
-    }
-    forkJoin(requests).subscribe({
-      next: (records) => {
-        this.records.set(records);
-        this.loading.set(false);
-      },
-      error: (error: unknown) => {
-        this.error.set(apiErrorMessage(error));
-        this.loading.set(false);
-      },
-    });
+    this.api
+      .list(resource.endpoint, {
+        page: this.pageIndex() + 1,
+        pageSize: this.pageSize(),
+        search: resource.serverSearch ? this.search() : '',
+        ordering: this.ordering(),
+        filters: this.filterValues(),
+      })
+      .subscribe({
+        next: (page) => {
+          this.rows.set(page.rows);
+          this.count.set(page.count);
+          this.loading.set(false);
+        },
+        error: (error: unknown) => {
+          this.rows.set([]);
+          this.count.set(0);
+          this.error.set(apiErrorMessage(error));
+          this.loading.set(false);
+        },
+      });
+  }
+
+  private openForm(data: RecordFormData): void {
+    this.dialog
+      .open<RecordFormComponent, RecordFormData, Row | null>(RecordFormComponent, {
+        data,
+        width: '56rem',
+        maxWidth: '95vw',
+        autoFocus: 'first-tabbable',
+        // Cancel and Escape go through the form's own unsaved-changes check.
+        disableClose: true,
+      })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (!saved) {
+          return;
+        }
+        const action = data.row ? 'updated' : 'created';
+        this.notice.set(`${data.resource.singular} ${action}.`);
+        this.load();
+      });
+  }
+
+  private openDetail(row: Row): void {
+    this.dialog.open<RecordDetailComponent, { resource: ResourceConfig; row: Row }>(
+      RecordDetailComponent,
+      { data: { resource: this.resource(), row }, maxWidth: '95vw' },
+    );
+  }
+
+  private confirm(data: {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    reason?: { label: string; required: boolean };
+  }) {
+    return this.dialog
+      .open<ConfirmDialogComponent, typeof data, ConfirmResult | null>(ConfirmDialogComponent, {
+        data,
+        maxWidth: '95vw',
+      })
+      .afterClosed();
   }
 }

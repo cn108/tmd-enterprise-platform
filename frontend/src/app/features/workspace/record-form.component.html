@@ -1,0 +1,160 @@
+<h2 mat-dialog-title>{{ title() }}</h2>
+
+<mat-dialog-content>
+  @if (optionsLoading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading choices" />
+  }
+
+  @if (summary(); as message) {
+    <p class="form__summary" role="alert">{{ message }}</p>
+  }
+
+  <form [formGroup]="form" class="form" (ngSubmit)="submit()">
+    <div class="fields">
+      @for (field of fields; track field.key) {
+        @if (field.type === 'checkbox') {
+          <mat-checkbox [formControlName]="field.key" class="fields__check">
+            {{ field.label }}
+          </mat-checkbox>
+        } @else if (field.type === 'select') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ field.label }}</mat-label>
+            <mat-select [formControlName]="field.key">
+              <mat-option [value]="null">—</mat-option>
+              @for (option of optionList(field); track option.value) {
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+            @if (field.help) {
+              <mat-hint>{{ field.help }}</mat-hint>
+            }
+            @if (fieldError(field.key); as error) {
+              <mat-error>{{ error }}</mat-error>
+            } @else if (form.get(field.key)?.hasError('required')) {
+              <mat-error>{{ field.label }} is required.</mat-error>
+            }
+          </mat-form-field>
+        } @else if (field.type === 'file') {
+          <mat-form-field appearance="outline" class="fields__wide" subscriptSizing="dynamic">
+            <mat-label>{{ field.label }}</mat-label>
+            <input
+              type="file"
+              class="fields__file"
+              [attr.aria-label]="field.label"
+              (change)="onFile(field.key, $event)"
+            />
+            @if (field.help) {
+              <mat-hint>{{ field.help }}</mat-hint>
+            }
+            @if (fieldError(field.key); as error) {
+              <mat-error>{{ error }}</mat-error>
+            } @else if (form.get(field.key)?.hasError('required')) {
+              <mat-error>{{ field.label }} is required.</mat-error>
+            }
+          </mat-form-field>
+        } @else if (field.type === 'textarea') {
+          <mat-form-field appearance="outline" class="fields__wide" subscriptSizing="dynamic">
+            <mat-label>{{ field.label }}</mat-label>
+            <textarea matInput rows="3" [formControlName]="field.key"></textarea>
+            @if (field.help) {
+              <mat-hint>{{ field.help }}</mat-hint>
+            }
+            @if (fieldError(field.key); as error) {
+              <mat-error>{{ error }}</mat-error>
+            }
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ field.label }}</mat-label>
+            <input
+              matInput
+              [type]="field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'"
+              [formControlName]="field.key"
+              [attr.min]="field.min ?? null"
+              [attr.step]="field.step ?? null"
+              [readonly]="editing && field.readOnlyOnEdit === true"
+            />
+            @if (field.help) {
+              <mat-hint>{{ field.help }}</mat-hint>
+            }
+            @if (fieldError(field.key); as error) {
+              <mat-error>{{ error }}</mat-error>
+            } @else if (form.get(field.key)?.hasError('required')) {
+              <mat-error>{{ field.label }} is required.</mat-error>
+            } @else if (form.get(field.key)?.hasError('min')) {
+              <mat-error>{{ field.label }} is too low.</mat-error>
+            }
+          </mat-form-field>
+        }
+      }
+    </div>
+
+    @if (lineFields.length > 0) {
+      <fieldset class="lines">
+        <legend>{{ data.resource.lines?.label ?? 'Lines' }}</legend>
+        <div formArrayName="lines">
+          @for (line of lines.controls; track $index) {
+            <div class="lines__row" [formGroupName]="$index">
+              @for (field of lineFields; track field.key) {
+                @if (field.type === 'checkbox') {
+                  <mat-checkbox [formControlName]="field.key" class="lines__check">
+                    {{ field.label }}
+                  </mat-checkbox>
+                } @else {
+                  <mat-form-field
+                    appearance="outline"
+                    class="lines__field"
+                    subscriptSizing="dynamic"
+                  >
+                    <mat-label>{{ field.label }}</mat-label>
+                    @if (field.type === 'select') {
+                    <mat-select [formControlName]="field.key">
+                      <mat-option [value]="null">—</mat-option>
+                      @for (option of optionList(field); track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                      }
+                    </mat-select>
+                    } @else {
+                      <input
+                        matInput
+                        [type]="field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'"
+                        [formControlName]="field.key"
+                        [attr.min]="field.min ?? null"
+                        [attr.step]="field.step ?? null"
+                      />
+                    }
+                    @if (lineError($index, field.key); as error) {
+                      <mat-error>{{ error }}</mat-error>
+                    } @else if (line.get(field.key)?.hasError('required')) {
+                      <mat-error>{{ field.label }} is required.</mat-error>
+                    }
+                  </mat-form-field>
+                }
+              }
+              <button
+                mat-button
+                type="button"
+                class="lines__remove"
+                (click)="removeLine($index)"
+                [disabled]="lines.length === 1"
+                [attr.aria-label]="'Remove line ' + ($index + 1)"
+              >
+                Remove
+              </button>
+            </div>
+          }
+        </div>
+        <button mat-stroked-button type="button" (click)="addLine()">
+          {{ data.resource.lines?.addLabel ?? 'Add line' }}
+        </button>
+      </fieldset>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()" [disabled]="submitting()">Cancel</button>
+  <button mat-flat-button type="button" (click)="submit()" [disabled]="submitting()">
+    {{ submitLabel() }}
+  </button>
+</mat-dialog-actions>

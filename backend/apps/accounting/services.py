@@ -12,6 +12,7 @@ records an authorised user has explicitly approved.
 
 from __future__ import annotations
 
+from calendar import monthrange
 from collections.abc import Iterable
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -25,11 +26,14 @@ from apps.accounting.models import (
     Account,
     AccountingPeriod,
     AccountingSettings,
+    AccountRoleMapping,
+    FinancialEvent,
     JournalEntry,
     JournalLine,
     OpeningBalance,
     PostingRule,
 )
+from apps.core.models import create_audit_event
 from apps.procurement.numbering import next_number
 
 MONEY = Decimal("0.01")
@@ -65,6 +69,31 @@ def approve_account(account: Account, actor) -> Account:
     return account
 
 
+def create_monthly_periods(year, actor) -> list[AccountingPeriod]:
+    """Create calendar-month periods clipped to the fiscal year."""
+
+    periods = []
+    cursor = date(year.start_date.year, year.start_date.month, 1)
+    while cursor <= year.end_date:
+        last_day = monthrange(cursor.year, cursor.month)[1]
+        month_end = date(cursor.year, cursor.month, last_day)
+        start = max(cursor, year.start_date)
+        end = min(month_end, year.end_date)
+        period, _ = AccountingPeriod.objects.get_or_create(
+            fiscal_year=year,
+            name=f"{start:%B %Y}",
+            defaults={
+                "start_date": start,
+                "end_date": end,
+                "created_by": actor,
+                "updated_by": actor,
+            },
+        )
+        periods.append(period)
+        cursor = date(cursor.year + (cursor.month == 12), cursor.month % 12 + 1, 1)
+    return periods
+
+
 def approve_posting_rule(rule: PostingRule, actor) -> PostingRule:
     if rule.approved_at is not None:
         raise Conflict("This posting rule is already approved.")
@@ -72,13 +101,49 @@ def approve_posting_rule(rule: PostingRule, actor) -> PostingRule:
         raise Conflict("The person who created the rule cannot approve it.")
     if not rule.lines.exists():
         raise Conflict("A posting rule needs at least one line before approval.")
-    unapproved = rule.lines.select_related("account").filter(account__approved_at__isnull=True)
+    unapproved = rule.lines.select_related("account").filter(
+        account__isnull=False, account__approved_at__isnull=True
+    )
     if unapproved.exists():
         raise Conflict("Every account on the rule must be approved first.")
+    for line in rule.lines.select_related("account_role", "account"):
+        if line.account_id:
+            continue
+        if line.account_role_id is None:
+            raise Conflict("Every rule line needs an account or an account role.")
+        if resolve_role_account(line.account_role, timezone.localdate()) is None:
+            raise Conflict(f"Account role {line.account_role.code} has no approved mapping.")
     rule.approved_by = actor
     rule.approved_at = timezone.now()
     rule.save(update_fields=["approved_by", "approved_at", "updated_at"])
     return rule
+
+
+def resolve_role_account(role, on_date: date | None = None) -> Account | None:
+    """Return the approved account mapped to a role for the given date."""
+
+    from django.db.models import Q
+
+    target = on_date or timezone.localdate()
+    mapping = (
+        AccountRoleMapping.objects.filter(
+            role=role,
+            is_active=True,
+            effective_from__lte=target,
+        )
+        .filter(Q(effective_to__isnull=True) | Q(effective_to__gte=target))
+        .select_related("account")
+        .order_by("-effective_from")
+        .first()
+    )
+    if (
+        mapping is None
+        or mapping.approved_at is None
+        or not mapping.account.is_approved
+        or not mapping.account.is_active
+    ):
+        return None
+    return mapping.account
 
 
 def configure_retained_earnings(account: Account | None, actor) -> AccountingSettings:
@@ -94,6 +159,27 @@ def configure_retained_earnings(account: Account | None, actor) -> AccountingSet
     settings.retained_earnings_account = account
     settings.updated_by = actor
     settings.save()
+    return settings
+
+
+def review_posting(actor, notes: str = "") -> AccountingSettings:
+    """Record the Finance Controller review that unlocks automatic posting."""
+
+    if not notes.strip():
+        raise Conflict("Record what was reviewed and by whom.")
+    settings = AccountingSettings.load()
+    settings.posting_reviewed_at = timezone.now()
+    settings.posting_reviewed_by = actor
+    settings.posting_review_notes = notes.strip()
+    settings.updated_by = actor
+    settings.save()
+    create_audit_event(
+        actor=actor,
+        action="accounting.posting_reviewed",
+        entity_type="accounting.accountingsettings",
+        entity_id=settings.pk,
+        after={"notes": settings.posting_review_notes},
+    )
     return settings
 
 
@@ -243,6 +329,13 @@ def post_journal(journal: JournalEntry, actor) -> JournalEntry:
             "updated_at",
         ]
     )
+    create_audit_event(
+        actor=actor,
+        action="journal.posted",
+        entity_type="accounting.journalentry",
+        entity_id=journal.pk,
+        after={"number": journal.number, "total_debit": str(journal.total_debit)},
+    )
     return journal
 
 
@@ -378,6 +471,27 @@ def post_opening_balance(opening: OpeningBalance, actor) -> OpeningBalance:
             "updated_at",
         ]
     )
+    FinancialEvent.objects.get_or_create(
+        code=FinancialEvent.Code.E21,
+        source_type="accounting.openingbalance",
+        source_id=opening.pk,
+        defaults={
+            "event_date": opening.as_of_date,
+            "amount": journal.total_debit,
+            "description": f"Opening balances {opening.fiscal_year.code}",
+            "status": FinancialEvent.Status.POSTED,
+            "journal": journal,
+            "posted_at": timezone.now(),
+            "posted_by": actor,
+        },
+    )
+    create_audit_event(
+        actor=actor,
+        action="opening_balance.posted",
+        entity_type="accounting.openingbalance",
+        entity_id=opening.pk,
+        after={"number": opening.number, "journal": journal.number},
+    )
     return opening
 
 
@@ -406,7 +520,7 @@ def post_event(
         and JournalEntry.objects.filter(posting_rule=rule, event_reference=reference).exists()
     ):
         raise Conflict("This event reference has already been posted for the rule.")
-    rule_lines = list(rule.lines.select_related("account").order_by("line_number"))
+    rule_lines = list(rule.lines.select_related("account", "account_role").order_by("line_number"))
     if not rule_lines:
         raise Conflict("The posting rule has no lines.")
     known_keys = {line.amount_key for line in rule_lines}
@@ -423,9 +537,17 @@ def post_event(
             raise Conflict("Event amounts cannot be negative.")
         if amount == 0:
             continue
+        account = rule_line.account
+        if account is None:
+            account = resolve_role_account(rule_line.account_role, journal_date)
+            if account is None:
+                raise Conflict(
+                    f"Account role {rule_line.account_role.code} has no approved mapping "
+                    "for this date."
+                )
         lines.append(
             {
-                "account": rule_line.account,
+                "account": account,
                 "debit": amount if rule_line.direction == "debit" else ZERO,
                 "credit": amount if rule_line.direction == "credit" else ZERO,
                 "description": description,
@@ -525,7 +647,166 @@ def close_period(period: AccountingPeriod, actor) -> AccountingPeriod:
     period.closed_by = actor
     period.updated_by = actor
     period.save(update_fields=["status", "closed_at", "closed_by", "updated_by", "updated_at"])
+    create_audit_event(
+        actor=actor,
+        action="period.closed",
+        entity_type="accounting.accountingperiod",
+        entity_id=period.pk,
+        after={"name": period.name, "closed_at": str(period.closed_at)},
+    )
     return period
+
+
+def reopen_period(period: AccountingPeriod, actor, reason: str) -> AccountingPeriod:
+    if period.status != AccountingPeriod.Status.CLOSED:
+        raise Conflict("Only a closed period can be reopened.")
+    if not reason.strip():
+        raise Conflict("Reopening a period needs a reason.")
+    period.status = AccountingPeriod.Status.OPEN
+    period.reopened_at = timezone.now()
+    period.reopened_by = actor
+    period.reopen_reason = reason.strip()
+    period.updated_by = actor
+    period.save(
+        update_fields=[
+            "status",
+            "reopened_at",
+            "reopened_by",
+            "reopen_reason",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    create_audit_event(
+        actor=actor,
+        action="period.reopened",
+        entity_type="accounting.accountingperiod",
+        entity_id=period.pk,
+        after={"name": period.name, "reason": period.reopen_reason},
+    )
+    return period
+
+
+def enqueue_financial_event(
+    *,
+    code: str,
+    source_type: str,
+    source_id: int,
+    event_date: date,
+    amount,
+    description: str = "",
+    direction: str = "",
+    project=None,
+    cost_centre=None,
+    party=None,
+    payload: dict | None = None,
+) -> FinancialEvent:
+    """Record a financial event without requiring accounting configuration.
+
+    The outbox is intentional: a stock receipt must not fail because the chart
+    of accounts has not been reviewed yet, and the event must not disappear.
+    """
+
+    event, _ = FinancialEvent.objects.get_or_create(
+        code=code,
+        source_type=source_type,
+        source_id=source_id,
+        defaults={
+            "event_date": event_date,
+            "amount": _money(amount),
+            "description": description[:255],
+            "direction": direction,
+            "project": project,
+            "cost_centre": cost_centre,
+            "party": party,
+            "payload": payload or {},
+        },
+    )
+    return event
+
+
+def _event_rule(event: FinancialEvent) -> PostingRule | None:
+    event_type = event.code
+    if event.code == FinancialEvent.Code.E16:
+        event_type = "E16_GAIN" if event.direction == "gain" else "E16_LOSS"
+    return (
+        PostingRule.objects.filter(event_type=event_type, is_active=True)
+        .filter(approved_at__isnull=False)
+        .order_by("id")
+        .first()
+    )
+
+
+def post_financial_event(event: FinancialEvent, actor) -> FinancialEvent:
+    """Post one outbox event if an approved rule and mapping exist."""
+
+    if event.status == FinancialEvent.Status.POSTED:
+        raise Conflict("This financial event is already posted.")
+    settings = AccountingSettings.load()
+    if settings.posting_reviewed_at is None:
+        event.status = FinancialEvent.Status.PENDING
+        event.error = "Automatic posting awaits Finance Controller review."
+        event.save(update_fields=["status", "error", "updated_at"])
+        return event
+    rule = _event_rule(event)
+    if rule is None:
+        event.status = FinancialEvent.Status.PENDING
+        event.error = "No approved posting rule is configured for this event type."
+        event.save(update_fields=["status", "error", "updated_at"])
+        return event
+    period = (
+        AccountingPeriod.objects.filter(
+            start_date__lte=event.event_date, end_date__gte=event.event_date
+        )
+        .order_by("start_date")
+        .first()
+    )
+    if period is None:
+        event.error = "No accounting period covers the event date."
+        event.save(update_fields=["error", "updated_at"])
+        return event
+    try:
+        journal = post_event(
+            rule,
+            actor,
+            journal_date=event.event_date,
+            period=period,
+            description=event.description or event.get_code_display(),
+            amounts={"event_amount": event.amount},
+            reference=f"{event.source_type}:{event.source_id}:{event.pk}",
+            project=event.project,
+            cost_centre=event.cost_centre,
+            party=event.party,
+        )
+    except Conflict as exc:
+        event.status = FinancialEvent.Status.FAILED
+        event.error = str(exc)[:255]
+        event.save(update_fields=["status", "error", "updated_at"])
+        return event
+    event.status = FinancialEvent.Status.POSTED
+    event.journal = journal
+    event.error = ""
+    event.posted_at = timezone.now()
+    event.posted_by = actor
+    event.save(update_fields=["status", "journal", "error", "posted_at", "posted_by", "updated_at"])
+    return event
+
+
+def process_pending_financial_events(actor, limit: int = 100) -> dict:
+    events = list(
+        FinancialEvent.objects.filter(
+            status__in=[FinancialEvent.Status.PENDING, FinancialEvent.Status.FAILED]
+        ).order_by("id")[:limit]
+    )
+    posted = 0
+    failed = 0
+    for event in events:
+        result = post_financial_event(event, actor)
+        if result.status == FinancialEvent.Status.POSTED:
+            posted += 1
+        elif result.status == FinancialEvent.Status.FAILED:
+            failed += 1
+    return {"attempted": len(events), "posted": posted, "failed": failed}
 
 
 def _posted_lines(*, start=None, end=None, period=None, exclude_closing=False):

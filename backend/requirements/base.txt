@@ -14,3 +14,13 @@ argon2-cffi>=25.0,<26.0
 
 # Field-level encryption for supplier bank details (B-26).
 cryptography>=44,<47
+
+# Invoice PDF rendering. Pinned to a compatible major range; no font or
+# company logo is bundled because company legal details are client data.
+reportlab>=4.2,<5.0
+
+# XLSX bank statement import (Phase 8).
+openpyxl>=3.1,<4.0
+
+# Production WSGI server. Development uses Django's runserver.
+gunicorn>=23,<24

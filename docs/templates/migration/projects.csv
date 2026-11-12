@@ -1,0 +1,2 @@
+code,name,customer_code,status,start_date,end_date,currency,budget_total
+SAMPLE-PRJ-001,Sample Project,SAMPLE-CUS-001,active,2026-01-01,2026-12-31,NGN,1000000.00

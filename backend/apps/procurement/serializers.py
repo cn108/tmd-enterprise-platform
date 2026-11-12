@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.catalogue.models import CatalogueItem, UnitOfMeasure
+from apps.core.approvals import approval_state
 from apps.organisation.models import CostCentre
 from apps.parties.models import Party
 from apps.procurement.models import (
@@ -26,13 +28,18 @@ from apps.warehousing.models import Warehouse
 
 
 class DestinationSerializer(serializers.ModelSerializer):
+    project_code = serializers.SerializerMethodField()
+    warehouse_code = serializers.SerializerMethodField()
+
     class Meta:
         model = Destination
         fields = [
             "id",
             "kind",
             "project",
+            "project_code",
             "warehouse",
+            "warehouse_code",
             "location_name",
             "notes",
             "created_at",
@@ -74,16 +81,29 @@ class DestinationSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def get_project_code(self, obj: Destination) -> str | None:
+        return obj.project.code if obj.project_id else None
+
+    def get_warehouse_code(self, obj: Destination) -> str | None:
+        return obj.warehouse.code if obj.warehouse_id else None
+
 
 class PurchaseRequestLineSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    uom_code = serializers.CharField(source="uom.code", read_only=True)
+    label = serializers.SerializerMethodField()
+
     class Meta:
         model = PurchaseRequestLine
         fields = [
             "id",
             "item",
+            "item_code",
+            "label",
             "description",
             "quantity",
             "uom",
+            "uom_code",
             "cost_centre",
             "created_at",
             "updated_at",
@@ -95,11 +115,19 @@ class PurchaseRequestLineSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Quantity must be greater than zero.")
         return value
 
+    def get_label(self, obj: PurchaseRequestLine) -> str:
+        return f"{obj.request.number} · {obj.item.code} · {obj.quantity}"
+
 
 class PurchaseRequestSerializer(serializers.ModelSerializer):
     lines = PurchaseRequestLineSerializer(many=True)
     requester = serializers.SerializerMethodField()
     approved_by = serializers.SerializerMethodField()
+    department_code = serializers.SerializerMethodField()
+    destination_kind = serializers.SerializerMethodField()
+    approvals_required = serializers.SerializerMethodField()
+    approvals_recorded = serializers.SerializerMethodField()
+    approval_policy = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseRequest
@@ -108,7 +136,9 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
             "number",
             "requester",
             "department",
+            "department_code",
             "destination",
+            "destination_kind",
             "justification",
             "required_by",
             "status",
@@ -116,6 +146,9 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
             "approved_by",
             "approved_at",
             "rejection_reason",
+            "approvals_required",
+            "approvals_recorded",
+            "approval_policy",
             "lines",
             "created_at",
             "updated_at",
@@ -136,6 +169,25 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     def get_approved_by(self, obj: PurchaseRequest) -> str | None:
         return obj.approved_by.email if obj.approved_by else None
 
+    def get_department_code(self, obj: PurchaseRequest) -> str | None:
+        return obj.department.code if obj.department_id else None
+
+    def get_destination_kind(self, obj: PurchaseRequest) -> str | None:
+        return obj.destination.kind if obj.destination_id else None
+
+    def _state(self, obj: PurchaseRequest) -> dict:
+        return approval_state("purchase_request", obj.pk, 0)
+
+    def get_approvals_required(self, obj: PurchaseRequest) -> int:
+        return self._state(obj)["required"]
+
+    def get_approvals_recorded(self, obj: PurchaseRequest) -> int:
+        return self._state(obj)["recorded"]
+
+    def get_approval_policy(self, obj: PurchaseRequest) -> str | None:
+        return self._state(obj)["policy"]
+
+    @transaction.atomic
     def create(self, validated_data):
         lines = validated_data.pop("lines", [])
         if not lines:
@@ -151,11 +203,41 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
             PurchaseRequestLine.objects.create(request=request, **line)
         return request
 
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        """A draft request is editable; after submission it is not."""
+        if instance.status != PurchaseRequest.Status.DRAFT:
+            raise serializers.ValidationError(
+                "Only a draft request can be edited. Raise a new request instead."
+            )
+        lines = validated_data.pop("lines", None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        if lines is not None:
+            if not lines:
+                raise serializers.ValidationError({"lines": "Add at least one line."})
+            instance.lines.all().delete()
+            for line in lines:
+                PurchaseRequestLine.objects.create(request=instance, **line)
+        return instance
+
 
 class RfqSupplierSerializer(serializers.ModelSerializer):
+    rfq_number = serializers.CharField(source="rfq.number", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
+
     class Meta:
         model = RfqSupplier
-        fields = ["id", "rfq", "supplier", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "rfq",
+            "rfq_number",
+            "supplier",
+            "supplier_name",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["created_at", "updated_at"]
 
     def validate_supplier(self, value: Party):
@@ -167,12 +249,15 @@ class RfqSupplierSerializer(serializers.ModelSerializer):
 
 
 class RequestForQuotationSerializer(serializers.ModelSerializer):
+    request_number = serializers.CharField(source="request.number", read_only=True)
+
     class Meta:
         model = RequestForQuotation
         fields = [
             "id",
             "number",
             "request",
+            "request_number",
             "status",
             "due_date",
             "issued_at",
@@ -187,6 +272,7 @@ class RequestForQuotationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Only an approved request can be quoted.")
         return value
 
+    @transaction.atomic
     def create(self, validated_data):
         from .numbering import next_number
 
@@ -201,6 +287,8 @@ class SupplierQuoteLineSerializer(serializers.ModelSerializer):
 
 class SupplierQuoteSerializer(serializers.ModelSerializer):
     lines = SupplierQuoteLineSerializer(many=True)
+    rfq_number = serializers.CharField(source="rfq.number", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
 
     class Meta:
         model = SupplierQuote
@@ -208,7 +296,9 @@ class SupplierQuoteSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "rfq",
+            "rfq_number",
             "supplier",
+            "supplier_name",
             "reference",
             "received_at",
             "currency",
@@ -223,6 +313,7 @@ class SupplierQuoteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Quotations come from suppliers.")
         return value
 
+    @transaction.atomic
     def create(self, validated_data):
         from .numbering import next_number
         from .services import StateConflict, validate_quote
@@ -242,9 +333,21 @@ class SupplierQuoteSerializer(serializers.ModelSerializer):
 
 
 class SupplierSelectionSerializer(serializers.ModelSerializer):
+    rfq_number = serializers.CharField(source="rfq.number", read_only=True)
+    quote_number = serializers.CharField(source="quote.number", read_only=True)
+
     class Meta:
         model = SupplierSelection
-        fields = ["id", "rfq", "quote", "reason", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "rfq",
+            "rfq_number",
+            "quote",
+            "quote_number",
+            "reason",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["created_at", "updated_at"]
 
     def validate(self, attrs):
@@ -258,11 +361,17 @@ class SupplierSelectionSerializer(serializers.ModelSerializer):
 
 
 class PurchaseOrderLineSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    schedules = serializers.SerializerMethodField()
+    label = serializers.SerializerMethodField()
+
     class Meta:
         model = PurchaseOrderLine
         fields = [
             "id",
             "item",
+            "item_code",
+            "label",
             "description",
             "quantity",
             "unit_price",
@@ -271,6 +380,7 @@ class PurchaseOrderLineSerializer(serializers.ModelSerializer):
             "quantity_accepted",
             "quantity_rejected",
             "quantity_damaged",
+            "schedules",
         ]
         read_only_fields = ["quantity_accepted", "quantity_rejected", "quantity_damaged"]
 
@@ -278,6 +388,21 @@ class PurchaseOrderLineSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Quantity must be greater than zero.")
         return value
+
+    def get_schedules(self, obj: PurchaseOrderLine) -> list[dict]:
+        return [
+            {
+                "id": schedule.pk,
+                "due_date": schedule.due_date,
+                "quantity": schedule.quantity,
+                "quantity_delivered": schedule.quantity_delivered,
+                "destination": schedule.destination_id,
+            }
+            for schedule in obj.schedules.all()
+        ]
+
+    def get_label(self, obj: PurchaseOrderLine) -> str:
+        return f"{obj.order.number} · {obj.item.code} · {obj.quantity}"
 
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
@@ -289,6 +414,11 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     )
     total_value = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
     approved_by = serializers.SerializerMethodField()
+    supplier_name = serializers.SerializerMethodField()
+    request_number = serializers.SerializerMethodField()
+    approvals_required = serializers.SerializerMethodField()
+    approvals_recorded = serializers.SerializerMethodField()
+    approval_policy = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
@@ -296,11 +426,14 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "id",
             "number",
             "supplier",
+            "supplier_name",
             "request",
+            "request_number",
             "rfq",
             "selection",
             "destination",
             "currency",
+            "revision",
             "status",
             "submitted_at",
             "approved_by",
@@ -309,12 +442,16 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             "closed_at",
             "close_reason",
             "total_value",
+            "approvals_required",
+            "approvals_recorded",
+            "approval_policy",
             "lines",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "number",
+            "revision",
             "status",
             "submitted_at",
             "approved_at",
@@ -328,6 +465,25 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     def get_approved_by(self, obj: PurchaseOrder) -> str | None:
         return obj.approved_by.email if obj.approved_by else None
 
+    def _state(self, obj: PurchaseOrder) -> dict:
+        return approval_state("purchase_order", obj.pk, obj.total_value)
+
+    def get_approvals_required(self, obj: PurchaseOrder) -> int:
+        return self._state(obj)["required"]
+
+    def get_approvals_recorded(self, obj: PurchaseOrder) -> int:
+        return self._state(obj)["recorded"]
+
+    def get_approval_policy(self, obj: PurchaseOrder) -> str | None:
+        return self._state(obj)["policy"]
+
+    def get_supplier_name(self, obj: PurchaseOrder) -> str | None:
+        return obj.supplier.legal_name if obj.supplier_id else None
+
+    def get_request_number(self, obj: PurchaseOrder) -> str | None:
+        return obj.request.number if obj.request_id else None
+
+    @transaction.atomic
     def create(self, validated_data):
         from .numbering import next_number
 
@@ -368,8 +524,36 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             PurchaseOrderLine.objects.create(order=order, **line)
         return order
 
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        """Amend a draft order. Issued orders are changed by a new order.
+
+        Replacing the lines raises the revision so the order history shows that
+        its contents changed before approval. No authorisation for amendments
+        beyond the existing order write access is invented.
+        """
+        if instance.status != PurchaseOrder.Status.DRAFT:
+            raise serializers.ValidationError(
+                "Only a draft order can be amended. Raise a new order instead."
+            )
+        lines = validated_data.pop("lines", None)
+        validated_data.pop("selection", None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if lines is not None:
+            if not lines:
+                raise serializers.ValidationError({"lines": "An order needs at least one line."})
+            instance.lines.all().delete()
+            for line in lines:
+                PurchaseOrderLine.objects.create(order=instance, **line)
+            instance.revision += 1
+        instance.save()
+        return instance
+
 
 class DeliveryScheduleSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+
     class Meta:
         model = DeliverySchedule
         fields = [
@@ -379,6 +563,7 @@ class DeliveryScheduleSerializer(serializers.ModelSerializer):
             "quantity",
             "destination",
             "quantity_delivered",
+            "label",
             "created_at",
             "updated_at",
         ]
@@ -395,6 +580,12 @@ class DeliveryScheduleSerializer(serializers.ModelSerializer):
                 {"quantity": "Schedules cannot exceed the ordered quantity."}
             )
         return attrs
+
+    def get_label(self, obj: DeliverySchedule) -> str:
+        return (
+            f"{obj.order_line.order.number} · {obj.order_line.item.code} · "
+            f"due {obj.due_date} · {obj.quantity}"
+        )
 
 
 class GoodsReceiptLineSerializer(serializers.Serializer):
@@ -422,10 +613,13 @@ class GoodsReceiptCreateSerializer(serializers.Serializer):
 
 
 class GoodsReceiptLineReadSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+
     class Meta:
         model = GoodsReceiptLine
         fields = [
             "id",
+            "label",
             "schedule",
             "order_line",
             "quantity_delivered",
@@ -435,17 +629,33 @@ class GoodsReceiptLineReadSerializer(serializers.ModelSerializer):
             "rejection_reason",
         ]
 
+    def get_label(self, obj: GoodsReceiptLine) -> str:
+        return f"{obj.receipt.number} · {obj.order_line.item.code} · {obj.quantity_accepted}"
+
 
 class GoodsReceiptNoteSerializer(serializers.ModelSerializer):
     lines = GoodsReceiptLineReadSerializer(many=True, read_only=True)
     received_by = serializers.SerializerMethodField()
+    order_number = serializers.SerializerMethodField()
 
     class Meta:
         model = GoodsReceiptNote
-        fields = ["id", "number", "order", "received_at", "notes", "received_by", "lines"]
+        fields = [
+            "id",
+            "number",
+            "order",
+            "order_number",
+            "received_at",
+            "notes",
+            "received_by",
+            "lines",
+        ]
 
     def get_received_by(self, obj: GoodsReceiptNote) -> str:
         return obj.received_by.email
+
+    def get_order_number(self, obj: GoodsReceiptNote) -> str | None:
+        return obj.order.number if obj.order_id else None
 
 
 class ItemReferenceSerializer(serializers.ModelSerializer):

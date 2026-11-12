@@ -7,6 +7,8 @@ management sign-off; it is small and data-driven on purpose.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -40,9 +42,31 @@ class Project(UserStampedModel):
     managers = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="managed_projects"
     )
+    project_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="led_projects",
+    )
+    department = models.ForeignKey(
+        "organisation.Department",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="projects",
+    )
+    cost_centre = models.ForeignKey(
+        "organisation.CostCentre",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="projects",
+    )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
+    actual_completion_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
 
     class Meta:
@@ -136,3 +160,171 @@ class ContractRevision(UserStampedModel):
 
     def __str__(self) -> str:
         return f"{self.contract.reference} rev {self.revision_number}"
+
+
+class BudgetCategory(models.TextChoices):
+    MATERIALS = "materials", "Materials"
+    LABOUR = "labour", "Labour"
+    LOGISTICS = "logistics", "Logistics and transport"
+    EQUIPMENT = "equipment", "Equipment rental"
+    SUBCONTRACT = "subcontract", "Subcontracting"
+    ENGINEERING = "engineering", "Engineering services"
+    OTHER = "other", "Other direct cost"
+
+
+class ProjectBudget(UserStampedModel):
+    """A versioned project budget (PRJ-03).
+
+    Amounts are client data. A budget is approved by a second person; approval
+    is a permission the access administrator grants, because no approval-limit
+    policy (D-04) has been signed. Approved budgets are not edited: a new
+    version is raised instead, so committed cost can be compared with the
+    budget that applied at the time.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name="budgets")
+    version = models.PositiveIntegerField(default=1)
+    currency = models.CharField(max_length=3, default="NGN")
+    revision_reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["project__code", "-version"]
+        verbose_name = "project budget"
+        verbose_name_plural = "project budgets"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "version"], name="unique_budget_version_per_project"
+            )
+        ]
+        permissions = [("approve_projectbudget", "Can approve a project budget")]
+
+    def __str__(self) -> str:
+        return f"{self.project.code} budget v{self.version}"
+
+    @property
+    def total_value(self):
+        return sum((line.amount for line in self.lines.all()), start=Decimal("0"))
+
+
+class BudgetLine(UserStampedModel):
+    budget = models.ForeignKey(ProjectBudget, on_delete=models.CASCADE, related_name="lines")
+    cost_centre = models.ForeignKey(
+        "organisation.CostCentre",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="budget_lines",
+    )
+    category = models.CharField(
+        max_length=16, choices=BudgetCategory.choices, default=BudgetCategory.OTHER
+    )
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+
+    class Meta:
+        ordering = ["budget", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0), name="budget_line_amount_non_negative"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.budget_id}: {self.description} {self.amount}"
+
+
+class ProjectCost(UserStampedModel):
+    """A direct project cost not already represented by procurement or stock.
+
+    Supplier invoices and project stock issues are deliberately not duplicated
+    here: the costing report combines those source documents with the approved
+    rows in this table. This prevents the same cost being counted twice.
+    """
+
+    class Source(models.TextChoices):
+        MANUAL = "manual", "Manual cost capture"
+        RENTAL_AGREEMENT = "rental_agreement", "Equipment rental agreement"
+        OTHER = "other", "Other direct cost"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name="costs")
+    cost_date = models.DateField()
+    category = models.CharField(max_length=16, choices=BudgetCategory.choices)
+    description = models.CharField(max_length=255)
+    supplier = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="project_costs",
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    currency = models.CharField(max_length=3, default="NGN")
+    reference = models.CharField(max_length=120, blank=True)
+    source_type = models.CharField(max_length=20, choices=Source.choices, default=Source.MANUAL)
+    source_id = models.PositiveBigIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["project__code", "-cost_date", "-id"]
+        verbose_name = "project cost"
+        verbose_name_plural = "project costs"
+        permissions = [
+            ("approve_projectcost", "Can approve a direct project cost"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="project_cost_amount_positive"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.project.code}: {self.description} {self.amount}"
+
+
+class ProjectMilestone(UserStampedModel):
+    """A dated project milestone (PRJ-05). Completion is a recorded date, not
+    an invented workflow status."""
+
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name="milestones")
+    name = models.CharField(max_length=200)
+    due_date = models.DateField(null=True, blank=True)
+    completed_on = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["project__code", "due_date", "name"]
+        verbose_name = "project milestone"
+        verbose_name_plural = "project milestones"
+
+    def __str__(self) -> str:
+        return f"{self.project.code}: {self.name}"

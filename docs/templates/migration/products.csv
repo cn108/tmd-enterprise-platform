@@ -1,0 +1,2 @@
+code,name,kind,uom_code,category_code,is_active
+SAMPLE-ITEM-001,Sample Cement,product,BAG,MATERIALS,true

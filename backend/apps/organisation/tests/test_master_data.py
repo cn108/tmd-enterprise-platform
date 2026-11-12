@@ -50,7 +50,7 @@ def test_departments_are_listed_and_not_deleted(auth_client):
     listed = auth_client.get("/api/v1/departments/")
 
     assert listed.status_code == 200
-    assert [row["code"] for row in listed.json()] == ["FIN"]
+    assert [row["code"] for row in listed.json()["results"]] == ["FIN"]
 
     deletion = auth_client.delete(f"/api/v1/departments/{department.pk}/")
 

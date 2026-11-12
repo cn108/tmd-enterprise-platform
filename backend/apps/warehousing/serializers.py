@@ -23,11 +23,14 @@ class WarehouseSerializer(CodedSerializerMixin, serializers.ModelSerializer):
 
 
 class StorageLocationSerializer(CodedSerializerMixin, serializers.ModelSerializer):
+    warehouse_code = serializers.CharField(source="warehouse.code", read_only=True)
+
     class Meta:
         model = StorageLocation
         fields = [
             "id",
             "warehouse",
+            "warehouse_code",
             "code",
             "name",
             "is_active",

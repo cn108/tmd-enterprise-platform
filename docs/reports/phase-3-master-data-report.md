@@ -106,6 +106,12 @@ Either close Phase 2 (W4–W9) once G1 is signed, so master data can be permissi
 
 ---
 
+## Addendum — 11 November 2026 (session 2)
+
+The portal now covers the master-data surface described above: supplier categories, contacts, addresses, tax registrations, masked bank accounts and two-person changes, compliance documents, catalogue support records, storage locations, departments, cost centres, destinations, project locations, contracts and revisions, project budgets with lines and separate approval, milestones, and private document upload/download. The earlier gap "No screens: master data is API/admin only" and the missing budgets/milestones are closed.
+
+Still outstanding: append-only audit history (W7), approved retention rules (Q-28), and the management-approved role matrix that decides who may change restricted records. The module remains **PARTIAL** under the specification's definition.
+
 ## Rules applied to this report
 
 - No financial feature is reported as production-ready; none was built.

@@ -1,0 +1,2 @@
+code,legal_name,trading_name,payment_terms_days,default_currency,credit_limit,credit_hold,email,phone,is_active
+SAMPLE-CUS-001,Sample Customer Ltd,Sample Customer,30,NGN,0,false,customer@example.invalid,+2340000000001,true

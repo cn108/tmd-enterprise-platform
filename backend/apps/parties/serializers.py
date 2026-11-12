@@ -84,11 +84,14 @@ class CustomerSerializer(CodedSerializerMixin, serializers.ModelSerializer):
 
 
 class ContactSerializer(serializers.ModelSerializer):
+    party_code = serializers.CharField(source="party.code", read_only=True)
+
     class Meta:
         model = Contact
         fields = [
             "id",
             "party",
+            "party_code",
             "name",
             "role",
             "email",
@@ -100,12 +103,23 @@ class ContactSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
+class PartyOptionSerializer(serializers.ModelSerializer):
+    """All parties, for relationship master data that serves either role."""
+
+    class Meta:
+        model = Party
+        fields = ["id", "code", "legal_name", "is_supplier", "is_customer", "is_active"]
+
+
 class AddressSerializer(serializers.ModelSerializer):
+    party_code = serializers.CharField(source="party.code", read_only=True)
+
     class Meta:
         model = Address
         fields = [
             "id",
             "party",
+            "party_code",
             "label",
             "line1",
             "line2",
@@ -121,11 +135,14 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class TaxRegistrationSerializer(serializers.ModelSerializer):
+    party_code = serializers.CharField(source="party.code", read_only=True)
+
     class Meta:
         model = TaxRegistration
         fields = [
             "id",
             "party",
+            "party_code",
             "scheme",
             "number",
             "issued_on",
@@ -140,12 +157,16 @@ class BankAccountSerializer(serializers.ModelSerializer):
     """Read-only view of an approved account; never exposes the ciphertext."""
 
     masked_account = serializers.CharField(read_only=True)
+    supplier_code = serializers.CharField(source="supplier.code", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
 
     class Meta:
         model = BankAccount
         fields = [
             "id",
             "supplier",
+            "supplier_code",
+            "supplier_name",
             "bank_name",
             "account_name",
             "masked_account",
@@ -165,12 +186,14 @@ class BankAccountChangeRequestSerializer(serializers.ModelSerializer):
     )
     requested_by = serializers.SerializerMethodField()
     reviewed_by = serializers.SerializerMethodField()
+    supplier_code = serializers.CharField(source="supplier.code", read_only=True)
 
     class Meta:
         model = BankAccountChangeRequest
         fields = [
             "id",
             "supplier",
+            "supplier_code",
             "bank_account",
             "proposed_bank_name",
             "proposed_account_name",
@@ -235,11 +258,14 @@ class BankAccountDecisionSerializer(serializers.Serializer):
 
 
 class ComplianceDocumentSerializer(serializers.ModelSerializer):
+    party_code = serializers.CharField(source="supplier.code", read_only=True)
+
     class Meta:
         model = ComplianceDocument
         fields = [
             "id",
             "supplier",
+            "party_code",
             "document_type",
             "reference",
             "issued_on",

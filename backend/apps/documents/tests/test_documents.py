@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.documents.models import Document
+from apps.identity.models import User
 
 pytestmark = pytest.mark.django_db
 
@@ -14,6 +16,32 @@ PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
 def media_root(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
     return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def document_permissions(user):
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            codename__in=[
+                "view_document",
+                "add_document",
+                "change_document",
+                "view_documentcategory",
+                "view_documentlink",
+                "add_documentlink",
+            ]
+        )
+    )
+    return user
+
+
+def test_documents_require_permission(auth_client, user):
+    other = User.objects.create_user(
+        email="no-docs@example.com", full_name="No Documents", password="Tmd-Pass-2026!"
+    )
+    client = auth_client
+    client.force_authenticate(user=other)
+    assert client.get("/api/v1/documents/").status_code == 403
 
 
 def upload(client, name: str = "contract.pdf", content: bytes = PDF, **extra):

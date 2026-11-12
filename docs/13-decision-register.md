@@ -2,7 +2,7 @@
 
 **Version:** 0.1 — 11 November 2026
 **Guide references:** §9 Phase 0 step 7, §15.9
-**Labels:** **CONFIRMED** (decided and signed) · **PROPOSED** (recommended, awaiting approval) · **ASSUMPTION** (needed to progress, must be disproved or confirmed) · **UNRESOLVED** (blocks the phase named)
+**Labels:** **CONFIRMED** (decided and signed) · **PROVISIONAL** (direction recorded, implemented as configuration, requires professional review) · **PROPOSED** (recommended, awaiting approval) · **ASSUMPTION** (needed to progress, must be disproved or confirmed) · **UNRESOLVED** (blocks the phase named)
 
 Only CONFIRMED items may be implemented as company policy. PROPOSED and ASSUMPTION items are design proposals that must be ratified or replaced.
 
@@ -14,14 +14,14 @@ Only CONFIRMED items may be implemented as company policy. PROPOSED and ASSUMPTI
 | --- | --- | --- | --- | --- | --- |
 | D-01 | Approve Phase 0 scope and the phased plan in `14-backlog.md` | **CONFIRMED** | Management — approved in writing, 11 Nov 2026 | Phase 1 | No build can begin |
 | D-02 | Entity/office/warehouse/site structure | UNRESOLVED | Management | Phase 3 | Data model and reporting groups cannot be finalised |
-| D-03 | Role and permission matrix | UNRESOLVED | Management + dept heads | Phase 2 | Access control built on guesses; high rework risk |
-| D-04 | Approval limits and maker-checker design | UNRESOLVED | Management + Finance | Phase 2/4 | Approval engine can only be a stub |
-| D-04a | Dual approval everywhere, or single approval with dual only above a value threshold | UNRESOLVED | Management | Phase 2 | Maker-checker rules cannot be finalised (`05-…` §4) |
-| D-04b | Basis for determining approvers (amount, department, project, procurement type, or combination) | UNRESOLVED | Management | Phase 2 | Approval policy data model stays generic |
-| D-05 | Chart of accounts, financial year, periods, posting matrix | UNRESOLVED | Accountant | Phase 6 | **No posting possible** |
-| D-06 | Inventory costing method and GRNI policy | UNRESOLVED | Accountant | Phase 5/6 | Stock valuation and project cost incorrect |
+| D-03 | Role and permission matrix | **PROVISIONAL** (nine roles; 12 Nov 2026) | Management + dept heads | Phase 2 | Nine roles applied; named holders and HSE/Requester reduction need confirmation. See `reports/configuration-report-2026-11-12.md` |
+| D-04 | Approval limits and maker-checker design | **PROVISIONAL** (₦5,000,000; 12 Nov 2026) | Management + Finance | Phase 2/4 | Bands apply to purchase orders and budgets; supplier invoice/payment bands await their modules |
+| D-04a | Dual approval everywhere, or single approval with dual only above a value threshold | **PROVISIONAL** (single below ₦5m, dual at/above; 12 Nov 2026) | Management | Phase 2 | Implementation exists; band interpretation needs written confirmation |
+| D-04b | Basis for determining approvers (amount, department, project, procurement type, or combination) | **PROVISIONAL** (amount only; 12 Nov 2026) | Management | Phase 2 | Department/project routing not implemented |
+| D-05 | Chart of accounts, financial year, periods, posting matrix | **PROVISIONAL** (roles and monthly periods; 12 Nov 2026) | Accountant | Phase 6 | **No account or mapping supplied; no posting possible** |
+| D-06 | Inventory costing method and GRNI policy | **PROVISIONAL** (weighted average + specific identification; GRNI accrual; 12 Nov 2026) | Accountant | Phase 5/6 | Method recorded; mappings and Finance Controller review outstanding |
 | D-07 | Tax registrations, rates, e-invoicing scope | UNRESOLVED | Accountant / tax adviser | Phase 7 | Invoices may be non-compliant |
-| D-08 | Invoice numbering scheme | UNRESOLVED | Accountant | Phase 7 | Cannot issue documents |
+| D-08 | Invoice numbering scheme | **PROVISIONAL** (`INV-YYYY-NNNNNN`; 12 Nov 2026) | Accountant | Phase 7 | Stage 7A drafts use it; live issuance still needs approval |
 | D-09 | Technology stack (Angular, Django/DRF, PostgreSQL, Redis/Celery, Docker, GitHub Actions) | **CONFIRMED** | Management / IT — confirmed with the Phase 1 authorisation, 11 Nov 2026 | Phase 1 | Repository built on a stack that may be replaced |
 | D-10 | Hosting model (cloud vs local) and site connectivity | UNRESOLVED | Management / IT | Phase 1/12 | Deployment and DR design unknown |
 | D-11 | Migration cut-off and opening balance approach | UNRESOLVED | Finance + Management | Phase 13 | Cutover cannot be scheduled |
@@ -50,7 +50,7 @@ Only CONFIRMED items may be implemented as company policy. PROPOSED and ASSUMPTI
 | D-20 | Project cost/WIP treatment, including summary vs detail posting | UNRESOLVED | Accountant | Phase 6 |
 | D-21 | Landed-cost allocation method | UNRESOLVED | Accountant | Phase 5/7 |
 | D-22 | FX policy (rates, revaluation) — disabled until approved | UNRESOLVED | Accountant | Phase 6 (enablement only) |
-| D-23 | Rounding policy per document type | UNRESOLVED | Accountant | Phase 6/7 |
+| D-23 | Rounding policy per document type | **ASSUMPTION** (per-line half-up to 2 dp; Stage 7A) | Accountant | Phase 6/7 | Stage 7A uses half-up until confirmed |
 | D-24 | Fixed asset capitalisation/depreciation (equipment) | UNRESOLVED | Accountant | Phase 10 |
 | D-25 | Write-off / bad debt authority | UNRESOLVED | Management + Accountant | Phase 8 |
 | D-26 | Report definitions (ageing buckets, statements, P&L groupings) | UNRESOLVED | Accountant | Phase 6/11 |
@@ -159,6 +159,10 @@ Each decision is closed in a specific review session, using the worksheet named 
 A decision becomes CONFIRMED only when the worksheet is filled, the owner's name is recorded and the date is entered here. Verbal agreement is captured as PROPOSED until then.
 
 ## 8. Sign-off block
+
+## 8a. Provisional policy applied on 12 November 2026
+
+The decisions marked **PROVISIONAL** above are implemented as versioned configuration by `manage.py apply_provisional_governance`. They are **not** signed company policy and do not authorise production posting. The configuration report (`docs/reports/configuration-report-2026-11-12.md`) lists the implemented controls, outstanding mappings, blocked features and assumptions requiring professional review. A qualified Finance Controller must review the chart, opening balances and tax settings before the provisional label is changed to CONFIRMED.
 
 | Role | Name | Signature | Date |
 | --- | --- | --- | --- |

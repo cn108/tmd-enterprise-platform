@@ -1,0 +1,2 @@
+warehouse_code,item_code,quantity,unit_cost,valuation_date
+SAMPLE-WH-001,SAMPLE-ITEM-001,10,1000.00,2026-01-01

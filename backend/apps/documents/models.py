@@ -95,6 +95,9 @@ class DocumentLink(UserStampedModel):
         STORAGE_LOCATION = "storage_location", "Storage location"
         CERTIFICATE = "certificate", "Certificate"
         COMPLIANCE_DOCUMENT = "compliance_document", "Compliance document"
+        SUPPLIER_INVOICE = "supplier_invoice", "Supplier invoice"
+        WORK_ORDER = "service_work_order", "Engineering / maintenance work order"
+        RENTAL_AGREEMENT = "rental_agreement", "Equipment rental agreement"
 
     document = models.ForeignKey(Document, on_delete=models.PROTECT, related_name="links")
     entity_type = models.CharField(max_length=32, choices=EntityType.choices)

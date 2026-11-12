@@ -27,46 +27,66 @@ from apps.parties.serializers import (
     ComplianceDocumentSerializer,
     ContactSerializer,
     CustomerSerializer,
+    PartyOptionSerializer,
     SupplierCategorySerializer,
     SupplierSerializer,
     TaxRegistrationSerializer,
 )
 from shared.exceptions import error_response
-from shared.viewsets import MasterDataViewSet, NoDeleteViewSet
+from shared.permissions import ModelPermission
+from shared.viewsets import ProtectedMasterDataViewSet, ProtectedNoDeleteViewSet
 
 audit_logger = logging.getLogger("apps.parties.audit")
 APPROVE_PERMISSION = "parties.approve_bankaccountchange"
 
 
-class SupplierCategoryViewSet(MasterDataViewSet):
+class SupplierCategoryViewSet(ProtectedMasterDataViewSet):
     queryset = SupplierCategory.objects.all()
     serializer_class = SupplierCategorySerializer
     search_fields = ("code", "name")
 
 
-class SupplierViewSet(MasterDataViewSet):
+class SupplierViewSet(ProtectedMasterDataViewSet):
     queryset = Party.objects.filter(is_supplier=True).select_related("supplier_category")
     serializer_class = SupplierSerializer
     search_fields = ("code", "legal_name", "trading_name", "email")
 
 
-class CustomerViewSet(MasterDataViewSet):
+class CustomerViewSet(ProtectedMasterDataViewSet):
     queryset = Party.objects.filter(is_customer=True)
     serializer_class = CustomerSerializer
     search_fields = ("code", "legal_name", "trading_name", "email")
 
 
-class ContactViewSet(NoDeleteViewSet):
+class PartyViewSet(viewsets.ReadOnlyModelViewSet):
+    """Every party, for contacts, addresses and tax registrations."""
+
+    serializer_class = PartyOptionSerializer
+    permission_classes = [ModelPermission]
+    search_fields = ("code", "legal_name", "trading_name")
+    ordering_fields = ("code", "legal_name")
+
+    def get_queryset(self):
+        queryset = Party.objects.all()
+        role = (self.request.query_params.get("role") or "").strip()
+        if role == "supplier":
+            queryset = queryset.filter(is_supplier=True)
+        elif role == "customer":
+            queryset = queryset.filter(is_customer=True)
+        return queryset
+
+
+class ContactViewSet(ProtectedNoDeleteViewSet):
     queryset = Contact.objects.select_related("party").all()
     serializer_class = ContactSerializer
 
 
-class AddressViewSet(NoDeleteViewSet):
+class AddressViewSet(ProtectedNoDeleteViewSet):
     queryset = Address.objects.select_related("party").all()
     serializer_class = AddressSerializer
 
 
-class TaxRegistrationViewSet(NoDeleteViewSet):
+class TaxRegistrationViewSet(ProtectedNoDeleteViewSet):
     queryset = TaxRegistration.objects.select_related("party").all()
     serializer_class = TaxRegistrationSerializer
 
@@ -76,6 +96,7 @@ class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = BankAccount.objects.select_related("supplier").all()
     serializer_class = BankAccountSerializer
+    permission_classes = [ModelPermission]
 
 
 class BankAccountChangeRequestViewSet(
@@ -88,6 +109,7 @@ class BankAccountChangeRequestViewSet(
         "supplier", "bank_account", "created_by", "reviewed_by"
     )
     serializer_class = BankAccountChangeRequestSerializer
+    permission_classes = [ModelPermission]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -166,6 +188,6 @@ class BankAccountChangeRequestViewSet(
         return self._decide(request, pk, approve=False)
 
 
-class ComplianceDocumentViewSet(NoDeleteViewSet):
+class ComplianceDocumentViewSet(ProtectedNoDeleteViewSet):
     queryset = ComplianceDocument.objects.select_related("supplier", "document").all()
     serializer_class = ComplianceDocumentSerializer

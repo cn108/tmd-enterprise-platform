@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.accounting.models import (
     Account,
     AccountingPeriod,
     AccountingSettings,
+    AccountRole,
+    AccountRoleMapping,
+    FinancialEvent,
     FiscalYear,
     JournalEntry,
     JournalLine,
@@ -63,6 +67,53 @@ class AccountSerializer(serializers.ModelSerializer):
         return value
 
 
+class AccountRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountRole
+        fields = ["id", "code", "name", "description", "is_active", "created_at", "updated_at"]
+        read_only_fields = ["code", "created_at", "updated_at"]
+
+
+class AccountRoleMappingSerializer(serializers.ModelSerializer):
+    role_code = serializers.CharField(source="role.code", read_only=True)
+    account_code = serializers.CharField(source="account.code", read_only=True)
+    approved_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AccountRoleMapping
+        fields = [
+            "id",
+            "role",
+            "role_code",
+            "account",
+            "account_code",
+            "effective_from",
+            "effective_to",
+            "is_active",
+            "approved_by",
+            "approved_at",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["approved_by", "approved_at", "created_at", "updated_at"]
+
+    def get_approved_by(self, obj: AccountRoleMapping) -> str | None:
+        return obj.approved_by.email if obj.approved_by else None
+
+    @transaction.atomic
+    def create(self, validated_data):
+        request = self.context["request"]
+        validated_data["created_by"] = request.user
+        validated_data["updated_by"] = request.user
+        return super().create(validated_data)
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        validated_data["updated_by"] = self.context["request"].user
+        return super().update(instance, validated_data)
+
+
 class FiscalYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = FiscalYear
@@ -81,25 +132,43 @@ class FiscalYearSerializer(serializers.ModelSerializer):
 
 class AccountingPeriodSerializer(serializers.ModelSerializer):
     closed_by = serializers.SerializerMethodField()
+    reopened_by = serializers.SerializerMethodField()
+    fiscal_year_code = serializers.CharField(source="fiscal_year.code", read_only=True)
 
     class Meta:
         model = AccountingPeriod
         fields = [
             "id",
             "fiscal_year",
+            "fiscal_year_code",
             "name",
             "start_date",
             "end_date",
             "status",
             "closed_at",
             "closed_by",
+            "reopened_at",
+            "reopened_by",
+            "reopen_reason",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["status", "closed_at", "closed_by", "created_at", "updated_at"]
+        read_only_fields = [
+            "status",
+            "closed_at",
+            "closed_by",
+            "reopened_at",
+            "reopened_by",
+            "reopen_reason",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_closed_by(self, obj: AccountingPeriod) -> str | None:
         return obj.closed_by.email if obj.closed_by else None
+
+    def get_reopened_by(self, obj: AccountingPeriod) -> str | None:
+        return obj.reopened_by.email if obj.reopened_by else None
 
     def validate(self, attrs):
         year = attrs.get("fiscal_year", getattr(self.instance, "fiscal_year", None))
@@ -307,6 +376,7 @@ class OpeningBalanceCreateSerializer(serializers.Serializer):
             )
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
         lines = validated_data.pop("lines")
@@ -371,7 +441,12 @@ class OpeningBalanceSerializer(serializers.ModelSerializer):
 
 
 class PostingRuleLineInputSerializer(serializers.Serializer):
-    account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all())
+    account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.all(), required=False, allow_null=True
+    )
+    account_role = serializers.PrimaryKeyRelatedField(
+        queryset=AccountRole.objects.all(), required=False, allow_null=True
+    )
     direction = serializers.ChoiceField(choices=PostingRuleLine.Direction.choices)
     amount_key = serializers.CharField(max_length=60)
 
@@ -380,11 +455,21 @@ class PostingRuleLineInputSerializer(serializers.Serializer):
             raise serializers.ValidationError("An amount key is required.")
         return value.strip()
 
+    def validate(self, attrs):
+        account = attrs.get("account")
+        role = attrs.get("account_role")
+        if bool(account) == bool(role):
+            raise serializers.ValidationError(
+                "Each line needs either an account or an account role, not both."
+            )
+        return attrs
+
 
 class PostingRuleCreateSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=60)
     name = serializers.CharField(max_length=120)
     description = serializers.CharField(required=False, allow_blank=True, default="")
+    event_type = serializers.CharField(required=False, allow_blank=True, default="")
     lines = PostingRuleLineInputSerializer(many=True)
 
     def validate_code(self, value):
@@ -398,6 +483,7 @@ class PostingRuleCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("A posting rule needs at least one line.")
         return value
 
+    @transaction.atomic
     def create(self, validated_data):
         request = self.context["request"]
         lines = validated_data.pop("lines")
@@ -411,10 +497,20 @@ class PostingRuleCreateSerializer(serializers.Serializer):
 
 class PostingRuleLineSerializer(serializers.ModelSerializer):
     account_code = serializers.CharField(source="account.code", read_only=True)
+    account_role_code = serializers.CharField(source="account_role.code", read_only=True)
 
     class Meta:
         model = PostingRuleLine
-        fields = ["id", "line_number", "account", "account_code", "direction", "amount_key"]
+        fields = [
+            "id",
+            "line_number",
+            "account",
+            "account_code",
+            "account_role",
+            "account_role_code",
+            "direction",
+            "amount_key",
+        ]
 
 
 class PostingRuleSerializer(serializers.ModelSerializer):
@@ -428,6 +524,7 @@ class PostingRuleSerializer(serializers.ModelSerializer):
             "code",
             "name",
             "description",
+            "event_type",
             "is_active",
             "approved_by",
             "approved_at",
@@ -439,6 +536,36 @@ class PostingRuleSerializer(serializers.ModelSerializer):
 
     def get_approved_by(self, obj: PostingRule) -> str | None:
         return obj.approved_by.email if obj.approved_by else None
+
+
+class FinancialEventSerializer(serializers.ModelSerializer):
+    journal_number = serializers.CharField(source="journal.number", read_only=True, default=None)
+    code_label = serializers.CharField(source="get_code_display", read_only=True)
+
+    class Meta:
+        model = FinancialEvent
+        fields = [
+            "id",
+            "code",
+            "code_label",
+            "source_type",
+            "source_id",
+            "event_date",
+            "amount",
+            "description",
+            "direction",
+            "project",
+            "cost_centre",
+            "party",
+            "status",
+            "journal",
+            "journal_number",
+            "error",
+            "posted_at",
+            "posted_by",
+            "created_at",
+        ]
+        read_only_fields = fields
 
 
 class PostingEventSerializer(serializers.Serializer):
@@ -469,12 +596,23 @@ class AccountingSettingsSerializer(serializers.ModelSerializer):
     retained_earnings_account_code = serializers.CharField(
         source="retained_earnings_account.code", read_only=True, default=None
     )
+    posting_reviewed_by = serializers.CharField(
+        source="posting_reviewed_by.email", read_only=True, default=None
+    )
 
     class Meta:
         model = AccountingSettings
         fields = [
             "retained_earnings_account",
             "retained_earnings_account_code",
+            "posting_reviewed_at",
+            "posting_reviewed_by",
+            "posting_review_notes",
             "updated_at",
         ]
-        read_only_fields = ["updated_at"]
+        read_only_fields = [
+            "posting_reviewed_at",
+            "posting_reviewed_by",
+            "posting_review_notes",
+            "updated_at",
+        ]

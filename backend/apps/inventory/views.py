@@ -85,6 +85,20 @@ def _conflict(exc: Conflict) -> Response:
     return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
 
 
+def _page_params(request) -> tuple[int, int]:
+    """Bounded page window for computed report rows (spec 4.4 / 5.3)."""
+    raw_page = (request.query_params.get("page") or "1").strip()
+    raw_size = (request.query_params.get("page_size") or "25").strip()
+    try:
+        page = int(raw_page)
+        size = int(raw_size)
+    except ValueError as exc:
+        raise ValueError("page and page_size must be integers.") from exc
+    if page < 1 or size < 1:
+        raise ValueError("page and page_size must be positive.")
+    return page, min(size, 100)
+
+
 def _object_id(request, key: str):
     raw = (request.query_params.get(key) or "").strip()
     if not raw:
@@ -112,6 +126,8 @@ class InventoryPolicyView(APIView):
 
 class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StockMovementSerializer
+    search_fields = ("number", "reference", "reason", "item__code", "item__name")
+    ordering_fields = ("number", "movement_date", "occurred_at", "quantity")
 
     def get_queryset(self):
         queryset = StockMovement.objects.select_related(
@@ -145,8 +161,19 @@ class StockBalanceView(APIView):
         if warehouse_id and warehouse is None:
             return error_response("not_found", "Unknown warehouse.", status.HTTP_404_NOT_FOUND)
         rows = stock_rows(warehouse=warehouse, item=item)
+        try:
+            page, size = _page_params(request)
+        except ValueError as exc:
+            return error_response("invalid_filter", str(exc), status.HTTP_400_BAD_REQUEST)
+        # Totals are always for the whole report, never just the visible page.
+        total_quantity = str(sum((row["on_hand"] for row in rows), start=0))
+        total_value = str(sum((row["value"] for row in rows), start=0))
+        visible = rows[(page - 1) * size : page * size]
         return Response(
             {
+                "count": len(rows),
+                "page": page,
+                "page_size": size,
                 "rows": [
                     {
                         **row,
@@ -156,10 +183,10 @@ class StockBalanceView(APIView):
                         "unit_cost": str(row["unit_cost"]),
                         "value": str(row["value"]),
                     }
-                    for row in rows
+                    for row in visible
                 ],
-                "total_quantity": str(sum((row["on_hand"] for row in rows), start=0)),
-                "total_value": str(sum((row["value"] for row in rows), start=0)),
+                "total_quantity": total_quantity,
+                "total_value": total_value,
             }
         )
 
@@ -177,6 +204,14 @@ class InventoryValuationView(APIView):
             report = valuation_rows(warehouse=warehouse, item=item)
         except PolicyNotConfigured as exc:
             return _conflict(exc)
+        try:
+            page, size = _page_params(request)
+        except ValueError as exc:
+            return error_response("invalid_filter", str(exc), status.HTTP_400_BAD_REQUEST)
+        all_rows = report["rows"]
+        report["count"] = len(all_rows)
+        report["page"] = page
+        report["page_size"] = size
         report["rows"] = [
             {
                 **row,
@@ -186,7 +221,7 @@ class InventoryValuationView(APIView):
                 "unit_cost": str(row["unit_cost"]),
                 "value": str(row["value"]),
             }
-            for row in report["rows"]
+            for row in all_rows[(page - 1) * size : page * size]
         ]
         report["total_quantity"] = str(report["total_quantity"])
         report["total_value"] = str(report["total_value"])
@@ -200,19 +235,30 @@ class ReorderLevelViewSet(NoDeleteViewSet):
 
 class ReorderAlertView(APIView):
     def get(self, request):
+        try:
+            page, size = _page_params(request)
+        except ValueError as exc:
+            return error_response("invalid_filter", str(exc), status.HTTP_400_BAD_REQUEST)
+        alerts = reorder_alerts()
+        visible = alerts[(page - 1) * size : page * size]
         return Response(
-            [
-                {
-                    **alert,
-                    "minimum_quantity": str(alert["minimum_quantity"]),
-                    "reorder_quantity": str(alert["reorder_quantity"]),
-                    "on_hand": str(alert["on_hand"]),
-                    "reserved": str(alert["reserved"]),
-                    "available": str(alert["available"]),
-                    "shortfall": str(alert["shortfall"]),
-                }
-                for alert in reorder_alerts()
-            ]
+            {
+                "count": len(alerts),
+                "page": page,
+                "page_size": size,
+                "rows": [
+                    {
+                        **alert,
+                        "minimum_quantity": str(alert["minimum_quantity"]),
+                        "reorder_quantity": str(alert["reorder_quantity"]),
+                        "on_hand": str(alert["on_hand"]),
+                        "reserved": str(alert["reserved"]),
+                        "available": str(alert["available"]),
+                        "shortfall": str(alert["shortfall"]),
+                    }
+                    for alert in visible
+                ],
+            }
         )
 
 
@@ -229,6 +275,8 @@ class StockReceiptViewSet(ReadCreateViewSet):
     queryset = StockReceipt.objects.select_related(
         "warehouse", "supplier", "received_by"
     ).prefetch_related("lines")
+    search_fields = ("number", "reference", "notes", "warehouse__code")
+    ordering_fields = ("number", "received_at", "created_at")
 
     def get_serializer_class(self):
         return StockReceiptCreateSerializer if self.action == "create" else StockReceiptSerializer
@@ -248,6 +296,13 @@ class StockTransferViewSet(ReadCreateViewSet):
     queryset = StockTransfer.objects.select_related(
         "from_warehouse", "to_warehouse", "from_location", "to_location"
     ).prefetch_related("lines")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
 
     def get_serializer_class(self):
         return StockTransferCreateSerializer if self.action == "create" else StockTransferSerializer

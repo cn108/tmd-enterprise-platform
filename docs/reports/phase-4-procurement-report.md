@@ -112,6 +112,12 @@ Close Phase 2 W4–W9 once G1 is signed, so procurement actions can be permissio
 
 ---
 
+## Addendum — 11 November 2026 (session 2)
+
+The procurement workflow is now interactive end to end: RFQ creation and issue, invitations, quotations with lines, selection, manual and selection-generated purchase orders, draft amendments with revision numbers, delivery schedules, and receiving with accepted/rejected/damaged quantities. Purchase requests can be edited while draft. The earlier "screens outstanding" gap is closed.
+
+Still outstanding: permission-only approval because D-04 thresholds are unsigned, three-way match (which belongs with Phase 7 accounts payable), supplier returns, and the role matrix that grants approval permissions. The module remains **PARTIAL**.
+
 ## Rules applied to this report
 
 - No financial feature is reported as production-ready; none was built.

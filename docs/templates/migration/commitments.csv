@@ -1,0 +1,2 @@
+po_number,supplier_code,order_date,currency,total_value,status
+SAMPLE-PO-001,SAMPLE-SUP-001,2026-01-03,NGN,250000.00,issued

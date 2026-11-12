@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from django.contrib.auth.models import Permission
+from django.db.models import Q
 from rest_framework.test import APIClient
 
 from apps.identity.models import User
@@ -27,5 +29,20 @@ def auth_client(user) -> APIClient:
     # A separate client so ``api_client`` stays anonymous; force_authenticate()
     # mutates the client it is called on.
     client = APIClient()
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            content_type__app_label__in=["organisation", "parties", "catalogue", "warehousing"],
+        ).filter(
+            Q(codename__startswith="view_")
+            | Q(codename__startswith="add_")
+            | Q(codename__startswith="change_")
+            | Q(codename__startswith="delete_")
+        )
+    )
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            content_type__app_label="accounting", codename__startswith="view_"
+        )
+    )
     client.force_authenticate(user=user)
     return client

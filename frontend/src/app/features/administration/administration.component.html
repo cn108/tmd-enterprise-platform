@@ -1,0 +1,217 @@
+<section class="module" aria-labelledby="admin-heading">
+  <header class="module__header">
+    <div>
+      <p class="eyebrow">Access control</p>
+      <h1 id="admin-heading">Administration</h1>
+      <p class="module__intro">
+        Accounts and roles. A role is a named bundle of backend permissions; the access
+        administrator decides what each role may do. No role or permission bundle is pre-set.
+      </p>
+    </div>
+  </header>
+
+  @if (!canViewUsers() && !canViewRoles()) {
+    <p class="permission">
+      Your account has neither <code>identity.view_user</code> nor <code>auth.view_group</code>.
+      Access administration is hidden and the API refuses these endpoints to your account.
+    </p>
+  } @else {
+    <nav class="tabs" aria-label="Administration section">
+      @if (canViewUsers()) {
+        <button type="button" [class.is-active]="tab() === 'users'" (click)="selectTab('users')">
+          Users
+        </button>
+      }
+      @if (canViewRoles()) {
+        <button type="button" [class.is-active]="tab() === 'roles'" (click)="selectTab('roles')">
+          Roles and permissions
+        </button>
+      }
+    </nav>
+
+    @if (loading() || saving()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading administration data" />
+    }
+    @if (notice(); as message) {
+      <p class="notice" role="status">{{ message }}</p>
+    }
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    @if (tab() === 'users' && canViewUsers()) {
+      <section class="panel">
+        <div class="panel__head">
+          <h2>Users</h2>
+          @if (canManageUsers()) {
+            <button mat-flat-button type="button" (click)="newUser()">New user</button>
+          }
+        </div>
+
+        @if (users().length === 0) {
+          <p class="empty">No user accounts to show.</p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">User accounts</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Department</th>
+                  <th scope="col">Roles</th>
+                  <th scope="col">Active</th>
+                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of users(); track user.id) {
+                  <tr>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.department_code || '—' }}</td>
+                    <td>{{ user.role_names.length ? user.role_names.join(', ') : 'No role' }}</td>
+                    <td>{{ user.is_active ? 'Yes' : 'No' }}</td>
+                    <td>
+                      @if (canManageUsers()) {
+                        <button mat-button type="button" (click)="editUser(user)">Edit</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (userDraft(); as draft) {
+          <form class="editor" (ngSubmit)="saveUser()">
+            <h3>{{ draft.id ? 'Edit user' : 'New user' }}</h3>
+            <div class="editor__grid">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Email</mat-label>
+                <input matInput type="email" name="email" [(ngModel)]="draft.email" required />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Full name</mat-label>
+                <input matInput name="fullName" [(ngModel)]="draft.full_name" required />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Employee reference</mat-label>
+                <input matInput name="employeeRef" [(ngModel)]="draft.employee_ref" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Department</mat-label>
+                <mat-select name="department" [(ngModel)]="draft.department">
+                  <mat-option [value]="null">No department</mat-option>
+                  @for (department of departments(); track department['id']) {
+                    <mat-option [value]="department['id']">
+                      {{ department['code'] }} — {{ department['name'] }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Roles</mat-label>
+                <mat-select name="roles" [(ngModel)]="draft.roles" multiple>
+                  @for (role of roles(); track role.id) {
+                    <mat-option [value]="role.name">{{ role.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ draft.id ? 'New password (optional)' : 'Initial password' }}</mat-label>
+                <input matInput type="password" name="password" [(ngModel)]="draft.password" />
+              </mat-form-field>
+            </div>
+            <div class="checks">
+              <mat-checkbox name="active" [(ngModel)]="draft.is_active">Account active</mat-checkbox>
+              <mat-checkbox name="mustChange" [(ngModel)]="draft.must_change_password">
+                Must change password at next sign-in
+              </mat-checkbox>
+            </div>
+            <div class="editor__actions">
+              <button mat-flat-button type="submit" [disabled]="saving()">Save user</button>
+              <button mat-button type="button" (click)="cancel()">Cancel</button>
+            </div>
+          </form>
+        }
+      </section>
+    }
+
+    @if (tab() === 'roles' && canViewRoles()) {
+      <section class="panel">
+        <div class="panel__head">
+          <h2>Roles and permissions</h2>
+          @if (canManageRoles()) {
+            <button mat-flat-button type="button" (click)="newRole()">New role</button>
+          }
+        </div>
+
+        @if (roles().length === 0) {
+          <p class="empty">
+            No roles exist. Management must decide the role matrix; create a role and choose its
+            permissions when that decision is signed.
+          </p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Roles</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Role</th>
+                  <th scope="col">Permissions</th>
+                  <th scope="col">Members</th>
+                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (role of roles(); track role.id) {
+                  <tr>
+                    <td>{{ role.name }}</td>
+                    <td>{{ role.permission_codenames.length }}</td>
+                    <td>{{ role.member_count }}</td>
+                    <td>
+                      @if (canManageRoles()) {
+                        <button mat-button type="button" (click)="editRole(role)">Edit</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (roleDraft(); as draft) {
+          <form class="editor" (ngSubmit)="saveRole()">
+            <h3>{{ draft.id ? 'Edit role' : 'New role' }}</h3>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Role name</mat-label>
+              <input matInput name="roleName" [(ngModel)]="draft.name" required />
+            </mat-form-field>
+            <div class="permission-groups">
+              @for (group of permissionGroups(); track group.app) {
+                <fieldset>
+                  <legend>{{ group.app }}</legend>
+                  @for (permission of group.items; track permission.codename) {
+                    <mat-checkbox
+                      [checked]="includesPermission(permission.codename)"
+                      (change)="togglePermission(permission.codename, $event.checked)"
+                    >
+                      {{ permission.codename }} — {{ permission.name }}
+                    </mat-checkbox>
+                  }
+                </fieldset>
+              }
+            </div>
+            <div class="editor__actions">
+              <button mat-flat-button type="submit" [disabled]="saving()">Save role</button>
+              <button mat-button type="button" (click)="cancel()">Cancel</button>
+            </div>
+          </form>
+        }
+      </section>
+    }
+  }
+</section>

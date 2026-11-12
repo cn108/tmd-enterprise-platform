@@ -189,6 +189,7 @@ class SupplierInvoice(UserStampedModel):
         permissions = [
             ("approve_supplierinvoice", "Can approve a supplier invoice"),
             ("cancel_supplierinvoice", "Can cancel a supplier invoice"),
+            ("email_supplierinvoice", "Can email an approved supplier invoice PDF"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -363,6 +364,7 @@ class CustomerInvoice(UserStampedModel):
         permissions = [
             ("approve_customerinvoice", "Can approve a customer invoice"),
             ("cancel_customerinvoice", "Can cancel a customer invoice"),
+            ("email_customerinvoice", "Can email an approved customer invoice PDF"),
         ]
         constraints = [
             models.CheckConstraint(

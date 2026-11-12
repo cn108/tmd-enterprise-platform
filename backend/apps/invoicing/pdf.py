@@ -133,7 +133,7 @@ def _lines_table(headers: list[str], rows: list[list[str]], widths: list[float])
     return table
 
 
-def supplier_invoice_pdf(invoice: SupplierInvoice, download: bool = False) -> FileResponse:
+def supplier_invoice_pdf_bytes(invoice: SupplierInvoice) -> bytes:
     settings = InvoiceSettings.load()
     buffer = BytesIO()
     document = SimpleDocTemplate(buffer, pagesize=A4, title=invoice.number, pageCompression=0)
@@ -208,10 +208,16 @@ def supplier_invoice_pdf(invoice: SupplierInvoice, download: bool = False) -> Fi
             Paragraph(f"<b>Notes:</b> {_safe(invoice.notes)}", getSampleStyleSheet()["Normal"])
         )
     document.build(story)
-    return _response(buffer, f"{invoice.number}.pdf", download)
+    return buffer.getvalue()
 
 
-def customer_invoice_pdf(invoice: CustomerInvoice, download: bool = False) -> FileResponse:
+def supplier_invoice_pdf(invoice: SupplierInvoice, download: bool = False) -> FileResponse:
+    return _response(
+        BytesIO(supplier_invoice_pdf_bytes(invoice)), f"{invoice.number}.pdf", download
+    )
+
+
+def customer_invoice_pdf_bytes(invoice: CustomerInvoice) -> bytes:
     settings = InvoiceSettings.load()
     buffer = BytesIO()
     document = SimpleDocTemplate(buffer, pagesize=A4, title=invoice.number, pageCompression=0)
@@ -280,7 +286,13 @@ def customer_invoice_pdf(invoice: CustomerInvoice, download: bool = False) -> Fi
             Paragraph(f"<b>Notes:</b> {_safe(invoice.notes)}", getSampleStyleSheet()["Normal"])
         )
     document.build(story)
-    return _response(buffer, f"{invoice.number}.pdf", download)
+    return buffer.getvalue()
+
+
+def customer_invoice_pdf(invoice: CustomerInvoice, download: bool = False) -> FileResponse:
+    return _response(
+        BytesIO(customer_invoice_pdf_bytes(invoice)), f"{invoice.number}.pdf", download
+    )
 
 
 def invoice_note_pdf(note: InvoiceNote, download: bool = False) -> FileResponse:

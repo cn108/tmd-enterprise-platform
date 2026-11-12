@@ -45,6 +45,8 @@ export interface FieldConfig {
   min?: number;
   step?: string;
   defaultValue?: string | number | boolean | null;
+  /** Default an action field from another property on the selected row. */
+  defaultFromRow?: string;
 }
 
 export interface LineConfig {
@@ -2664,6 +2666,12 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
 
 export function initialValue(field: FieldConfig, row?: Row): string | number | boolean | null {
   if (row) {
+    if (field.defaultFromRow) {
+      const source = row[field.defaultFromRow];
+      if (typeof source === 'string' && source) {
+        return source;
+      }
+    }
     const current = row[field.key];
     if (typeof current === 'number' || typeof current === 'string' || typeof current === 'boolean') {
       return current;

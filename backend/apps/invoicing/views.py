@@ -10,6 +10,12 @@ from rest_framework.response import Response
 
 from apps.core.models import create_audit_event
 from apps.documents.models import Document, DocumentLink
+from apps.invoicing.emailing import (
+    InvoiceEmailDeliveryError,
+    InvoiceEmailError,
+    send_customer_invoice_email,
+    send_supplier_invoice_email,
+)
 from apps.invoicing.models import (
     CustomerInvoice,
     InvoiceNote,
@@ -22,6 +28,7 @@ from apps.invoicing.models import (
 from apps.invoicing.pdf import customer_invoice_pdf, invoice_note_pdf, supplier_invoice_pdf
 from apps.invoicing.serializers import (
     CustomerInvoiceSerializer,
+    InvoiceEmailSerializer,
     InvoiceNoteSerializer,
     InvoiceSettingsSerializer,
     NrsSubmissionSerializer,
@@ -200,6 +207,29 @@ class SupplierInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
         invoice = self.get_object()
         return supplier_invoice_pdf(invoice, download=request.query_params.get("download") == "1")
 
+    @action(detail=True, methods=["post"])
+    def email(self, request, pk=None):
+        _require(request, "invoicing.view_supplierinvoice")
+        _require(request, "invoicing.email_supplierinvoice")
+        payload = InvoiceEmailSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        try:
+            result = send_supplier_invoice_email(
+                self.get_object(),
+                payload.validated_data["to"],
+                payload.validated_data.get("cc", ""),
+                payload.validated_data.get("message", ""),
+                request.user,
+                request=request,
+            )
+        except InvoiceEmailDeliveryError as exc:
+            return error_response(
+                "email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY
+            )
+        except InvoiceEmailError as exc:
+            return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
+        return Response(result)
+
     @action(detail=False, methods=["get"], url_path="check-duplicate")
     def check_duplicate(self, request):
         _require(request, "invoicing.view_supplierinvoice")
@@ -345,6 +375,29 @@ class CustomerInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     def pdf(self, request, pk=None):
         invoice = self.get_object()
         return customer_invoice_pdf(invoice, download=request.query_params.get("download") == "1")
+
+    @action(detail=True, methods=["post"])
+    def email(self, request, pk=None):
+        _require(request, "invoicing.view_customerinvoice")
+        _require(request, "invoicing.email_customerinvoice")
+        payload = InvoiceEmailSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        try:
+            result = send_customer_invoice_email(
+                self.get_object(),
+                payload.validated_data["to"],
+                payload.validated_data.get("cc", ""),
+                payload.validated_data.get("message", ""),
+                request.user,
+                request=request,
+            )
+        except InvoiceEmailDeliveryError as exc:
+            return error_response(
+                "email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY
+            )
+        except InvoiceEmailError as exc:
+            return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
+        return Response(result)
 
 
 class InvoiceNoteViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):

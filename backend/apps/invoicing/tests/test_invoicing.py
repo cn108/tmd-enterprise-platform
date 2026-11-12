@@ -6,6 +6,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from rest_framework.test import APIClient
@@ -384,6 +385,144 @@ def test_customer_invoice_draft_approval_and_test_pdf(client_for, customer, appr
     content = pdf_bytes(pdf)
     assert content.startswith(b"%PDF")
     assert b"TEST DOCUMENT" in content
+
+
+def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
+    client_for, customer, approver, vat, settings, mailoutbox
+):
+    seed()
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <tmdtico@gmail.com>"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    creator = make_user("customer.email@example.com")
+    client = client_for(creator)
+    body = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price="1000", vat_tax=vat.pk)],
+    )
+    client.post(f"/api/v1/customer-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/customer-invoices/{body['id']}/approve/")
+
+    response = client.post(
+        f"/api/v1/customer-invoices/{body['id']}/email/",
+        {"to": "tmdtico@gmail.com", "cc": "", "message": "Please find the invoice attached."},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.content
+    assert response.json()["to"] == "tmdtico@gmail.com"
+    assert len(mailoutbox) == 1
+    message = mailoutbox[0]
+    assert message.from_email == "Tico McDon Limited <tmdtico@gmail.com>"
+    assert message.to == ["tmdtico@gmail.com"]
+    assert message.attachments[0][0] == f"{body['number']}.pdf"
+    assert message.attachments[0][1].startswith(b"%PDF")
+
+
+def test_test_invoice_email_is_limited_to_the_company_test_mailbox(
+    client_for, customer, approver, vat, settings, mailoutbox
+):
+    seed()
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    creator = make_user("customer.email.safety@example.com")
+    client = client_for(creator)
+    body = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price="1000", vat_tax=vat.pk)],
+    )
+    client.post(f"/api/v1/customer-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/customer-invoices/{body['id']}/approve/")
+
+    external = client.post(
+        f"/api/v1/customer-invoices/{body['id']}/email/",
+        {"to": "customer@example.com"},
+        format="json",
+    )
+    assert external.status_code == 409
+    assert "test document" in external.json()["error"]["message"].lower()
+    assert len(mailoutbox) == 0
+
+    draft = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price="500")],
+    )
+    response = client.post(
+        f"/api/v1/customer-invoices/{draft['id']}/email/",
+        {"to": "tmdtico@gmail.com"},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert "approved" in response.json()["error"]["message"].lower()
+
+
+def test_approved_supplier_invoice_can_be_emailed(
+    client_for, supplier, approver, settings, mailoutbox
+):
+    seed()
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    creator = make_user("supplier.email@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload()],
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+
+    response = client.post(
+        f"/api/v1/supplier-invoices/{invoice['id']}/email/",
+        {"to": "tmdtico@gmail.com"},
+        format="json",
+    )
+    assert response.status_code == 200, response.content
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].attachments[0][0] == f"{invoice['number']}.pdf"
+
+
+def test_only_an_authorised_user_can_email_an_invoice(
+    client_for, customer, approver, vat, settings, mailoutbox
+):
+    seed()
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    creator = make_user("customer.email.permission@example.com")
+    client = client_for(creator)
+    body = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price="100", vat_tax=vat.pk)],
+    )
+    client.post(f"/api/v1/customer-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/customer-invoices/{body['id']}/approve/")
+
+    viewer = User.objects.create_user(
+        email="customer.email.viewer@example.com", full_name="Invoice Viewer"
+    )
+    viewer.user_permissions.add(Permission.objects.get(codename="view_customerinvoice"))
+    viewer_client = client_for(viewer)
+    denied = viewer_client.post(
+        f"/api/v1/customer-invoices/{body['id']}/email/",
+        {"to": "tmdtico@gmail.com"},
+        format="json",
+    )
+    assert denied.status_code == 403
+    assert len(mailoutbox) == 0
+
+    viewer.user_permissions.add(Permission.objects.get(codename="email_customerinvoice"))
+    allowed = client_for(User.objects.get(pk=viewer.pk)).post(
+        f"/api/v1/customer-invoices/{body['id']}/email/",
+        {"to": "tmdtico@gmail.com"},
+        format="json",
+    )
+    assert allowed.status_code == 200, allowed.content
+    assert len(mailoutbox) == 1
 
 
 def test_credit_note_reduces_payment_due_after_approval(client_for, supplier, approver):

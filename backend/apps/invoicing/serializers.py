@@ -162,6 +162,7 @@ class SupplierInvoiceLineSerializer(serializers.ModelSerializer):
 class SupplierInvoiceSerializer(serializers.ModelSerializer):
     lines = SupplierInvoiceLineSerializer(many=True)
     supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
+    supplier_email = serializers.EmailField(source="supplier.email", read_only=True, default="")
     purchase_order_number = serializers.CharField(
         source="purchase_order.number", read_only=True, default=None
     )
@@ -183,6 +184,7 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
             "supplier_invoice_number",
             "supplier",
             "supplier_name",
+            "supplier_email",
             "project",
             "purchase_order",
             "purchase_order_number",
@@ -510,6 +512,7 @@ class CustomerInvoiceLineSerializer(serializers.ModelSerializer):
 class CustomerInvoiceSerializer(serializers.ModelSerializer):
     lines = CustomerInvoiceLineSerializer(many=True)
     customer_name = serializers.CharField(source="customer.legal_name", read_only=True)
+    customer_email = serializers.EmailField(source="customer.email", read_only=True, default="")
     project_code = serializers.CharField(source="project.code", read_only=True, default=None)
     approved_by = serializers.SerializerMethodField()
     test_document = serializers.BooleanField(source="is_test", read_only=True)
@@ -525,6 +528,7 @@ class CustomerInvoiceSerializer(serializers.ModelSerializer):
             "number",
             "customer",
             "customer_name",
+            "customer_email",
             "project",
             "project_code",
             "customer_reference",
@@ -1113,6 +1117,12 @@ class InvoiceSettingsSerializer(serializers.ModelSerializer):
 class MatchCheckSerializer(serializers.Serializer):
     purchase_order = serializers.IntegerField(required=False, allow_null=True)
     supplier = serializers.IntegerField(required=False, allow_null=True)
+
+
+class InvoiceEmailSerializer(serializers.Serializer):
+    to = serializers.EmailField()
+    cc = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    message = serializers.CharField(required=False, allow_blank=True, max_length=2000)
 
 
 class PaymentAllocationRequestSerializer(serializers.Serializer):

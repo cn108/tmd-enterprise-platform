@@ -64,3 +64,17 @@ def test_crud_actions_and_operational_lifecycle_permissions_are_applied():
     assert "services.complete_workorder" in operations
     assert "leasing.dispatch_rental" in operations
     assert "leasing.record_inspection" in operations
+
+
+def test_invoice_emailing_is_limited_to_finance_roles():
+    apply_matrix()
+
+    for role in ("Management", "Accountant", "Finance Controller", "Finance Officer"):
+        granted = permissions(role)
+        assert "invoicing.email_supplierinvoice" in granted
+        assert "invoicing.email_customerinvoice" in granted
+
+    for role in ("Procurement Officer", "Storekeeper", "Auditor"):
+        granted = permissions(role)
+        assert "invoicing.email_supplierinvoice" not in granted
+        assert "invoicing.email_customerinvoice" not in granted

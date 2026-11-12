@@ -119,6 +119,24 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_URL = env_str("REDIS_URL", "redis://127.0.0.1:6379/0")
 
+# --- Outbound email ---------------------------------------------------------
+# Invoice delivery uses the company's Gmail mailbox. The app password is read
+# from the environment and is never stored in this repository. Set
+# EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend only for local
+# dry runs where no message should leave the machine.
+EMAIL_BACKEND = env_str("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env_str("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "tmdtico@gmail.com")
+EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "Tico McDon Limited <tmdtico@gmail.com>")
+EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT_SECONDS", 15)
+
+# A document still marked as test can only be emailed here. Production
+# activation removes the restriction on non-test approved invoices.
+INVOICE_EMAIL_TEST_RECIPIENT = env_str("INVOICE_EMAIL_TEST_RECIPIENT", "tmdtico@gmail.com")
+
 # --- Authentication ---------------------------------------------------------
 AUTH_USER_MODEL = "identity.User"
 

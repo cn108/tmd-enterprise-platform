@@ -5,7 +5,14 @@ from django.contrib.auth.models import Permission
 from rest_framework.test import APIClient
 
 from apps.identity.models import User
-from apps.parties.models import BankAccount, BankAccountChangeRequest, Party
+from apps.parties.models import (
+    Address,
+    BankAccount,
+    BankAccountChangeRequest,
+    Contact,
+    Party,
+    TaxRegistration,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -327,6 +334,47 @@ def test_tax_registration_duplicate_is_refused(auth_client):
     duplicate = auth_client.post("/api/v1/tax-registrations/", payload, format="json")
 
     assert duplicate.status_code == 400
+
+
+def test_contact_and_address_lists_accept_server_search(auth_client):
+    supplier = make_supplier()
+    Contact.objects.create(party=supplier, name="Ada Okafor", email="ada@example.com")
+    Contact.objects.create(party=supplier, name="Ben Musa")
+    Address.objects.create(party=supplier, line1="12 Marina Road", city="Lagos")
+    Address.objects.create(party=supplier, line1="9 Ahmadu Bello Way", city="Abuja")
+
+    contacts = auth_client.get("/api/v1/contacts/?search=Ada").json()
+    addresses = auth_client.get("/api/v1/addresses/?search=Abuja").json()
+
+    assert contacts["count"] == 1
+    assert contacts["results"][0]["name"] == "Ada Okafor"
+    assert addresses["count"] == 1
+    assert addresses["results"][0]["city"] == "Abuja"
+
+
+def test_tax_registration_list_filters_inactive_records(auth_client):
+    supplier = make_supplier()
+    TaxRegistration.objects.create(party=supplier, scheme="TIN", number="TIN-1")
+    TaxRegistration.objects.create(
+        party=supplier, scheme="VAT", number="VAT-1", is_active=False
+    )
+
+    response = auth_client.get("/api/v1/tax-registrations/?is_active=false")
+
+    assert response.status_code == 200, response.content
+    assert response.json()["count"] == 1
+    assert response.json()["results"][0]["scheme"] == "VAT"
+
+
+def test_bank_change_list_filters_by_status(auth_client):
+    supplier = make_supplier()
+    propose_bank_change(auth_client, supplier)
+
+    pending = auth_client.get("/api/v1/bank-account-change-requests/?status=pending").json()
+    approved = auth_client.get("/api/v1/bank-account-change-requests/?status=approved").json()
+
+    assert pending["count"] == 1
+    assert approved["count"] == 0
 
 
 def test_contact_and_address_attach_to_the_party(auth_client):

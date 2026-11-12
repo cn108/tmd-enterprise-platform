@@ -44,6 +44,13 @@ class ProjectViewSet(MasterDataViewSet):
     serializer_class = ProjectSerializer
     search_fields = ("code", "name", "customer__legal_name")
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter in Project.Status.values:
+            queryset = queryset.filter(status=status_filter)
+        return queryset
+
     @action(detail=True, methods=["get"])
     def cost_summary(self, request, pk=None):
         return Response(cost_summary(self.get_object()))
@@ -104,9 +111,10 @@ class ProjectViewSet(MasterDataViewSet):
         )
 
 
-class ProjectLocationViewSet(NoDeleteViewSet):
+class ProjectLocationViewSet(MasterDataViewSet):
     queryset = ProjectLocation.objects.select_related("project").all()
     serializer_class = ProjectLocationSerializer
+    search_fields = ("project__code", "name", "address")
 
 
 class CustomerContractViewSet(MasterDataViewSet):
@@ -125,6 +133,7 @@ class ContractRevisionViewSet(
 
     queryset = ContractRevision.objects.select_related("contract").all()
     serializer_class = ContractRevisionSerializer
+    search_fields = ("contract__reference", "reason")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
@@ -362,7 +371,7 @@ class ProjectDocumentListView(APIView):
         return _paged(request, rows)
 
 
-class ProjectMilestoneViewSet(NoDeleteViewSet):
+class ProjectMilestoneViewSet(MasterDataViewSet):
     queryset = ProjectMilestone.objects.select_related("project").all()
     serializer_class = ProjectMilestoneSerializer
     search_fields = ("project__code", "name", "notes")

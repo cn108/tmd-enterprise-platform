@@ -70,6 +70,7 @@ class ItemPriceViewSet(
     queryset = ItemPrice.objects.select_related("item").all()
     serializer_class = ItemPriceSerializer
     permission_classes = [ModelPermission]
+    search_fields = ("item__code", "source_reference")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
@@ -78,18 +79,22 @@ class ItemPriceViewSet(
 class TechnicalSpecificationViewSet(ProtectedNoDeleteViewSet):
     queryset = TechnicalSpecification.objects.select_related("item").all()
     serializer_class = TechnicalSpecificationSerializer
+    search_fields = ("item__code", "name", "value")
 
 
 class ItemBatchViewSet(ProtectedNoDeleteViewSet):
     queryset = ItemBatch.objects.select_related("item").all()
     serializer_class = ItemBatchSerializer
+    search_fields = ("item__code", "batch_number")
 
 
 class SerialNumberViewSet(ProtectedNoDeleteViewSet):
     queryset = SerialNumber.objects.select_related("item", "batch").all()
     serializer_class = SerialNumberSerializer
+    search_fields = ("item__code", "serial")
 
 
 class CertificateViewSet(ProtectedNoDeleteViewSet):
     queryset = Certificate.objects.select_related("item", "batch", "serial", "document").all()
     serializer_class = CertificateSerializer
+    search_fields = ("item__code", "certificate_type", "issuer", "reference")

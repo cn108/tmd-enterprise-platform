@@ -88,16 +88,19 @@ class PartyViewSet(viewsets.ReadOnlyModelViewSet):
 class ContactViewSet(ProtectedNoDeleteViewSet):
     queryset = Contact.objects.select_related("party").all()
     serializer_class = ContactSerializer
+    search_fields = ("party__code", "name", "role", "email")
 
 
 class AddressViewSet(ProtectedNoDeleteViewSet):
     queryset = Address.objects.select_related("party").all()
     serializer_class = AddressSerializer
+    search_fields = ("party__code", "label", "line1", "city", "state")
 
 
 class TaxRegistrationViewSet(ProtectedNoDeleteViewSet):
     queryset = TaxRegistration.objects.select_related("party").all()
     serializer_class = TaxRegistrationSerializer
+    search_fields = ("party__code", "scheme", "number")
 
 
 class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
@@ -106,6 +109,7 @@ class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BankAccount.objects.select_related("supplier").all()
     serializer_class = BankAccountSerializer
     permission_classes = [ModelPermission]
+    search_fields = ("supplier__code", "bank_name", "account_name", "account_last4")
 
 
 class BankAccountChangeRequestViewSet(
@@ -119,9 +123,18 @@ class BankAccountChangeRequestViewSet(
     )
     serializer_class = BankAccountChangeRequestSerializer
     permission_classes = [ModelPermission]
+    search_fields = (
+        "supplier__code",
+        "proposed_bank_name",
+        "proposed_account_name",
+        "status",
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter in BankAccountChangeRequest.Status.values:
+            queryset = queryset.filter(status=status_filter)
         if self.request.user.has_perm(APPROVE_PERMISSION):
             return queryset
         return queryset.filter(created_by=self.request.user)
@@ -200,3 +213,4 @@ class BankAccountChangeRequestViewSet(
 class ComplianceDocumentViewSet(ProtectedNoDeleteViewSet):
     queryset = ComplianceDocument.objects.select_related("supplier", "document").all()
     serializer_class = ComplianceDocumentSerializer
+    search_fields = ("supplier__code", "document_type", "reference")

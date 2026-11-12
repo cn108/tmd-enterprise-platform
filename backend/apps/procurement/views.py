@@ -77,6 +77,7 @@ class DestinationViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
     view_permission = "procurement.view_destination"
     queryset = Destination.objects.select_related("project", "warehouse").all()
     serializer_class = DestinationSerializer
+    search_fields = ("project__code", "warehouse__code", "location_name", "kind")
 
 
 class PurchaseRequestLineViewSet(ProcurementViewPermissionMixin, viewsets.ReadOnlyModelViewSet):

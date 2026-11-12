@@ -137,3 +137,17 @@ def test_project_is_not_deleted(auth_client):
 
     assert response.status_code == 409
     assert Project.objects.filter(pk=project.pk).exists()
+
+
+def test_project_list_filters_status_and_searches_name(auth_client):
+    draft = make_project("PRJ-1")
+    active = Project.objects.create(code="PRJ-2", name="Harbour upgrade", status="active")
+
+    filtered = auth_client.get("/api/v1/projects/?status=active").json()
+    searched = auth_client.get("/api/v1/projects/?search=Harbour").json()
+
+    assert filtered["count"] == 1
+    assert filtered["results"][0]["code"] == active.code
+    assert searched["count"] == 1
+    assert searched["results"][0]["id"] == active.pk
+    assert draft.code == "PRJ-1"

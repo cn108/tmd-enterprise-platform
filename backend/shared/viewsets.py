@@ -64,5 +64,7 @@ class ProtectedMasterDataViewSet(MasterDataViewSet):
     permission_classes = [ModelPermission]
 
 
-class ProtectedNoDeleteViewSet(NoDeleteViewSet):
+class ProtectedNoDeleteViewSet(MasterDataViewSet):
+    """Protected records that are never deleted, with active/search filters."""
+
     permission_classes = [ModelPermission]

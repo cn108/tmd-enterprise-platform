@@ -4,6 +4,8 @@
 **Purpose:** keep production invoice issuance, NRS submission and ledger posting disabled until the controls below are formally approved.
 **Current setting:** `InvoiceSettings.test_mode = True`; `activated_at = None`; no Finance Controller is assigned.
 
+**Execution checklist:** use [`phase-7b-activation-checklist.md`](phase-7b-activation-checklist.md) for the prioritized order, owners, evidence and sign-off record.
+
 Passing Stage 7A tests is **not** an activation criterion. A test run must never set these gates.
 
 ## 1. Blocking checklist

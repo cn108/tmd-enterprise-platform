@@ -1,0 +1,90 @@
+{
+  "database": "tmd_staging",
+  "workflows": {
+    "A_procurement_to_inventory": {
+      "passed": true,
+      "evidence": {
+        "request": "PR-2026-0001",
+        "order": "PO-2026-0001",
+        "goods_receipt": "GRN-2026-0001",
+        "receipt": "RCP-2026-0001"
+      }
+    },
+    "B_procurement_to_supplier_invoice": {
+      "passed": true,
+      "evidence": {
+        "invoice": "SI-2026-0001",
+        "match_status": "matched",
+        "total": "680000.00"
+      }
+    },
+    "C_customer_delivery_to_receivables": {
+      "passed": true,
+      "evidence": {
+        "invoice": "CI-2026-0001",
+        "balance": "2500000.00"
+      }
+    },
+    "D_payment_to_bank_reconciliation": {
+      "passed": true,
+      "evidence": {
+        "payment": "PAY-2026-0001",
+        "payment_status": "recorded",
+        "execution": "recorded",
+        "reconciliation": "REC-2026-0001"
+      }
+    },
+    "E_inventory_allocation_to_project_cost": {
+      "passed": true,
+      "evidence": {
+        "issue": "ISS-2026-0001",
+        "project": "PRJ-STG-001",
+        "issue_value": "240000.00"
+      }
+    },
+    "F_project_budget_to_expenditure": {
+      "passed": true,
+      "evidence": {
+        "budget": 1,
+        "budget_status": "approved",
+        "actual_cost": "300000.00"
+      }
+    },
+    "G_equipment_rental_lifecycle": {
+      "passed": true,
+      "evidence": {
+        "agreement": "RA-2026-0001",
+        "agreement_status": "closed",
+        "movements": 2,
+        "inspection_damage": false,
+        "maintenance": "planned"
+      }
+    },
+    "H_accounting_to_management_reporting": {
+      "passed": true,
+      "evidence": {
+        "journals": 11,
+        "net_result": "2485000.00",
+        "trial_balanced": true
+      }
+    },
+    "partial_and_damaged_delivery_handled": {
+      "passed": true,
+      "evidence": {
+        "damaged": "1.0000",
+        "rejected": "0.0000",
+        "reason": "UAT: one pump damaged in transit."
+      }
+    },
+    "service_contract_to_customer_acceptance": {
+      "passed": true,
+      "evidence": {
+        "contract": "SC-2026-0001",
+        "work_order": "WO-2026-0001",
+        "status": "accepted"
+      }
+    }
+  },
+  "failures": [],
+  "all_passed": true
+}

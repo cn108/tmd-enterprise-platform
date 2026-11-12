@@ -411,8 +411,11 @@ class TestReceiving:
     def test_partial_delivery_updates_the_order(self, auth_client):
         order, line, schedule = self._issued_order(auth_client)
         approver = grant(
-            User.objects.create_user(email="receiver@example.com", full_name="Receiver"),
-            "approve_purchaseorder",
+            grant(
+                User.objects.create_user(email="receiver@example.com", full_name="Receiver"),
+                "approve_purchaseorder",
+            ),
+            "add_goodsreceiptnote",
         )
         client = APIClient()
         client.force_authenticate(user=approver)
@@ -442,8 +445,11 @@ class TestReceiving:
     def test_rejected_goods_need_a_reason_and_are_not_accepted(self, auth_client):
         order, line, schedule = self._issued_order(auth_client)
         approver = grant(
-            User.objects.create_user(email="receiver2@example.com", full_name="Receiver"),
-            "approve_purchaseorder",
+            grant(
+                User.objects.create_user(email="receiver2@example.com", full_name="Receiver"),
+                "approve_purchaseorder",
+            ),
+            "add_goodsreceiptnote",
         )
         client = APIClient()
         client.force_authenticate(user=approver)
@@ -478,8 +484,11 @@ class TestReceiving:
     def test_over_receipt_is_refused(self, auth_client):
         order, line, schedule = self._issued_order(auth_client)
         approver = grant(
-            User.objects.create_user(email="receiver3@example.com", full_name="Receiver"),
-            "approve_purchaseorder",
+            grant(
+                User.objects.create_user(email="receiver3@example.com", full_name="Receiver"),
+                "approve_purchaseorder",
+            ),
+            "add_goodsreceiptnote",
         )
         client = APIClient()
         client.force_authenticate(user=approver)
@@ -542,8 +551,11 @@ class TestReceiving:
     def test_full_receipt_marks_the_order_received_then_closure_blocks_receipts(self, auth_client):
         order, line, schedule = self._issued_order(auth_client, quantity="5")
         approver = grant(
-            User.objects.create_user(email="receiver4@example.com", full_name="Receiver"),
-            "approve_purchaseorder",
+            grant(
+                User.objects.create_user(email="receiver4@example.com", full_name="Receiver"),
+                "approve_purchaseorder",
+            ),
+            "add_goodsreceiptnote",
         )
         client = APIClient()
         client.force_authenticate(user=approver)

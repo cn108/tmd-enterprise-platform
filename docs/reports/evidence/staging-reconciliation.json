@@ -1,0 +1,128 @@
+{
+  "database": "tmd_staging",
+  "generated_for": "TICO MCDON UAT staging (synthetic)",
+  "checks": {
+    "trial_balance_balanced": true,
+    "balance_sheet_balanced": true,
+    "ap_ledger_matches_invoice": true,
+    "ar_ledger_matches_invoice": true,
+    "inventory_ledger_matches_valuation": true,
+    "bank_ledger_matches_statement": true,
+    "bank_reconciliation_approved": true,
+    "po_partially_received": true,
+    "payment_recorded_not_executed": true,
+    "posted_journals_immutable_source": true,
+    "october_period_closed": true
+  },
+  "all_passed": true,
+  "trial_balance": {
+    "total_debit": "10130000.00",
+    "total_credit": "10130000.00",
+    "rows": 9
+  },
+  "income_statement": {
+    "income": [
+      {
+        "code": "4000-STG",
+        "name": "UAT Revenue",
+        "amount": "2500000.00"
+      }
+    ],
+    "expenses": [
+      {
+        "code": "5100-STG",
+        "name": "UAT Office expenses",
+        "amount": "15000.00"
+      }
+    ],
+    "total_income": "2500000.00",
+    "total_expenses": "15000.00",
+    "net_result": "2485000.00"
+  },
+  "balance_sheet": {
+    "as_of": "2026-11-30",
+    "assets": [
+      {
+        "code": "1000-STG",
+        "name": "UAT Bank",
+        "amount": "4160000.00"
+      },
+      {
+        "code": "1100-STG",
+        "name": "UAT Trade receivables",
+        "amount": "2500000.00"
+      },
+      {
+        "code": "1200-STG",
+        "name": "UAT Inventory",
+        "amount": "1315000.00"
+      },
+      {
+        "code": "1300-STG",
+        "name": "UAT Project cost",
+        "amount": "540000.00"
+      }
+    ],
+    "liabilities": [
+      {
+        "code": "2000-STG",
+        "name": "UAT Trade payables",
+        "amount": "180000.00"
+      }
+    ],
+    "equity": [
+      {
+        "code": "3000-STG",
+        "name": "UAT Share capital",
+        "amount": "5000000.00"
+      },
+      {
+        "code": "3100-STG",
+        "name": "UAT Opening balance equity",
+        "amount": "875000.00"
+      },
+      {
+        "code": "3200-STG",
+        "name": "UAT Retained earnings",
+        "amount": "-25000.00"
+      }
+    ],
+    "total_assets": "8515000.00",
+    "total_liabilities": "180000.00",
+    "total_equity": "5850000.00",
+    "unclosed_result": "2485000.00",
+    "total_equity_and_liabilities": "8515000.00",
+    "balanced": true
+  },
+  "control_reconciliation": {
+    "ap_ledger": "180000.00",
+    "supplier_invoice_balance": "180000.00",
+    "ar_ledger": "2500000.00",
+    "customer_invoice_balance": "2500000.00",
+    "inventory_ledger": "1315000.00",
+    "inventory_valuation": "1315000.00",
+    "bank_ledger": "4160000.00",
+    "bank_statement_closing": "4160000.00"
+  },
+  "documents": {
+    "purchase_order": "PO-2026-0001",
+    "purchase_order_status": "partially_received",
+    "supplier_invoice": "SI-2026-0001",
+    "customer_invoice": "CI-2026-0001",
+    "payment": "PAY-2026-0001",
+    "reconciliation": "REC-2026-0001",
+    "journal_count": 11,
+    "journal_line_count": 23
+  },
+  "stock": {
+    "method": "weighted_average",
+    "total_quantity": "32.0000",
+    "total_value": "1315000.00"
+  },
+  "bank_statement": {
+    "number": "BST-2026-0001",
+    "opening": "4675000.00",
+    "closing": "4160000.00",
+    "lines": 2
+  }
+}

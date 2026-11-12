@@ -39,3 +39,28 @@ def test_operational_roles_get_operational_but_not_financial_reporting():
     assert "services.view_workorder" in operations
     assert "leasing.view_equipment" in operations
     assert "reporting.view_reporting" in operations
+
+
+def test_crud_actions_and_operational_lifecycle_permissions_are_applied():
+    apply_matrix()
+
+    procurement = permissions("Procurement Officer")
+    assert "procurement.view_purchaseorder" in procurement
+    assert "procurement.add_purchaseorder" in procurement
+    assert "procurement.change_purchaseorder" in procurement
+    assert "procurement.add_goodsreceiptnote" in procurement
+
+    finance = permissions("Finance Officer")
+    assert "banking.import_bankstatement" in finance
+    assert "banking.match_banktransaction" in finance
+    assert "banking.submit_reconciliation" in finance
+
+    controller = permissions("Finance Controller")
+    assert "banking.approve_reconciliation" in controller
+    assert "banking.approve_banktransfer" in controller
+
+    operations = permissions("Operations / HSE")
+    assert "services.add_workorder" in operations
+    assert "services.complete_workorder" in operations
+    assert "leasing.dispatch_rental" in operations
+    assert "leasing.record_inspection" in operations

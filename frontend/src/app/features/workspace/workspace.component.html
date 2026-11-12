@@ -140,7 +140,11 @@
                   @if (resource().previewPath && row['id']) {
                     <button mat-button type="button" (click)="preview(row)">Preview PDF</button>
                   }
-                  @if (resource().edit && canEdit(row) && allowed(resource().permission)) {
+                  @if (
+                    resource().edit &&
+                    canEdit(row) &&
+                    allowed(resource().editPermission ?? resource().permission)
+                  ) {
                     <button mat-button type="button" (click)="edit(row)">Edit</button>
                   }
                   @if (resource().deactivate && row['is_active'] === true) {

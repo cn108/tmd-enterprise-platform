@@ -35,6 +35,11 @@ def grant(codename: str, email: str | None = None) -> APIClient:
         full_name="Inventory Actor",
     )
     user.user_permissions.add(Permission.objects.get(codename=codename))
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            content_type__app_label="inventory", codename__startswith="view_"
+        )
+    )
     client = APIClient()
     client.force_authenticate(user=User.objects.get(pk=user.pk))
     return client

@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -85,6 +86,15 @@ def _conflict(exc: Conflict) -> Response:
     return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
 
 
+class InventoryViewPermissionMixin:
+    view_permission = ""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method in SAFE_METHODS and self.view_permission:
+            _require(request, self.view_permission)
+
+
 def _page_params(request) -> tuple[int, int]:
     """Bounded page window for computed report rows (spec 4.4 / 5.3)."""
     raw_page = (request.query_params.get("page") or "1").strip()
@@ -111,6 +121,7 @@ def _object_id(request, key: str):
 
 class InventoryPolicyView(APIView):
     def get(self, request):
+        _require(request, "inventory.view_inventorypolicy")
         return Response(InventoryPolicySerializer(InventoryPolicy.load()).data)
 
     def patch(self, request):
@@ -124,7 +135,8 @@ class InventoryPolicyView(APIView):
         return Response(InventoryPolicySerializer(record).data)
 
 
-class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
+class StockMovementViewSet(InventoryViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
+    view_permission = "inventory.view_stockmovement"
     serializer_class = StockMovementSerializer
     search_fields = ("number", "reference", "reason", "item__code", "item__name")
     ordering_fields = ("number", "movement_date", "occurred_at", "quantity")
@@ -149,6 +161,7 @@ class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
 
 class StockBalanceView(APIView):
     def get(self, request):
+        _require(request, "inventory.view_stockmovement")
         try:
             item_id = _object_id(request, "item")
             warehouse_id = _object_id(request, "warehouse")
@@ -193,6 +206,7 @@ class StockBalanceView(APIView):
 
 class InventoryValuationView(APIView):
     def get(self, request):
+        _require(request, "inventory.view_stockmovement")
         try:
             item_id = _object_id(request, "item")
             warehouse_id = _object_id(request, "warehouse")
@@ -228,13 +242,15 @@ class InventoryValuationView(APIView):
         return Response(report)
 
 
-class ReorderLevelViewSet(NoDeleteViewSet):
+class ReorderLevelViewSet(InventoryViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "inventory.view_reorderlevel"
     queryset = ReorderLevel.objects.select_related("item", "warehouse").all()
     serializer_class = ReorderLevelSerializer
 
 
 class ReorderAlertView(APIView):
     def get(self, request):
+        _require(request, "inventory.view_reorderlevel")
         try:
             page, size = _page_params(request)
         except ValueError as exc:
@@ -263,15 +279,18 @@ class ReorderAlertView(APIView):
 
 
 class ReadCreateViewSet(
+    InventoryViewPermissionMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
+    view_permission = ""
     """Create-and-read documents; no update or delete route exists."""
 
 
 class StockReceiptViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockreceipt"
     queryset = StockReceipt.objects.select_related(
         "warehouse", "supplier", "received_by"
     ).prefetch_related("lines")
@@ -293,6 +312,7 @@ class StockReceiptViewSet(ReadCreateViewSet):
 
 
 class StockTransferViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stocktransfer"
     queryset = StockTransfer.objects.select_related(
         "from_warehouse", "to_warehouse", "from_location", "to_location"
     ).prefetch_related("lines")
@@ -346,6 +366,7 @@ class StockTransferViewSet(ReadCreateViewSet):
 
 
 class StockIssueViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockissue"
     queryset = StockIssue.objects.select_related(
         "project", "cost_centre", "issued_by"
     ).prefetch_related("lines")
@@ -365,6 +386,7 @@ class StockIssueViewSet(ReadCreateViewSet):
 
 
 class StockReturnViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockreturn"
     queryset = StockReturn.objects.select_related("project", "returned_by").prefetch_related(
         "lines"
     )
@@ -384,6 +406,7 @@ class StockReturnViewSet(ReadCreateViewSet):
 
 
 class StockAdjustmentViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockadjustment"
     queryset = StockAdjustment.objects.select_related("adjusted_by").prefetch_related("lines")
 
     def get_serializer_class(self):
@@ -405,6 +428,7 @@ class StockAdjustmentViewSet(ReadCreateViewSet):
 
 
 class StockDamageViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockdamage"
     queryset = StockDamage.objects.select_related("recorded_by").prefetch_related("lines")
 
     def get_serializer_class(self):
@@ -422,6 +446,7 @@ class StockDamageViewSet(ReadCreateViewSet):
 
 
 class StockCountViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockcount"
     queryset = StockCount.objects.select_related(
         "warehouse", "counted_by", "posted_by"
     ).prefetch_related("lines")
@@ -450,6 +475,7 @@ class StockCountViewSet(ReadCreateViewSet):
 
 
 class StockReservationViewSet(ReadCreateViewSet):
+    view_permission = "inventory.view_stockreservation"
     queryset = StockReservation.objects.select_related("item", "warehouse", "project").all()
     serializer_class = StockReservationSerializer
 

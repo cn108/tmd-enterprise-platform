@@ -1,0 +1,62 @@
+{
+  "database": "tmd_staging",
+  "workers": 16,
+  "requests": 400,
+  "wall_seconds": 6.5,
+  "requests_per_second": 61.5,
+  "errors": 0,
+  "endpoints": {
+    "session": {
+      "requests": 80,
+      "errors": 0,
+      "status_counts": {
+        "200": 80
+      },
+      "mean_ms": 54.9,
+      "p95_ms": 193.3,
+      "max_ms": 225.6
+    },
+    "purchase_orders": {
+      "requests": 80,
+      "errors": 0,
+      "status_counts": {
+        "200": 80
+      },
+      "mean_ms": 441.9,
+      "p95_ms": 681.4,
+      "max_ms": 737.1
+    },
+    "stock_balances": {
+      "requests": 80,
+      "errors": 0,
+      "status_counts": {
+        "200": 80
+      },
+      "mean_ms": 121.7,
+      "p95_ms": 154.8,
+      "max_ms": 223.0
+    },
+    "financial_statements": {
+      "requests": 80,
+      "errors": 0,
+      "status_counts": {
+        "200": 40,
+        "403": 40
+      },
+      "mean_ms": 281.3,
+      "p95_ms": 649.4,
+      "max_ms": 731.9
+    },
+    "inventory_report": {
+      "requests": 80,
+      "errors": 0,
+      "status_counts": {
+        "200": 80
+      },
+      "mean_ms": 387.0,
+      "p95_ms": 471.5,
+      "max_ms": 556.1
+    }
+  },
+  "note": "Read-only concurrent load against the local Django development server. It measures application and database query cost, not production network or worker capacity."
+}

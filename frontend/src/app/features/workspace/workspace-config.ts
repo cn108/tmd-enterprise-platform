@@ -98,6 +98,8 @@ export interface ResourceConfig {
    * authenticated user, which is what its viewset actually enforces.
    */
   permission?: string;
+  /** Permission needed to edit when it differs from the create permission. */
+  editPermission?: string;
   create?: boolean;
   edit?: boolean;
   /** Only offer Edit while the record is in one of these states. */
@@ -1431,6 +1433,8 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         label: 'Purchase requests',
         singular: 'purchase request',
         endpoint: '/api/v1/purchase-requests/',
+        permission: 'procurement.add_purchaserequest',
+        editPermission: 'procurement.change_purchaserequest',
         serverSearch: true,
         create: true,
         edit: true,

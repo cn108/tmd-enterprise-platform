@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from apps.procurement.models import (
@@ -63,14 +64,25 @@ def _conflict(exc: StateConflict) -> Response:
     return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
 
 
-class DestinationViewSet(NoDeleteViewSet):
+class ProcurementViewPermissionMixin:
+    view_permission = ""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method in SAFE_METHODS and self.view_permission:
+            _require(request, self.view_permission)
+
+
+class DestinationViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_destination"
     queryset = Destination.objects.select_related("project", "warehouse").all()
     serializer_class = DestinationSerializer
 
 
-class PurchaseRequestLineViewSet(viewsets.ReadOnlyModelViewSet):
+class PurchaseRequestLineViewSet(ProcurementViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
     """Lines of a request, for quotation entry. Filter with ``?request=``."""
 
+    view_permission = "procurement.view_purchaserequestline"
     serializer_class = PurchaseRequestLineSerializer
 
     def get_queryset(self):
@@ -81,9 +93,10 @@ class PurchaseRequestLineViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class PurchaseOrderLineViewSet(viewsets.ReadOnlyModelViewSet):
+class PurchaseOrderLineViewSet(ProcurementViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
     """Lines of an order, for delivery scheduling. Filter with ``?order=``."""
 
+    view_permission = "procurement.view_purchaseorderline"
     serializer_class = PurchaseOrderLineSerializer
 
     def get_queryset(self):
@@ -94,7 +107,8 @@ class PurchaseOrderLineViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class PurchaseRequestViewSet(NoDeleteViewSet):
+class PurchaseRequestViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_purchaserequest"
     queryset = PurchaseRequest.objects.select_related(
         "requester", "department", "destination"
     ).prefetch_related("lines")
@@ -109,8 +123,17 @@ class PurchaseRequestViewSet(NoDeleteViewSet):
             queryset = queryset.filter(status=status)
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        _require(request, "procurement.add_purchaserequest")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _require(request, "procurement.change_purchaserequest")
+        return super().update(request, *args, **kwargs)
+
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
+        _require(request, "procurement.add_purchaserequest")
         try:
             return Response(PurchaseRequestSerializer(submit_request(self.get_object())).data)
         except StateConflict as exc:
@@ -136,7 +159,8 @@ class PurchaseRequestViewSet(NoDeleteViewSet):
         return Response(PurchaseRequestSerializer(result).data)
 
 
-class RequestForQuotationViewSet(NoDeleteViewSet):
+class RequestForQuotationViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_requestforquotation"
     queryset = RequestForQuotation.objects.select_related("request").prefetch_related("invitations")
     serializer_class = RequestForQuotationSerializer
 
@@ -147,33 +171,60 @@ class RequestForQuotationViewSet(NoDeleteViewSet):
             queryset = queryset.filter(status=status_filter)
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        _require(request, "procurement.add_requestforquotation")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _require(request, "procurement.change_requestforquotation")
+        return super().update(request, *args, **kwargs)
+
     @action(detail=True, methods=["post"])
     def issue(self, request, pk=None):
+        _require(request, "procurement.add_requestforquotation")
         try:
             return Response(RequestForQuotationSerializer(issue_rfq(self.get_object())).data)
         except StateConflict as exc:
             return _conflict(exc)
 
 
-class RfqSupplierViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class RfqSupplierViewSet(
+    ProcurementViewPermissionMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    view_permission = "procurement.view_rfqsupplier"
     queryset = RfqSupplier.objects.select_related("rfq", "supplier").all()
     serializer_class = RfqSupplierSerializer
 
     def perform_create(self, serializer):
+        _require(self.request, "procurement.add_rfqsupplier")
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
 
 
-class SupplierQuoteViewSet(NoDeleteViewSet):
+class SupplierQuoteViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_supplierquote"
     queryset = SupplierQuote.objects.select_related("rfq", "supplier").prefetch_related("lines")
     serializer_class = SupplierQuoteSerializer
 
+    def create(self, request, *args, **kwargs):
+        _require(request, "procurement.add_supplierquote")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _require(request, "procurement.change_supplierquote")
+        return super().update(request, *args, **kwargs)
+
 
 class SupplierSelectionViewSet(
+    ProcurementViewPermissionMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
+    view_permission = "procurement.view_supplierselection"
     queryset = SupplierSelection.objects.select_related("rfq", "quote").all()
     serializer_class = SupplierSelectionSerializer
 
@@ -185,7 +236,8 @@ class SupplierSelectionViewSet(
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
 
 
-class PurchaseOrderViewSet(NoDeleteViewSet):
+class PurchaseOrderViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_purchaseorder"
     queryset = PurchaseOrder.objects.select_related(
         "supplier", "request", "destination"
     ).prefetch_related("lines__schedules")
@@ -200,8 +252,17 @@ class PurchaseOrderViewSet(NoDeleteViewSet):
             queryset = queryset.filter(status=status)
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        _require(request, "procurement.add_purchaseorder")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _require(request, "procurement.change_purchaseorder")
+        return super().update(request, *args, **kwargs)
+
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
+        _require(request, "procurement.change_purchaseorder")
         try:
             return Response(PurchaseOrderSerializer(submit_order(self.get_object())).data)
         except StateConflict as exc:
@@ -218,6 +279,7 @@ class PurchaseOrderViewSet(NoDeleteViewSet):
 
     @action(detail=True, methods=["post"])
     def issue(self, request, pk=None):
+        _require(request, "procurement.change_purchaseorder")
         try:
             return Response(PurchaseOrderSerializer(issue_order(self.get_object())).data)
         except StateConflict as exc:
@@ -225,6 +287,7 @@ class PurchaseOrderViewSet(NoDeleteViewSet):
 
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
+        _require(request, "procurement.change_purchaseorder")
         reason = (request.data.get("reason") or "").strip()
         try:
             result = close_order(self.get_object(), request.user, reason)
@@ -234,6 +297,7 @@ class PurchaseOrderViewSet(NoDeleteViewSet):
 
     @action(detail=True, methods=["post"])
     def receive(self, request, pk=None):
+        _require(request, "procurement.add_goodsreceiptnote")
         order = self.get_object()
         payload = GoodsReceiptCreateSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
@@ -250,12 +314,14 @@ class PurchaseOrderViewSet(NoDeleteViewSet):
         return Response(GoodsReceiptNoteSerializer(receipt).data, status=status.HTTP_201_CREATED)
 
 
-class DeliveryScheduleViewSet(NoDeleteViewSet):
+class DeliveryScheduleViewSet(ProcurementViewPermissionMixin, NoDeleteViewSet):
+    view_permission = "procurement.view_deliveryschedule"
     queryset = DeliverySchedule.objects.select_related("order_line", "destination").all()
     serializer_class = DeliveryScheduleSerializer
 
 
-class GoodsReceiptNoteViewSet(viewsets.ReadOnlyModelViewSet):
+class GoodsReceiptNoteViewSet(ProcurementViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
+    view_permission = "procurement.view_goodsreceiptnote"
     queryset = GoodsReceiptNote.objects.select_related("order", "received_by").prefetch_related(
         "lines"
     )
@@ -264,9 +330,10 @@ class GoodsReceiptNoteViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ("number", "received_at", "created_at")
 
 
-class GoodsReceiptLineViewSet(viewsets.ReadOnlyModelViewSet):
+class GoodsReceiptLineViewSet(ProcurementViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
     """Accepted receipt lines available for supplier-invoice matching."""
 
+    view_permission = "procurement.view_goodsreceiptline"
     serializer_class = GoodsReceiptLineReadSerializer
 
     def get_queryset(self):

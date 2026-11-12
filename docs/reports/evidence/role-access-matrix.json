@@ -1,0 +1,709 @@
+{
+  "database": "tmd_staging",
+  "roles": 10,
+  "checks": 130,
+  "failures": [],
+  "all_passed": true,
+  "matrix": [
+    {
+      "role": "System Administrator",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 409,
+          "allowed": true,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 404,
+          "allowed": true,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Management",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 409,
+          "allowed": true,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Accountant",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Finance Controller",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Finance Officer",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Procurement Officer",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Project Manager",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 409,
+          "allowed": true,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 404,
+          "allowed": true,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Storekeeper",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Operations / HSE",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 400,
+          "allowed": true,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 404,
+          "allowed": true,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        }
+      }
+    },
+    {
+      "role": "Auditor",
+      "checks": {
+        "read_procurement": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_inventory": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_services": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_leasing": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "read_bank_accounts": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        },
+        "create_purchase_request": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "receive_goods": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "issue_stock": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "import_bank_statement": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "accept_work_order": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "dispatch_rental": {
+          "status": 403,
+          "allowed": false,
+          "pass": true
+        },
+        "export_financial_report": {
+          "status": 200,
+          "allowed": true,
+          "pass": true
+        }
+      }
+    }
+  ]
+}

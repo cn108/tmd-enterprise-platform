@@ -13,6 +13,7 @@ configuration report and is reversible by an access administrator.
 from __future__ import annotations
 
 from django.contrib.auth.models import Group, Permission
+from django.db.models import Q
 
 from apps.core.models import PolicyDecision
 
@@ -42,10 +43,10 @@ def _crud(app_labels, actions=("view", "add", "change")):
     """
 
     prefixes = tuple(f"{action}_" for action in actions)
-    return Permission.objects.filter(
-        content_type__app_label__in=app_labels,
-        codename__startswith=prefixes,
-    )
+    query = Q()
+    for prefix in prefixes:
+        query |= Q(codename__startswith=prefix)
+    return Permission.objects.filter(query, content_type__app_label__in=app_labels)
 
 
 def _view(app_labels):
@@ -136,6 +137,11 @@ MATRIX = {
                 "approve_customerinvoice",
                 "approve_invoicenote",
                 "approve_payment",
+                "add_purchaserequest",
+                "approve_reconciliation",
+                "approve_servicecontract",
+                "accept_workorder",
+                "approve_rentalagreement",
                 "view_reporting",
                 "view_financialreporting",
                 "export_reporting",
@@ -170,6 +176,9 @@ MATRIX = {
                 "close_period",
                 "reopen_period",
                 "configure_accounting",
+                "add_purchaserequest",
+                "approve_reconciliation",
+                "manage_bankaccounts",
                 "set_valuation_method",
                 "view_audit",
                 "view_taxconfiguration",
@@ -210,6 +219,9 @@ MATRIX = {
                 "approve_customerinvoice",
                 "approve_invoicenote",
                 "approve_payment",
+                "add_purchaserequest",
+                "approve_reconciliation",
+                "approve_banktransfer",
                 "approve_account",
                 "approve_postingrule",
                 "approve_journal",
@@ -244,6 +256,11 @@ MATRIX = {
             [
                 "record_payment",
                 "allocate_payment",
+                "add_purchaserequest",
+                "import_bankstatement",
+                "match_banktransaction",
+                "submit_reconciliation",
+                "manage_banktransfer",
                 "view_reporting",
                 "view_financialreporting",
                 "export_reporting",
@@ -261,9 +278,18 @@ MATRIX = {
                 "inventory",
                 "accounting",
                 "invoicing",
+                "services",
+                "leasing",
             ]
         )
-        | _permissions(["select_supplier", "view_reporting"])
+        | _permissions(
+            [
+                "select_supplier",
+                "add_purchaserequest",
+                "add_goodsreceiptnote",
+                "view_reporting",
+            ]
+        )
     ),
     "Project Manager": (
         _crud(["projects", "documents"])
@@ -282,7 +308,27 @@ MATRIX = {
             ]
         )
         | _crud(["procurement"], actions=("view", "add", "change"))
-        | _permissions(["view_reporting"])
+        | _permissions(
+            [
+                "add_purchaserequest",
+                "add_servicecontract",
+                "change_servicecontract",
+                "add_workorder",
+                "change_workorder",
+                "assign_workorder",
+                "complete_workorder",
+                "accept_workorder",
+                "add_rentalagreement",
+                "change_rentalagreement",
+                "add_equipmentreservation",
+                "change_equipmentreservation",
+                "dispatch_rental",
+                "return_equipment",
+                "record_inspection",
+                "close_rentalagreement",
+                "view_reporting",
+            ]
+        )
     ),
     "Storekeeper": (
         _view(
@@ -296,6 +342,8 @@ MATRIX = {
                 "procurement",
                 "accounting",
                 "invoicing",
+                "services",
+                "leasing",
             ]
         )
         | _view(["inventory"])
@@ -309,6 +357,8 @@ MATRIX = {
                 "write_off_stock",
                 "count_stock",
                 "reserve_stock",
+                "add_purchaserequest",
+                "add_goodsreceiptnote",
                 "view_audit",
                 "view_reporting",
             ]
@@ -329,7 +379,31 @@ MATRIX = {
                 "leasing",
             ]
         )
-        | _permissions(["view_reporting"])
+        | _permissions(
+            [
+                "add_purchaserequest",
+                "add_workorder",
+                "change_workorder",
+                "assign_workorder",
+                "complete_workorder",
+                "add_servicechecklistitem",
+                "change_servicechecklistitem",
+                "add_hserecord",
+                "change_hserecord",
+                "add_workorderreport",
+                "change_workorderreport",
+                "manage_equipment",
+                "add_equipmentreservation",
+                "change_equipmentreservation",
+                "dispatch_rental",
+                "return_equipment",
+                "record_inspection",
+                "close_rentalagreement",
+                "add_equipmentmaintenance",
+                "change_equipmentmaintenance",
+                "view_reporting",
+            ]
+        )
     ),
     "Auditor": (
         _view(

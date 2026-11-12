@@ -44,5 +44,19 @@ def auth_client(user) -> APIClient:
             content_type__app_label="accounting", codename__startswith="view_"
         )
     )
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            Q(codename__startswith="view_")
+            | Q(codename__startswith="add_")
+            | Q(codename__startswith="change_"),
+            content_type__app_label="procurement",
+        )
+    )
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            content_type__app_label="inventory",
+            codename__startswith="view_",
+        )
+    )
     client.force_authenticate(user=user)
     return client

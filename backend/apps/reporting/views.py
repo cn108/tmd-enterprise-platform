@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.http import HttpResponse
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -115,6 +117,14 @@ def _payload(request, name: str) -> dict:
 
 
 class ReportView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("start", OpenApiTypes.DATE, required=False),
+            OpenApiParameter("end", OpenApiTypes.DATE, required=False),
+            OpenApiParameter("account", OpenApiTypes.INT, required=False),
+        ],
+        responses={200: OpenApiTypes.OBJECT},
+    )
     def get(self, request, name: str):
         _require_report_access(request.user, name)
         try:
@@ -157,6 +167,15 @@ def _csv_safe(value: str) -> str:
 
 
 class ReportExportView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("start", OpenApiTypes.DATE, required=False),
+            OpenApiParameter("end", OpenApiTypes.DATE, required=False),
+            OpenApiParameter("account", OpenApiTypes.INT, required=False),
+            OpenApiParameter("output", OpenApiTypes.STR, required=False),
+        ],
+        responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+    )
     def get(self, request, name: str):
         _require_report_access(request.user, name, export=True)
         try:

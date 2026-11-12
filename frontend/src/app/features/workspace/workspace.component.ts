@@ -181,7 +181,11 @@ export class WorkspaceComponent {
 
   protected edit(row: Row): void {
     const resource = this.resource();
-    if (!resource.edit || !this.canEdit(row) || !this.allowed(resource.permission)) {
+    if (
+      !resource.edit ||
+      !this.canEdit(row) ||
+      !this.allowed(resource.editPermission ?? resource.permission)
+    ) {
       return;
     }
     this.openForm({ resource, row });

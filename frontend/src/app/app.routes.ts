@@ -5,6 +5,11 @@ import { authGuard, guestGuard } from './core/auth.guard';
 const workspace = () =>
   import('./features/workspace/workspace.component').then((m) => m.WorkspaceComponent);
 
+const masterDataPage = () =>
+  import('./features/master-data/master-data-page.component').then(
+    (m) => m.MasterDataPageComponent,
+  );
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -22,10 +27,36 @@ export const routes: Routes = [
   },
   {
     path: 'master-data',
-    title: 'Master data · TMD Platform',
+    pathMatch: 'full',
+    redirectTo: 'master-data/suppliers',
+  },
+  {
+    path: 'master-data/suppliers',
+    title: 'Suppliers · TMD Platform',
     canActivate: [authGuard],
-    data: { module: 'master-data' },
-    loadComponent: workspace,
+    data: { module: 'master-data', entity: 'suppliers', tab: 'suppliers' },
+    loadComponent: masterDataPage,
+  },
+  {
+    path: 'master-data/customers',
+    title: 'Customers · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'master-data', entity: 'customers', tab: 'customers' },
+    loadComponent: masterDataPage,
+  },
+  {
+    path: 'master-data/products',
+    title: 'Products · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'master-data', entity: 'products', tab: 'catalogue' },
+    loadComponent: masterDataPage,
+  },
+  {
+    path: 'master-data/tax-rates',
+    title: 'Tax rates · TMD Platform',
+    canActivate: [authGuard],
+    data: { module: 'master-data', entity: 'tax-rates', tab: 'suppliers' },
+    loadComponent: masterDataPage,
   },
   {
     path: 'procurement',

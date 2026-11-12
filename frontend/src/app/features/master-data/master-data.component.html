@@ -1,0 +1,466 @@
+<section class="md-page" aria-labelledby="md-title">
+  <header class="md-header">
+    <div>
+      <nav class="md-breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/master-data/suppliers">Master Data</a>
+        <span aria-hidden="true">›</span>
+        <span>{{ entity.label }}</span>
+      </nav>
+      <div class="md-heading">
+        <h1 id="md-title">{{ entity.title }}</h1>
+        <span class="md-count">{{ count() }} {{ count() === 1 ? 'record' : 'records' }}</span>
+      </div>
+      <p class="md-updated">
+        @if (lastUpdated(); as updated) {
+          Updated {{ timestamp(updated) }}
+        } @else {
+          Live register · writes are validated by the server
+        }
+      </p>
+    </div>
+    <span class="md-test-mode">Staging</span>
+  </header>
+
+  <div class="md-toolbar">
+    <div class="md-toolbar__top">
+      <label class="md-search">
+        <span class="visually-hidden">Search {{ entity.label }}</span>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4.5 4.5" />
+        </svg>
+        <input
+          type="search"
+          placeholder="Search {{ entity.label.toLowerCase() }}…"
+          [value]="search()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+
+      <div class="md-toolbar__actions">
+        <details class="md-filter-menu">
+          <summary class="md-button md-button--ghost">
+            Filters
+            @if (activeFilters().length) {
+              <span class="md-filter-count">{{ activeFilters().length }}</span>
+            }
+          </summary>
+          <div class="md-filter-popover">
+            @for (filter of entity.filters; track filter.key) {
+              <label class="md-filter-field">
+                <span>{{ filter.label }}</span>
+                <select [value]="filterValue(filter.key)" (change)="setFilter(filter.key, $event)">
+                  <option value="">All</option>
+                  @for (option of filter.options; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+            }
+            @if (activeFilters().length) {
+              <button type="button" class="md-link" (click)="clearAll()">Clear all</button>
+            }
+          </div>
+        </details>
+
+        <button type="button" class="md-button md-button--ghost" (click)="exportCsv()">
+          Export CSV
+        </button>
+        <button
+          type="button"
+          class="md-button md-button--ghost"
+          [disabled]="selectedCount() === 0"
+          (click)="clearSelection()"
+        >
+          Clear selection {{ selectedCount() ? '(' + selectedCount() + ')' : '' }}
+        </button>
+        @if (canCreate()) {
+          <button type="button" class="md-button md-button--primary" (click)="openCreate($event)">
+            + New {{ entity.singular }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="md-button md-button--primary"
+            disabled
+            title="You do not have permission to create this record."
+          >
+            + New {{ entity.singular }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <nav class="md-tabs" aria-label="Master data entities">
+      @for (item of entities; track item.key) {
+        <a
+          [routerLink]="['/master-data', item.key]"
+          [queryParams]="{ layout: 'v2' }"
+          [class.is-active]="item.key === entity.key"
+          [attr.aria-current]="item.key === entity.key ? 'page' : null"
+        >
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    @if (activeFilters().length) {
+      <div class="md-chips" aria-label="Active filters">
+        @for (filter of activeFilters(); track filter.key) {
+          <button
+            type="button"
+            class="md-chip"
+            [attr.aria-label]="'Remove ' + filter.label + ': ' + filter.text"
+            (click)="removeFilter(filter.key)"
+          >
+            {{ filter.label }}: {{ filter.text }}
+            <span aria-hidden="true">×</span>
+          </button>
+        }
+        <button type="button" class="md-link" (click)="clearAll()">Clear all</button>
+      </div>
+    }
+  </div>
+
+  @if (notice(); as message) {
+    <p class="md-notice" role="status">{{ message }}</p>
+  }
+
+  @if (error(); as message) {
+    <div class="md-error" role="alert">
+      <span>{{ message }}</span>
+      @if (!message.toLowerCase().includes('permission')) {
+        <button type="button" class="md-link" (click)="clearAll()">Retry with current filters</button>
+      }
+    </div>
+  }
+
+  <p class="visually-hidden" aria-live="polite">{{ announce() }}</p>
+
+  <section class="md-card" aria-label="{{ entity.label }} table">
+    <div class="md-table-scroll">
+      <div class="md-table" role="table" [attr.aria-rowcount]="count()" [attr.aria-colcount]="entity.columns.length + 2">
+        <div class="md-table-head" role="row" [style.gridTemplateColumns]="entity.grid">
+          <div class="md-head-cell col-checkbox" role="columnheader">
+            <input
+              type="checkbox"
+              aria-label="Select all records on this page"
+              [checked]="allSelected()"
+              [indeterminate]="someSelected()"
+              (click)="toggleAll($event)"
+            />
+          </div>
+          @for (column of entity.columns; track column.key) {
+            <div
+              class="md-head-cell"
+              [class]="'md-head-cell col-' + column.key"
+              [class.cell--number]="column.kind === 'number'"
+              role="columnheader"
+              [attr.aria-sort]="column.sortable ? ariaSort(column) : null"
+            >
+              @if (column.sortable) {
+                <button type="button" class="md-sort" (click)="sortBy(column)">
+                  {{ column.label }}
+                  <span aria-hidden="true">{{ sortKey() === (column.sortKey ?? column.key) ? (sortDir() === 'asc' ? '▲' : '▼') : '↕' }}</span>
+                </button>
+              } @else {
+                {{ column.label }}
+              }
+            </div>
+          }
+          <div class="md-head-cell col-actions" role="columnheader">Actions</div>
+        </div>
+
+        @if (loading()) {
+          <div class="md-skeleton" aria-label="Loading records" aria-busy="true">
+            @for (skeleton of [1, 2, 3, 4, 5, 6, 7, 8]; track skeleton) {
+              <div class="md-skeleton__row" [style.gridTemplateColumns]="entity.grid">
+                @for (column of entity.columns; track column.key) {
+                  <span class="md-skeleton__cell" [style.width]="skeleton % 2 ? '66%' : '82%'"></span>
+                }
+              </div>
+            }
+          </div>
+        } @else if (rows().length === 0) {
+          <div class="md-empty">
+            <svg viewBox="0 0 64 64" width="58" height="58" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <rect x="10" y="14" width="44" height="38" rx="4" />
+              <path d="M10 24h44M22 34h20M22 41h13" />
+            </svg>
+            <h2>No {{ entity.label.toLowerCase() }} found</h2>
+            <p>Adjust your search or filters, or add the first {{ entity.singular }}.</p>
+            @if (canCreate()) {
+              <button type="button" class="md-button md-button--primary" (click)="openCreate($event)">
+                + Add first {{ entity.singular }}
+              </button>
+            }
+          </div>
+        } @else {
+          <ng-template #rowTemplate let-row>
+            <div
+              class="md-row"
+              role="row"
+              tabindex="0"
+              [style.gridTemplateColumns]="entity.grid"
+              [class.is-selected]="isSelected(row)"
+              [attr.aria-selected]="isSelected(row)"
+              (click)="openView(row, $event)"
+              (keydown)="onRowKey($event, row)"
+            >
+              <div class="cell col-checkbox" role="cell">
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(row)"
+                  [attr.aria-label]="'Select ' + recordLabel(row)"
+                  (click)="toggleRow(row, $event)"
+                />
+              </div>
+              @for (column of entity.columns; track column.key) {
+                <div
+                  [class]="'cell col-' + column.key"
+                  [class.cell--number]="column.kind === 'number'"
+                  role="cell"
+                >
+                  @if (column.kind === 'status') {
+                    <span class="md-badge" [class]="'md-badge md-badge--' + statusTone(column, row)">
+                      {{ cell(row, column) }}
+                    </span>
+                  } @else {
+                    <span class="md-cell-text">{{ cell(row, column) }}</span>
+                  }
+                </div>
+              }
+              <div class="cell col-actions" role="cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                <details class="md-row-menu">
+                  <summary [attr.aria-label]="'Actions for ' + recordLabel(row)">⋯</summary>
+                  <div class="md-row-menu__list">
+                    <button type="button" (click)="openView(row, $event)">View</button>
+                    @if (canEdit() && editable(row)) {
+                      <button type="button" (click)="openView(row, $event); openEdit($event)">Edit</button>
+                    }
+                    @if (entity.canDeactivate && canEdit() && row['is_active'] === true) {
+                      <button type="button" class="danger" (click)="deactivate(row, $event)">Deactivate</button>
+                    }
+                  </div>
+                </details>
+              </div>
+            </div>
+          </ng-template>
+
+          @if (rows().length > 500) {
+            <cdk-virtual-scroll-viewport class="md-viewport" [itemSize]="48" role="rowgroup">
+              <ng-container
+                *cdkVirtualFor="let row of rows(); trackBy: trackRow"
+                [ngTemplateOutlet]="rowTemplate"
+                [ngTemplateOutletContext]="{$implicit: row}"
+              />
+            </cdk-virtual-scroll-viewport>
+          } @else {
+            <div role="rowgroup">
+              @for (row of rows(); track row['id']) {
+                <ng-container
+                  [ngTemplateOutlet]="rowTemplate"
+                  [ngTemplateOutletContext]="{$implicit: row}"
+                />
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    @if (selectedCount() > 0) {
+      <div class="md-bulk" role="region" aria-label="Bulk actions">
+        <strong>{{ selectedCount() }} selected</strong>
+        <button type="button" class="md-link" (click)="exportCsv(true)">Export</button>
+        <button
+          type="button"
+          class="md-link"
+          disabled
+          title="Duplicate merging needs a reviewed merge policy; no server-side merge operation exists yet."
+        >
+          Merge duplicates
+        </button>
+        @if (entity.canDeactivate && canEdit()) {
+          <button type="button" class="md-link danger" (click)="bulkDeactivate()">Deactivate</button>
+        }
+        <button type="button" class="md-link" (click)="clearSelection()">Clear</button>
+      </div>
+    }
+
+    <footer class="md-footer">
+      <span>
+        @if (count() === 0) {
+          No records
+        } @else {
+          Showing {{ showingFrom() }}–{{ showingTo() }} of {{ count() }}
+        }
+      </span>
+      <div class="md-pager">
+        <button type="button" aria-label="Previous page" [disabled]="pageIndex() === 0" (click)="goToPage(pageIndex() - 1)">‹</button>
+        @for (page of pageNumbers(); track page) {
+          <button
+            type="button"
+            [class.is-active]="page === pageIndex()"
+            [attr.aria-current]="page === pageIndex() ? 'page' : null"
+            (click)="goToPage(page)"
+          >
+            {{ page + 1 }}
+          </button>
+        }
+        <button type="button" aria-label="Next page" [disabled]="pageIndex() >= totalPages() - 1" (click)="goToPage(pageIndex() + 1)">›</button>
+      </div>
+      <label class="md-page-size">
+        <span class="visually-hidden">Page size</span>
+        <select (change)="onPageSize($event)">
+          <option value="25" [selected]="pageSize() === 25">25 / page</option>
+          <option value="50" [selected]="pageSize() === 50">50 / page</option>
+          <option value="100" [selected]="pageSize() === 100">100 / page</option>
+        </select>
+      </label>
+      <label class="md-jump">
+        <span>Go to</span>
+        <input type="number" min="1" max="{{ totalPages() }}" (change)="jumpToPage($event)" />
+      </label>
+    </footer>
+  </section>
+</section>
+
+@if (panelOpen()) {
+  <button type="button" class="md-backdrop" aria-label="Close record panel" (click)="closePanel()"></button>
+  <aside
+    class="md-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="md-panel-title"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown.escape)="closePanel()"
+  >
+    <header class="md-panel__head">
+      <div>
+        <p class="md-panel__eyebrow">{{ entity.label }}</p>
+        <h2 id="md-panel-title">
+          @if (panelMode() === 'create') {
+            New {{ entity.singular }}
+          } @else {
+            {{ recordLabel(selectedRow()) }}
+          }
+        </h2>
+      </div>
+      <button type="button" class="md-icon-button" aria-label="Close panel" (click)="closePanel()">×</button>
+    </header>
+
+    @if (panelError(); as message) {
+      <p class="md-panel__error" role="alert">{{ message }}</p>
+    }
+
+    @if (panelMode() === 'view') {
+      <div class="md-panel__body" tabindex="0">
+        <div class="md-panel__status">
+          @if (selectedRow()?.['is_active'] !== undefined) {
+            <span class="md-badge" [class]="selectedRow()?.['is_active'] ? 'md-badge md-badge--success' : 'md-badge md-badge--neutral'">
+              {{ selectedRow()?.['is_active'] ? 'Active' : 'Inactive' }}
+            </span>
+          }
+          @if (selectedRow()?.['review_status']; as status) {
+            <span class="md-badge md-badge--info">{{ displayValue(status, 'status') }}</span>
+          }
+        </div>
+
+        <dl class="md-detail">
+          @for (field of entity.detail; track field.key) {
+            <div>
+              <dt>{{ field.label }}</dt>
+              <dd>{{ detailValue(selectedRow() ?? {}, field) }}</dd>
+            </div>
+          }
+        </dl>
+
+        <section class="md-history" aria-labelledby="md-history-title">
+          <h3 id="md-history-title">Activity history</h3>
+          <p>Created {{ timestamp(selectedRow()?.['created_at']) }}</p>
+          <p>Last updated {{ timestamp(selectedRow()?.['updated_at']) }}</p>
+        </section>
+
+        <section class="md-linked" aria-labelledby="md-linked-title">
+          <h3 id="md-linked-title">Linked documents</h3>
+          <p>No linked documents are returned for this record type.</p>
+        </section>
+      </div>
+
+      <footer class="md-panel__footer">
+        <button type="button" class="md-button md-button--ghost" (click)="closePanel()">Close</button>
+        @if (selectedRow() && entity.canDeactivate && canEdit() && selectedRow()?.['is_active'] === true) {
+          <button type="button" class="md-button md-button--danger" (click)="deactivate(selectedRow()!, $event)">
+            Deactivate
+          </button>
+        }
+        @if (selectedRow() && canEdit() && editable(selectedRow()!)) {
+          <button type="button" class="md-button md-button--primary" (click)="openEdit($event)">Edit record</button>
+        }
+      </footer>
+    } @else {
+      <form class="md-panel__body md-form" tabindex="0" [formGroup]="form" (ngSubmit)="save()">
+        @for (field of entity.fields; track field.key) {
+          <div class="md-field" [class.md-field--wide]="field.type === 'textarea' || field.type === 'checkbox'">
+            @if (field.type === 'checkbox') {
+              <label class="md-check">
+                <input
+                  type="checkbox"
+                  [formControlName]="field.key"
+                />
+                <span>{{ field.label }}</span>
+              </label>
+            } @else {
+              <label [for]="'md-field-' + field.key">
+                {{ field.label }}
+                @if (field.required) { <span aria-hidden="true" class="required">*</span> }
+              </label>
+              @if (field.type === 'select') {
+                <select
+                  [id]="'md-field-' + field.key"
+                  [formControlName]="field.key"
+                  [attr.aria-invalid]="fieldError(field) ? 'true' : null"
+                >
+                  <option value="">—</option>
+                  @for (option of optionList(field); track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              } @else if (field.type === 'textarea') {
+                <textarea
+                  [id]="'md-field-' + field.key"
+                  rows="3"
+                  [formControlName]="field.key"
+                  [attr.aria-invalid]="fieldError(field) ? 'true' : null"
+                ></textarea>
+              } @else {
+                <input
+                  [id]="'md-field-' + field.key"
+                  [type]="field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'"
+                  [formControlName]="field.key"
+                  [attr.min]="field.min ?? null"
+                  [attr.step]="field.step ?? null"
+                  [attr.aria-invalid]="fieldError(field) ? 'true' : null"
+                />
+              }
+              @if (fieldError(field); as message) {
+                <p class="md-field__error" role="alert">{{ message }}</p>
+              } @else if (field.help) {
+                <p class="md-field__hint">{{ field.help }}</p>
+              }
+            }
+          </div>
+        }
+      </form>
+
+      <footer class="md-panel__footer">
+        <button type="button" class="md-button md-button--ghost" [disabled]="panelSaving()" (click)="closePanel()">Cancel</button>
+        <button type="button" class="md-button md-button--primary" [disabled]="panelSaving()" (click)="save()">
+          {{ panelSaving() ? 'Saving…' : 'Save ' + entity.singular }}
+        </button>
+      </footer>
+    }
+  </aside>
+}

@@ -53,7 +53,8 @@ export class WorkspaceComponent {
   private readonly search$ = new Subject<void>();
 
   private readonly query = this.route.snapshot.queryParamMap;
-  private readonly requestedTab = this.query.get('tab');
+  private readonly requestedTab =
+    this.query.get('tab') ?? (this.route.snapshot.data['tab'] as string | undefined);
   protected readonly config = MODULES[this.key];
   protected readonly activeTab = signal(
     this.config.tabs.some((tab) => tab.id === this.requestedTab)

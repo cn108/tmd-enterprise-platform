@@ -1,13 +1,31 @@
+@use './styles/master-data';
 @use '@angular/material' as mat;
 
 :root {
-  --tmd-navy: #102038;
-  --tmd-navy-soft: #1d3a5f;
-  --tmd-gold: #e8b64c;
+  --tmd-navy: #0c1f3d;
+  --tmd-navy-700: #143059;
+  --tmd-navy-soft: #143059;
+  --tmd-gold: #c9a227;
+  --tmd-gold-text: #8a6d1a;
+  --tmd-gold-soft: #e8b64c;
   --tmd-ink: #182234;
   --tmd-muted: #5d6b80;
-  --tmd-line: #e2e7ef;
-  --tmd-danger: #a3352b;
+  --tmd-line: #e3e8f0;
+  --tmd-border: #e3e8f0;
+  --tmd-page: #f4f6fa;
+  --tmd-danger: #b3362b;
+  --tmd-success: #1e7f4f;
+  --tmd-warning: #b26a00;
+  --tmd-info: #2c5f8a;
+  --tmd-teal: #0f6e6e;
+  --tmd-surface: #fff;
+  --tmd-text: var(--tmd-ink);
+  --tmd-accent: var(--tmd-gold);
+  --tmd-accent-dark: #2f7a4d;
+  --mat-sys-primary: #143059;
+  --mat-sys-on-primary: #fff;
+  --mat-sys-primary-container: #dbe4ef;
+  --mat-sys-on-primary-container: #0c1f3d;
 }
 
 html {
@@ -37,9 +55,20 @@ body {
   height: 100%;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--tmd-gold);
+  outline-offset: 2px;
+}
+
 body {
   margin: 0;
-  background: #f5f7fa;
+  overflow-x: hidden;
+  background: var(--tmd-page);
   font-family:
     'Segoe UI',
     system-ui,
@@ -50,4 +79,74 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   color: var(--tmd-ink);
+}
+
+.tabs {
+  scrollbar-width: thin;
+  scrollbar-color: #b9c4d3 transparent;
+}
+
+.table-wrap {
+  scrollbar-color: #b9c4d3 #f3f5f8;
+}
+
+.table-wrap::-webkit-scrollbar {
+  height: 0.5rem;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: #f3f5f8;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b9c4d3;
+}
+
+.mat-mdc-dialog-surface {
+  border-radius: 0.75rem !important;
+}
+
+.mat-mdc-dialog-title {
+  padding: 1.25rem 1.5rem 0.4rem !important;
+  color: var(--tmd-navy);
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.mat-mdc-dialog-content {
+  max-height: 72vh;
+  padding: 0.5rem 1.5rem 1rem !important;
+}
+
+.mat-mdc-dialog-actions {
+  position: sticky;
+  bottom: 0;
+  gap: 0.25rem;
+  padding: 0.75rem 1.5rem 1rem !important;
+  border-top: 1px solid var(--tmd-line);
+  background: var(--tmd-surface);
+}
+
+@media (max-width: 640px) {
+  .mat-mdc-dialog-title {
+    padding: 1rem 1rem 0.35rem !important;
+  }
+
+  .mat-mdc-dialog-content {
+    padding: 0.4rem 1rem 0.8rem !important;
+  }
+
+  .mat-mdc-dialog-actions {
+    padding: 0.65rem 1rem 0.85rem !important;
+  }
+}
+
+/* Keep Material controls on the TMD navy rather than the default azure theme. */
+:root {
+  --mat-sys-primary: #143059;
+  --mat-sys-on-primary: #fff;
+  --mat-sys-primary-container: #dbe4ef;
+  --mat-sys-on-primary-container: #0c1f3d;
 }

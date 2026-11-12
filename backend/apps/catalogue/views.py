@@ -51,6 +51,13 @@ class CatalogueItemViewSet(ProtectedMasterDataViewSet):
     serializer_class = CatalogueItemSerializer
     search_fields = ("code", "name", "brand", "description")
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        kind = (self.request.query_params.get("kind") or "").strip().lower()
+        if kind in {CatalogueItem.Kind.PRODUCT, CatalogueItem.Kind.SERVICE}:
+            queryset = queryset.filter(kind=kind)
+        return queryset
+
 
 class ItemPriceViewSet(
     mixins.CreateModelMixin,

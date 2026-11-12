@@ -90,6 +90,13 @@ class TaxConfigurationViewSet(viewsets.ModelViewSet):
     search_fields = ("code", "name")
     ordering_fields = ("code", "tax_type", "effective_from")
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = (self.request.query_params.get("review_status") or "").strip()
+        if status in TaxConfiguration.ReviewStatus.values:
+            queryset = queryset.filter(review_status=status)
+        return queryset
+
     def create(self, request, *args, **kwargs):
         _require(request, "core.add_taxconfiguration")
         return super().create(request, *args, **kwargs)

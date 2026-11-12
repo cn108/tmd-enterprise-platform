@@ -47,15 +47,24 @@ class SupplierCategoryViewSet(ProtectedMasterDataViewSet):
 
 
 class SupplierViewSet(ProtectedMasterDataViewSet):
-    queryset = Party.objects.filter(is_supplier=True).select_related("supplier_category")
+    queryset = Party.objects.filter(is_supplier=True).select_related(
+        "supplier_category"
+    ).prefetch_related("tax_registrations", "addresses")
     serializer_class = SupplierSerializer
     search_fields = ("code", "legal_name", "trading_name", "email")
 
 
 class CustomerViewSet(ProtectedMasterDataViewSet):
-    queryset = Party.objects.filter(is_customer=True)
+    queryset = Party.objects.filter(is_customer=True).prefetch_related("addresses")
     serializer_class = CustomerSerializer
     search_fields = ("code", "legal_name", "trading_name", "email")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        credit_hold = (self.request.query_params.get("credit_hold") or "").lower()
+        if credit_hold in {"true", "false"}:
+            queryset = queryset.filter(credit_hold=credit_hold == "true")
+        return queryset
 
 
 class PartyViewSet(viewsets.ReadOnlyModelViewSet):

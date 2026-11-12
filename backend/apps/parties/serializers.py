@@ -16,6 +16,26 @@ from apps.parties.models import (
 from shared.serializers import CodedSerializerMixin
 
 
+def _tax_number(party: Party) -> str:
+    """The active TIN registration, or the first active registration as shown on the record."""
+    registrations = [item for item in party.tax_registrations.all() if item.is_active]
+    for item in registrations:
+        if item.scheme.strip().upper() == "TIN":
+            return item.number
+    return registrations[0].number if registrations else ""
+
+
+def _region(party: Party) -> str:
+    addresses = list(party.addresses.all())
+    primary = next(
+        (item for item in addresses if item.is_primary),
+        addresses[0] if addresses else None,
+    )
+    if primary is None:
+        return ""
+    return primary.state or primary.city
+
+
 class SupplierCategorySerializer(CodedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SupplierCategory
@@ -25,6 +45,8 @@ class SupplierCategorySerializer(CodedSerializerMixin, serializers.ModelSerializ
 
 class SupplierSerializer(CodedSerializerMixin, serializers.ModelSerializer):
     is_customer = serializers.BooleanField(read_only=True)
+    tin = serializers.SerializerMethodField()
+    region = serializers.SerializerMethodField()
 
     class Meta:
         model = Party
@@ -43,10 +65,18 @@ class SupplierSerializer(CodedSerializerMixin, serializers.ModelSerializer):
             "notes",
             "is_active",
             "is_customer",
+            "tin",
+            "region",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at", "is_customer"]
+        read_only_fields = ["created_at", "updated_at", "is_customer", "tin", "region"]
+
+    def get_tin(self, obj: Party) -> str:
+        return _tax_number(obj)
+
+    def get_region(self, obj: Party) -> str:
+        return _region(obj)
 
     def create(self, validated_data):
         validated_data["is_supplier"] = True
@@ -55,6 +85,7 @@ class SupplierSerializer(CodedSerializerMixin, serializers.ModelSerializer):
 
 class CustomerSerializer(CodedSerializerMixin, serializers.ModelSerializer):
     is_supplier = serializers.BooleanField(read_only=True)
+    region = serializers.SerializerMethodField()
 
     class Meta:
         model = Party
@@ -73,10 +104,14 @@ class CustomerSerializer(CodedSerializerMixin, serializers.ModelSerializer):
             "notes",
             "is_active",
             "is_supplier",
+            "region",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at", "is_supplier"]
+        read_only_fields = ["created_at", "updated_at", "is_supplier", "region"]
+
+    def get_region(self, obj: Party) -> str:
+        return _region(obj)
 
     def create(self, validated_data):
         validated_data["is_customer"] = True

@@ -223,6 +223,7 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_FILTER_BACKENDS": [
         "rest_framework.filters.SearchFilter",
+        "shared.filters.SortOrderFilter",
         "rest_framework.filters.OrderingFilter",
     ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

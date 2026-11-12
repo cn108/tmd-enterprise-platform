@@ -17,5 +17,13 @@ class StandardPagination(PageNumberPagination):
     max_page_size = 100
 
     def get_page_size(self, request):
+        # The v2 master-data contract uses `pageSize`; existing screens use
+        # `page_size`. Both are bounded by max_page_size.
+        camel_size = request.query_params.get("pageSize")
+        if camel_size:
+            try:
+                return min(max(int(camel_size), 1), self.max_page_size)
+            except ValueError:
+                pass
         size = super().get_page_size(request)
         return size or self.page_size

@@ -87,8 +87,10 @@ def test_invoice_posting_is_limited_to_accounting_roles():
         granted = permissions(role)
         assert "invoicing.post_supplierinvoice" in granted
         assert "invoicing.post_customerinvoice" in granted
+        assert "invoicing.post_supplierpayment" in granted
 
     for role in ("Management", "Finance Officer", "Procurement Officer", "Auditor"):
         granted = permissions(role)
         assert "invoicing.post_supplierinvoice" not in granted
         assert "invoicing.post_customerinvoice" not in granted
+        assert "invoicing.post_supplierpayment" not in granted

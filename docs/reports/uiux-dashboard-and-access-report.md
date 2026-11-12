@@ -137,3 +137,32 @@ Browser checks confirmed:
 - No approval, rejection or payment was executed during this visual review; the dashboard and access states were inspected, not every workflow transition.
 - The access presentation was verified on the modules listed above, with full role samples for Management, Finance, Procurement, Warehouse, Project Manager, Auditor and System Administrator. Other individual role combinations should still be checked during supervised UAT.
 - This work does not change the production-readiness conclusion. MFA, TLS, off-host backup, monitoring, approved finance policy and management sign-off remain outstanding.
+
+## 7. Follow-up — 12 November 2026
+
+The dashboard module grid was completed to cover all eleven modules, including Invoices,
+Reports and Administration. Each module now carries a role-aware **Restricted** badge when
+the signed-in account lacks its view permission. Restricted modules stay visible with
+**View access status** rather than disappearing, so an employee can see that the module
+exists and who to ask without being shown its records.
+
+The indicator comes from the dashboard API's `module_access` data, which is computed from
+real view permissions. It is a presentation aid only; Django permission classes remain the
+authority.
+
+Additional browser evidence:
+
+| State | Evidence |
+| --- | --- |
+| Finance Controller — Administration marked Restricted | [`evidence/uiux/dashboard-module-access-controller-bottom-2026-11-12.png`](evidence/uiux/dashboard-module-access-controller-bottom-2026-11-12.png) |
+| Finance Controller — restricted Administration page | [`evidence/uiux/access-restricted-controller-2026-11-12.png`](evidence/uiux/access-restricted-controller-2026-11-12.png) |
+| Recorded test payment — posting refused in test mode | [`evidence/uiux/payment-post-blocked-test-mode-2026-11-12.png`](evidence/uiux/payment-post-blocked-test-mode-2026-11-12.png) |
+| Finance Controller dashboard header and financial overview | [`evidence/uiux/dashboard-controller-module-access-2026-11-12.png`](evidence/uiux/dashboard-controller-module-access-2026-11-12.png) |
+
+The dashboard stylesheet remains at 7.99 kB: below the 8 kB error budget, above the 6 kB
+warning budget. No budget was increased and no warning was suppressed.
+
+Verification after the follow-up: 316 backend tests, 66 focused invoicing/reporting tests,
+53 frontend tests, frontend lint and production build. The successful supplier-payment
+posting path is covered by an automated test; the browser deliberately exercised only the
+test-mode refusal because staging remains unactivated.

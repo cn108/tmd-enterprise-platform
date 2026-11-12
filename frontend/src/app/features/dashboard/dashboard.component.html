@@ -254,12 +254,19 @@
         </div>
       </div>
       <div class="modules__grid">
-        @for (module of modules; track module.path) {
+        @for (module of dashboard.module_access; track module.path) {
           <a class="module-card" [routerLink]="module.path">
-            <span class="module-card__index">{{ module.index }}</span>
+            <span class="module-card__head">
+              <span class="module-card__index">{{ $index + 1 }}</span>
+              @if (!module.readable) {
+                <span class="state">Restricted</span>
+              }
+            </span>
             <h3>{{ module.label }}</h3>
-            <p>{{ module.text }}</p>
-            <span class="module-card__link">Open module →</span>
+            <p>{{ module.description }}</p>
+            <span class="module-card__link">
+              {{ module.readable ? 'Open module →' : 'View access status →' }}
+            </span>
           </a>
         }
       </div>

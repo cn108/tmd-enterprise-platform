@@ -679,6 +679,7 @@ export const INVOICING_MODULE: ModuleConfig = {
         { key: 'external_reference', label: 'External reference' },
         { key: 'status', label: 'Status', kind: 'status' },
         { key: 'execution_status', label: 'Execution status' },
+        { key: 'journal_number', label: 'Ledger journal' },
         { key: 'approvals_required', label: 'Approvals required' },
         { key: 'approvals_recorded', label: 'Approvals recorded' },
         { key: 'notes', label: 'Notes' },
@@ -755,6 +756,16 @@ export const INVOICING_MODULE: ModuleConfig = {
           statuses: ['approved'],
         },
         {
+          id: 'post',
+          label: 'Post to ledger',
+          path: 'post',
+          permission: 'invoicing.post_supplierpayment',
+          confirm:
+            'Post this recorded payment to the ledger? This creates an immutable journal entry.',
+          success: 'Supplier payment posted to the ledger.',
+          statuses: ['recorded'],
+        },
+        {
           id: 'allocate',
           label: 'Allocate to invoice',
           path: 'allocate',
@@ -792,7 +803,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           reason: { label: 'Cancellation reason', required: true },
         },
       ],
-      note: 'Recording is not execution. Bank execution and reconciliation remain outside Stage 7A.',
+      note: 'Recording is not execution. Payment posting is available only after Stage 7B activation, for a recorded non-test payment, and when every allocated invoice is already posted.',
     },
     {
       id: 'settings',

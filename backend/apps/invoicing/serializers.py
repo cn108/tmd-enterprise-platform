@@ -933,6 +933,9 @@ class SupplierPaymentSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
     test_document = serializers.BooleanField(source="is_test", read_only=True)
     unallocated_amount = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
+    journal_number = serializers.CharField(
+        source="journal_entry.number", read_only=True, default=None
+    )
     approvals_required = serializers.SerializerMethodField()
     approvals_recorded = serializers.SerializerMethodField()
     approval_policy = serializers.SerializerMethodField()
@@ -962,6 +965,7 @@ class SupplierPaymentSerializer(serializers.ModelSerializer):
             "approved_at",
             "recorded_by",
             "recorded_at",
+            "journal_number",
             "rejection_reason",
             "cancelled_at",
             "cancel_reason",

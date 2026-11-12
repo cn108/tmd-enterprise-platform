@@ -872,12 +872,20 @@ def cancel_payment(payment: SupplierPayment, actor, reason: str) -> SupplierPaym
     return payment
 
 
-def post_invoice(invoice, actor):
+def post_invoice(invoice, actor, idempotency_key: str = ""):
     """Post an approved invoice to the ledger through the activation gate."""
 
     from apps.invoicing.posting import post_invoice as post
 
-    return post(invoice, actor)
+    return post(invoice, actor, idempotency_key)
+
+
+def post_supplier_payment(payment, actor, idempotency_key: str = ""):
+    """Post a recorded supplier payment through the same activation gate."""
+
+    from apps.invoicing.posting import post_supplier_payment as post
+
+    return post(payment, actor, idempotency_key)
 
 
 def activation_blockers(settings: InvoiceSettings, checklist: dict) -> list[str]:
@@ -1014,6 +1022,7 @@ __all__ = [
     "next_payment_number",
     "next_supplier_invoice_number",
     "post_invoice",
+    "post_supplier_payment",
     "recalculate_customer_invoice",
     "recalculate_note",
     "recalculate_supplier_invoice",

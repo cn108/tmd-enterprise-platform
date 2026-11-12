@@ -222,6 +222,9 @@ def configure_invoice_posting(actor):
         "INPUT_TAX": ("1400-POST", "asset", "debit"),
         "OUTPUT_TAX": ("2200-POST", "liability", "credit"),
         "REVENUE": ("4000-POST", "income", "credit"),
+        "BANK": ("1010-POST", "asset", "debit"),
+        "CASH": ("1000-POST", "asset", "debit"),
+        "SUPPLIER_ADVANCES": ("1250-POST", "asset", "debit"),
     }
     now = timezone.now()
     for role_code, (code, account_type, normal_balance) in definitions.items():
@@ -773,8 +776,74 @@ def test_activated_supplier_invoice_posts_a_balanced_ledger_journal(
     assert SupplierInvoice.objects.get(pk=body["id"]).journal_entry_id == journal.pk
 
     replay = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
-    assert replay.status_code == 409
-    assert "already been posted" in replay.json()["error"]["message"]
+    assert replay.status_code == 200
+    assert replay["Idempotency-Replayed"] == "true"
+    assert replay.json()["journal_entry"] == journal.pk
+    assert JournalEntry.objects.filter(pk=journal.pk).count() == 1
+
+
+def test_recorded_supplier_payment_posts_and_replays_idempotently(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.payment@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-PAY-POST-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+    invoice_post = client.post(f"/api/v1/supplier-invoices/{invoice['id']}/post/")
+    assert invoice_post.status_code == 200, invoice_post.content
+
+    payment = client.post(
+        "/api/v1/supplier-payments/",
+        {
+            "supplier": supplier.pk,
+            "payment_date": "2026-11-15",
+            "currency": "NGN",
+            "amount": "100",
+            "method": "bank_transfer",
+            "external_reference": "PAY-POST-1",
+        },
+        format="json",
+    )
+    assert payment.status_code == 201, payment.content
+    payment_id = payment.json()["id"]
+    client.post(f"/api/v1/supplier-payments/{payment_id}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-payments/{payment_id}/approve/")
+    recorded = client.post(f"/api/v1/supplier-payments/{payment_id}/record/", {}, format="json")
+    assert recorded.status_code == 200, recorded.content
+    allocation = client.post(
+        f"/api/v1/supplier-payments/{payment_id}/allocate/",
+        {"supplier_invoice": invoice["id"], "amount": "60"},
+        format="json",
+    )
+    assert allocation.status_code == 201, allocation.content
+
+    posted = client.post(f"/api/v1/supplier-payments/{payment_id}/post/")
+    assert posted.status_code == 200, posted.content
+    journal = JournalEntry.objects.get(pk=posted.json()["journal_entry"])
+    balances = {
+        line.account.code: (line.debit, line.credit)
+        for line in journal.lines.select_related("account")
+    }
+    assert balances["2100-POST"] == (Decimal("60.00"), Decimal("0.00"))
+    assert balances["1250-POST"] == (Decimal("40.00"), Decimal("0.00"))
+    assert balances["1010-POST"] == (Decimal("0.00"), Decimal("100.00"))
+    assert SupplierPayment.objects.get(pk=payment_id).journal_entry_id == journal.pk
+
+    replay = client.post(f"/api/v1/supplier-payments/{payment_id}/post/")
+    assert replay.status_code == 200
+    assert replay["Idempotency-Replayed"] == "true"
+    assert replay.json()["journal_entry"] == journal.pk
+    assert JournalEntry.objects.filter(pk=journal.pk).count() == 1
 
 
 def test_activated_customer_invoice_posts_receivable_revenue_and_output_vat(
@@ -826,6 +895,46 @@ def test_wht_invoice_posting_requires_an_approved_treatment(
     posted = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
     assert posted.status_code == 409
     assert "WHT" in posted.json()["error"]["message"]
+    assert not JournalEntry.objects.exists()
+
+
+def test_posting_refuses_gross_invoice_when_an_approved_note_exists(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.note@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-POST-NOTE-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+    note = client.post(
+        "/api/v1/invoice-notes/",
+        {
+            "note_type": "credit",
+            "supplier_invoice": invoice["id"],
+            "note_date": "2026-11-13",
+            "reason": "Price correction",
+            "lines": [{"description": "Credit", "quantity": "1", "unit_price": "20"}],
+        },
+        format="json",
+    )
+    assert note.status_code == 201, note.content
+    note_id = note.json()["id"]
+    client.post(f"/api/v1/invoice-notes/{note_id}/submit/")
+    approved = client_for(approver).post(f"/api/v1/invoice-notes/{note_id}/approve/")
+    assert approved.status_code == 200, approved.content
+
+    posted = client.post(f"/api/v1/supplier-invoices/{invoice['id']}/post/")
+    assert posted.status_code == 409
+    assert "approved credit or debit notes" in posted.json()["error"]["message"]
     assert not JournalEntry.objects.exists()
 
 

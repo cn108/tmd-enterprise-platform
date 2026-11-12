@@ -62,6 +62,14 @@ interface QuickAction {
   link: string;
 }
 
+interface ModuleAccess {
+  id: string;
+  label: string;
+  path: string;
+  description: string;
+  readable: boolean;
+}
+
 interface Dashboard {
   generated_at: string;
   currency: string;
@@ -73,6 +81,7 @@ interface Dashboard {
   financial_overview: DashboardCard[] | null;
   invoice_management: DashboardCard[] | null;
   pending_actions: PendingAction[];
+  module_access: ModuleAccess[];
   quick_actions: QuickAction[];
   operations: {
     id: string;
@@ -83,17 +92,6 @@ interface Dashboard {
   recent_activity: Activity[];
 }
 
-const MODULES = [
-  { index: '01', label: 'Master data', path: '/master-data', text: 'Suppliers, customers, catalogue, warehouses and projects.' },
-  { index: '02', label: 'Procurement', path: '/procurement', text: 'Purchase requests, orders, quotations and goods receipts.' },
-  { index: '03', label: 'Inventory', path: '/inventory', text: 'Balances, movements, reorder alerts and the stock ledger.' },
-  { index: '04', label: 'Accounting', path: '/accounting', text: 'Chart of accounts, journals and approved posting rules.' },
-  { index: '05', label: 'Banking', path: '/banking', text: 'Statement import, matching, reconciliations and petty cash.' },
-  { index: '06', label: 'Projects', path: '/projects', text: 'Budgets, commitments, project costs and profitability.' },
-  { index: '07', label: 'Services', path: '/services', text: 'Engineering and maintenance work orders, HSE and reports.' },
-  { index: '08', label: 'Leasing', path: '/leasing', text: 'Equipment register, rental agreements and utilisation.' },
-] as const;
-
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe, RouterLink],
@@ -103,7 +101,6 @@ const MODULES = [
 export class DashboardComponent {
   private readonly http = inject(HttpClient);
   protected readonly auth = inject(AuthService);
-  protected readonly modules = MODULES;
 
   protected readonly data = signal<Dashboard | null>(null);
   protected readonly loading = signal(true);

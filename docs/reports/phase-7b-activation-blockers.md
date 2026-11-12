@@ -52,7 +52,7 @@ The endpoint also requires `invoicing.manage_invoicesettings`, and it writes an 
 - Design and approve payment execution and bank reconciliation before recording real payments; Stage 7A only records an external event.
 - Add invoice ageing, statements and receipt allocation in Phase 8.
 - Obtain NRS onboarding, credentials, endpoint and API version before enabling the flag. The adapter boundary exists, but no NRS network client is implemented.
-- Add idempotency to invoice posting when the posting rule is implemented; currently only payment recording is idempotent.
+- Invoice and supplier-payment posting are idempotent as of 12 November 2026; replay returns the original journal. Successful payment posting remains a test-only path until activation.
 
 ## 4. What remains safe while blocked
 

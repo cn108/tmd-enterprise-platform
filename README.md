@@ -4,15 +4,17 @@ Internal, project-centred procurement, inventory and financial management platfo
 
 This repository contains the **Phase 0 discovery pack**, the **Phase 1 engineering foundation**, Phase 2 identity and access administration, the **Phase 3–6 functional scope**, and **Stage 7A** of accounts payable and invoice issuance. The Angular Material portal is interactive across those modules, including reports, access administration and the invoicing workspace. Stage 7A documents are test-only; live invoice issuance, NRS submission and ledger posting are disabled until Stage 7B activation.
 
+**12 November 2026 review:** invoice posting and recorded supplier-payment posting are implemented behind the activation gate, invoice/payment posting is idempotent, approved-note posting is refused until note posting exists, and the dashboard now marks modules the signed-in role cannot open. See [`technical review`](docs/reports/technical-review-2026-11-12.md) and [`development gap register`](docs/reports/development-gap-register-2026-11-12.md).
+
 ## Current status
 
 | Item | State |
 | --- | --- |
 | Phase | Phases 3–6 functional scope plus **Stage 7A** implemented and interactive. No module is COMPLETE: the role matrix is provisional, the chart and opening balances are absent, and production posting is disabled. Current position and the module matrix: [`docs/frontend-backend-gap-analysis.md`](docs/frontend-backend-gap-analysis.md) |
 | Code | Django 5.2 + DRF, Angular 22 + Angular Material, Docker Compose, CI; custom user model, session auth, roles/permission bundles and user administration, suppliers/customers and relationships, catalogue and traceability, warehouses and locations, projects/contracts/budgets/milestones, documents, purchase requests → RFQ → quotation → selection → PO → delivery schedule → GRN, an immutable stock ledger, a double-entry accounting engine, and Stage 7A supplier/customer invoices, duplicate and matching controls, VAT/WHT configuration, notes, PDF test previews, payment recording/allocation and NRS adapter state |
-| Tests | 224 backend tests, 39 frontend tests, lint and formatting clean, secret scan clean, plus live portal-to-PostgreSQL verification scripts for master data and Stage 7A invoicing |
+| Tests | 316 backend tests, 53 frontend tests, lint and formatting clean, secret scan clean, plus live portal-to-PostgreSQL verification scripts for master data and Stage 7A invoicing |
 | Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. **Provisional policy applied 12 Nov 2026:** nine operational roles plus an unassigned Finance Controller, ₦5m approval bands, role-based chart, monthly periods, weighted-average/specific-identification valuation, GRNI and the five accounting events. Stage 7A invoices are test-only. Report: [`docs/reports/phase-7a-completion-report.md`](docs/reports/phase-7a-completion-report.md) |
-| Next phase | Stage 7B activation review: confirm roles, chart/mappings, opening balances, tax, numbering and legal details; record the Finance Controller posting review; then obtain management authorisation. Use the prioritized [`activation checklist`](docs/reports/phase-7b-activation-checklist.md) and the [`blocker register`](docs/reports/phase-7b-activation-blockers.md) |
+| Next phase | Stage 7B activation review: confirm roles, chart/mappings, opening balances, tax, numbering and legal details; record the Finance Controller posting review; then obtain management authorisation. Use the prioritized [`activation checklist`](docs/reports/phase-7b-activation-checklist.md), the [`blocker register`](docs/reports/phase-7b-activation-blockers.md) and the [`review gap register`](docs/reports/development-gap-register-2026-11-12.md) |
 
 ## Quickstart
 

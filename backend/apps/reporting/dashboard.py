@@ -930,6 +930,107 @@ def _recent_activity(user, focus_id: str, limit: int = 8) -> list[dict]:
     return rows
 
 
+MODULE_ACCESS = (
+    (
+        "master-data",
+        "Master data",
+        "/master-data",
+        "Suppliers, customers, catalogue, warehouses and projects.",
+        (),
+    ),
+    (
+        "procurement",
+        "Procurement",
+        "/procurement",
+        "Purchase requests, orders, quotations and goods receipts.",
+        ("procurement.view_purchaserequest", "procurement.view_purchaseorder"),
+    ),
+    (
+        "inventory",
+        "Inventory",
+        "/inventory",
+        "Balances, movements, reorder alerts and the stock ledger.",
+        ("inventory.view_stockmovement", "inventory.view_reorderlevel"),
+    ),
+    (
+        "accounting",
+        "Accounting",
+        "/accounting",
+        "Chart of accounts, journals and approved posting rules.",
+        ("accounting.view_account", "accounting.view_journalentry"),
+    ),
+    (
+        "invoicing",
+        "Invoices and payments",
+        "/invoicing",
+        "Supplier and customer invoices, notes, payments and NRS state.",
+        (
+            "invoicing.view_supplierinvoice",
+            "invoicing.view_customerinvoice",
+            "invoicing.view_invoicenote",
+            "invoicing.view_supplierpayment",
+        ),
+    ),
+    (
+        "banking",
+        "Banking",
+        "/banking",
+        "Statement import, matching, reconciliations and petty cash.",
+        ("banking.view_bankaccount", "banking.view_banktransaction"),
+    ),
+    (
+        "projects",
+        "Projects",
+        "/projects",
+        "Budgets, commitments, project costs and profitability.",
+        ("projects.view_project",),
+    ),
+    (
+        "services",
+        "Services",
+        "/services",
+        "Engineering and maintenance work orders, HSE and reports.",
+        ("services.view_workorder",),
+    ),
+    (
+        "leasing",
+        "Leasing",
+        "/leasing",
+        "Equipment register, rental agreements and utilisation.",
+        ("leasing.view_equipment",),
+    ),
+    (
+        "reports",
+        "Reports",
+        "/reports",
+        "Operational and financial reports with controlled exports.",
+        ("reporting.view_reporting",),
+    ),
+    (
+        "administration",
+        "Administration",
+        "/administration",
+        "Users, roles, access settings and audit access.",
+        ("identity.view_user",),
+    ),
+)
+
+
+def _module_access(user) -> list[dict]:
+    """Show every module, and label the ones this account cannot open."""
+
+    return [
+        {
+            "id": identifier,
+            "label": label,
+            "path": path,
+            "description": description,
+            "readable": not permissions or any(_can(user, item) for item in permissions),
+        }
+        for identifier, label, path, description, permissions in MODULE_ACCESS
+    ]
+
+
 def _quick_actions(user) -> list[dict]:
     definitions = [
         (
@@ -1073,6 +1174,7 @@ def dashboard_payload(user, start: date, end: date) -> dict:
         "financial_overview": financial,
         "invoice_management": invoice_rows,
         "pending_actions": actions,
+        "module_access": _module_access(user),
         "quick_actions": _quick_actions(user),
         "operations": _operations(user, focus["id"]),
         "recent_activity": _recent_activity(user, focus["id"]),

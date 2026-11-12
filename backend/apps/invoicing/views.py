@@ -51,6 +51,7 @@ from apps.invoicing.services import (
     cancel_supplier_invoice,
     duplicate_candidates,
     post_invoice,
+    post_supplier_payment,
     record_payment,
     reject_customer_invoice,
     reject_note,
@@ -169,18 +170,26 @@ class SupplierInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def post(self, request, pk=None):
         _require(request, "invoicing.post_supplierinvoice")
+        key = (
+            request.headers.get("Idempotency-Key")
+            or request.data.get("idempotency_key")
+            or f"invoice-post-supplier-{pk}"
+        ).strip()
         try:
             invoice = self.get_object()
-            journal = post_invoice(invoice, request.user)
+            journal, replayed = post_invoice(invoice, request.user, key)
         except InvoiceConflict as exc:
             return _conflict(exc)
-        return Response(
+        response = Response(
             {
                 "detail": f"{invoice.number} posted to {journal.number}.",
                 "journal_entry": journal.pk,
                 "journal_number": journal.number,
             }
         )
+        if replayed:
+            response["Idempotency-Replayed"] = "true"
+        return response
 
     @action(detail=True, methods=["post"], url_path="attach-document")
     def attach_document(self, request, pk=None):
@@ -358,18 +367,26 @@ class CustomerInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def post(self, request, pk=None):
         _require(request, "invoicing.post_customerinvoice")
+        key = (
+            request.headers.get("Idempotency-Key")
+            or request.data.get("idempotency_key")
+            or f"invoice-post-customer-{pk}"
+        ).strip()
         try:
             invoice = self.get_object()
-            journal = post_invoice(invoice, request.user)
+            journal, replayed = post_invoice(invoice, request.user, key)
         except InvoiceConflict as exc:
             return _conflict(exc)
-        return Response(
+        response = Response(
             {
                 "detail": f"{invoice.number} posted to {journal.number}.",
                 "journal_entry": journal.pk,
                 "journal_number": journal.number,
             }
         )
+        if replayed:
+            response["Idempotency-Replayed"] = "true"
+        return response
 
     @action(detail=True, methods=["post"], url_path="submit-nrs")
     def submit_nrs(self, request, pk=None):
@@ -571,6 +588,31 @@ class SupplierPaymentViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
         except InvoiceConflict as exc:
             return _conflict(exc)
         response = Response(self.get_serializer(payment).data)
+        if replayed:
+            response["Idempotency-Replayed"] = "true"
+        return response
+
+    @action(detail=True, methods=["post"])
+    def post(self, request, pk=None):
+        _require(request, "invoicing.post_supplierpayment")
+        key = (
+            request.headers.get("Idempotency-Key")
+            or request.data.get("idempotency_key")
+            or f"payment-post-{pk}"
+        ).strip()
+        try:
+            journal, replayed = post_supplier_payment(self.get_object(), request.user, key)
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        payment = self.get_object()
+        response = Response(
+            {
+                "detail": f"{payment.number} posted to {journal.number}.",
+                "journal_entry": journal.pk,
+                "journal_number": journal.number,
+                "status": payment.status,
+            }
+        )
         if replayed:
             response["Idempotency-Replayed"] = "true"
         return response

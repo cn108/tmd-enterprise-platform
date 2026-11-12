@@ -71,6 +71,22 @@ const DASHBOARD = {
       tone: 'attention',
     },
   ],
+  module_access: [
+    {
+      id: 'master-data',
+      label: 'Master data',
+      path: '/master-data',
+      description: 'Suppliers, customers, catalogue, warehouses and projects.',
+      readable: true,
+    },
+    {
+      id: 'administration',
+      label: 'Administration',
+      path: '/administration',
+      description: 'Users, roles, permissions, settings and audit access.',
+      readable: false,
+    },
+  ],
   quick_actions: [
     {
       id: 'create_purchase_request',
@@ -179,6 +195,20 @@ describe('DashboardComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Create purchase request');
     expect(text).not.toContain('Upload bank statement');
+  });
+
+  it('marks a module this role cannot open without hiding it', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Restricted');
+    expect(element.textContent).toContain('View access status');
+    const cards = Array.from(element.querySelectorAll('.module-card'));
+    const restricted = cards.find((card) => card.textContent?.includes('Administration'));
+    expect(restricted?.textContent).toContain('Restricted');
   });
 
   it('shows an empty pending-actions state instead of a false zero', () => {

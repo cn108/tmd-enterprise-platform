@@ -178,6 +178,17 @@ class TestDashboard:
         assert body["focus"]["id"] == "procurement"
         assert body["operations"]["id"] == "procurement"
 
+    def test_dashboard_marks_modules_the_account_cannot_open(self, db):
+        user = actor("view_reporting")
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        modules = {row["id"]: row for row in body["module_access"]}
+        assert modules["master-data"]["readable"] is True
+        assert modules["reports"]["readable"] is True
+        assert modules["procurement"]["readable"] is False
+        assert modules["administration"]["readable"] is False
+
     def test_activity_is_scoped_to_the_role_focus(self, db):
         user = actor(
             "view_purchaseorder",

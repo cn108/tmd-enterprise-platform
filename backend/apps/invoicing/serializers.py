@@ -161,6 +161,10 @@ class SupplierInvoiceLineSerializer(serializers.ModelSerializer):
 
 class SupplierInvoiceSerializer(serializers.ModelSerializer):
     lines = SupplierInvoiceLineSerializer(many=True)
+    journal_entry = serializers.PrimaryKeyRelatedField(read_only=True)
+    journal_number = serializers.CharField(
+        source="journal_entry.number", read_only=True, default=None
+    )
     supplier_name = serializers.CharField(source="supplier.legal_name", read_only=True)
     supplier_email = serializers.EmailField(source="supplier.email", read_only=True, default="")
     purchase_order_number = serializers.CharField(
@@ -217,6 +221,8 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
             "submitted_at",
             "approved_by",
             "approved_at",
+            "journal_entry",
+            "journal_number",
             "rejection_reason",
             "cancelled_at",
             "cancel_reason",
@@ -511,6 +517,10 @@ class CustomerInvoiceLineSerializer(serializers.ModelSerializer):
 
 class CustomerInvoiceSerializer(serializers.ModelSerializer):
     lines = CustomerInvoiceLineSerializer(many=True)
+    journal_entry = serializers.PrimaryKeyRelatedField(read_only=True)
+    journal_number = serializers.CharField(
+        source="journal_entry.number", read_only=True, default=None
+    )
     customer_name = serializers.CharField(source="customer.legal_name", read_only=True)
     customer_email = serializers.EmailField(source="customer.email", read_only=True, default="")
     project_code = serializers.CharField(source="project.code", read_only=True, default=None)
@@ -550,6 +560,8 @@ class CustomerInvoiceSerializer(serializers.ModelSerializer):
             "submitted_at",
             "approved_by",
             "approved_at",
+            "journal_entry",
+            "journal_number",
             "rejection_reason",
             "cancelled_at",
             "cancel_reason",

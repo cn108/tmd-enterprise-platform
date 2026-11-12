@@ -78,3 +78,17 @@ def test_invoice_emailing_is_limited_to_finance_roles():
         granted = permissions(role)
         assert "invoicing.email_supplierinvoice" not in granted
         assert "invoicing.email_customerinvoice" not in granted
+
+
+def test_invoice_posting_is_limited_to_accounting_roles():
+    apply_matrix()
+
+    for role in ("System Administrator", "Accountant", "Finance Controller"):
+        granted = permissions(role)
+        assert "invoicing.post_supplierinvoice" in granted
+        assert "invoicing.post_customerinvoice" in granted
+
+    for role in ("Management", "Finance Officer", "Procurement Officer", "Auditor"):
+        granted = permissions(role)
+        assert "invoicing.post_supplierinvoice" not in granted
+        assert "invoicing.post_customerinvoice" not in granted

@@ -339,6 +339,35 @@ def post_journal(journal: JournalEntry, actor) -> JournalEntry:
     return journal
 
 
+def post_system_journal(
+    *,
+    source_type: str,
+    actor,
+    journal_date: date,
+    period: AccountingPeriod,
+    description: str,
+    lines,
+    reason: str = "",
+    reversal_of: JournalEntry | None = None,
+    posting_rule: PostingRule | None = None,
+    event_reference: str = "",
+) -> JournalEntry:
+    """Post an authorised system-generated journal in one controlled step."""
+
+    return _post_system_journal(
+        source_type=source_type,
+        actor=actor,
+        journal_date=journal_date,
+        period=period,
+        description=description,
+        lines=lines,
+        reason=reason,
+        reversal_of=reversal_of,
+        posting_rule=posting_rule,
+        event_reference=event_reference,
+    )
+
+
 @transaction.atomic
 def _post_system_journal(
     *,

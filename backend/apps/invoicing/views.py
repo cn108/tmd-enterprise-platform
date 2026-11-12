@@ -170,10 +170,17 @@ class SupplierInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     def post(self, request, pk=None):
         _require(request, "invoicing.post_supplierinvoice")
         try:
-            post_invoice(self.get_object(), request.user)
+            invoice = self.get_object()
+            journal = post_invoice(invoice, request.user)
         except InvoiceConflict as exc:
             return _conflict(exc)
-        return Response({"detail": "Posted."})
+        return Response(
+            {
+                "detail": f"{invoice.number} posted to {journal.number}.",
+                "journal_entry": journal.pk,
+                "journal_number": journal.number,
+            }
+        )
 
     @action(detail=True, methods=["post"], url_path="attach-document")
     def attach_document(self, request, pk=None):
@@ -352,10 +359,17 @@ class CustomerInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     def post(self, request, pk=None):
         _require(request, "invoicing.post_customerinvoice")
         try:
-            post_invoice(self.get_object(), request.user)
+            invoice = self.get_object()
+            journal = post_invoice(invoice, request.user)
         except InvoiceConflict as exc:
             return _conflict(exc)
-        return Response({"detail": "Posted."})
+        return Response(
+            {
+                "detail": f"{invoice.number} posted to {journal.number}.",
+                "journal_entry": journal.pk,
+                "journal_number": journal.number,
+            }
+        )
 
     @action(detail=True, methods=["post"], url_path="submit-nrs")
     def submit_nrs(self, request, pk=None):

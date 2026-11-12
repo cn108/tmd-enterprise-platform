@@ -9,8 +9,17 @@ import pytest
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.accounting.models import (
+    Account,
+    AccountingPeriod,
+    AccountRole,
+    AccountRoleMapping,
+    FiscalYear,
+    JournalEntry,
+)
 from apps.catalogue.models import CatalogueItem
 from apps.core.models import ApprovalPolicy, TaxConfiguration
 from apps.documents.models import Document
@@ -182,6 +191,71 @@ def create_customer_invoice(client, customer, lines, **extra):
     )
     assert response.status_code == 201, response.content
     return response.json()
+
+
+def activate_live_invoices(actor):
+    settings = InvoiceSettings.load()
+    settings.test_mode = False
+    settings.activated_at = timezone.now()
+    settings.activated_by = actor
+    settings.activation_notes = "Posting test activation."
+    settings.save(
+        update_fields=[
+            "test_mode",
+            "activated_at",
+            "activated_by",
+            "activation_notes",
+            "updated_at",
+        ]
+    )
+
+
+def configure_invoice_posting(actor):
+    """Create approved UAT accounts and the mappings required by posting tests."""
+
+    definitions = {
+        "AP_CONTROL": ("2100-POST", "liability", "credit"),
+        "AR_CONTROL": ("1100-POST", "asset", "debit"),
+        "INVENTORY": ("1200-POST", "asset", "debit"),
+        "PROJECT_COST": ("1300-POST", "asset", "debit"),
+        "COST_OF_SALES": ("5000-POST", "expense", "debit"),
+        "INPUT_TAX": ("1400-POST", "asset", "debit"),
+        "OUTPUT_TAX": ("2200-POST", "liability", "credit"),
+        "REVENUE": ("4000-POST", "income", "credit"),
+    }
+    now = timezone.now()
+    for role_code, (code, account_type, normal_balance) in definitions.items():
+        account = Account.objects.create(
+            code=code,
+            name=f"Posting test {role_code}",
+            account_type=account_type,
+            normal_balance=normal_balance,
+            approved_at=now,
+            created_by=actor,
+            updated_by=actor,
+        )
+        AccountRoleMapping.objects.create(
+            role=AccountRole.objects.get(code=role_code),
+            account=account,
+            effective_from=date(2026, 1, 1),
+            approved_at=now,
+            approved_by=actor,
+            created_by=actor,
+            updated_by=actor,
+        )
+
+    year = FiscalYear.objects.create(
+        code="FY26-POST",
+        name="2026 posting test",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+    )
+    AccountingPeriod.objects.create(
+        fiscal_year=year,
+        name="November 2026",
+        start_date=date(2026, 11, 1),
+        end_date=date(2026, 11, 30),
+    )
 
 
 def test_supplier_invoice_calculates_vat_wht_and_stays_test(client_for, supplier, vat, wht):
@@ -662,6 +736,114 @@ def test_nrs_is_disabled_and_activation_posting_are_blocked(
     posting = client.post(f"/api/v1/supplier-invoices/{supplier_invoice['id']}/post/")
     assert posting.status_code == 409
     assert "Stage 7B" in posting.json()["error"]["message"]
+
+
+def test_activated_supplier_invoice_posts_a_balanced_ledger_journal(
+    client_for, supplier, approver, vat
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.supplier@example.com")
+    client = client_for(creator)
+    body = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100", vat_tax=vat.pk)],
+        number="SUP-POST-ACTIVE-1",
+        match_exempt_reason="Service.",
+    )
+    assert body["test_document"] is False
+    client.post(f"/api/v1/supplier-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+
+    posted = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
+    assert posted.status_code == 200, posted.content
+    journal = JournalEntry.objects.get(pk=posted.json()["journal_entry"])
+    assert journal.status == JournalEntry.Status.POSTED
+    assert journal.total_debit == Decimal("107.50")
+    assert journal.total_credit == Decimal("107.50")
+    balances = {
+        line.account.code: (line.debit, line.credit)
+        for line in journal.lines.select_related("account")
+    }
+    assert balances["2100-POST"] == (Decimal("0.00"), Decimal("107.50"))
+    assert balances["5000-POST"] == (Decimal("100.00"), Decimal("0.00"))
+    assert balances["1400-POST"] == (Decimal("7.50"), Decimal("0.00"))
+    assert SupplierInvoice.objects.get(pk=body["id"]).journal_entry_id == journal.pk
+
+    replay = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
+    assert replay.status_code == 409
+    assert "already been posted" in replay.json()["error"]["message"]
+
+
+def test_activated_customer_invoice_posts_receivable_revenue_and_output_vat(
+    client_for, customer, approver, vat
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.customer@example.com")
+    client = client_for(creator)
+    body = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price="100", vat_tax=vat.pk)],
+    )
+    assert body["test_document"] is False
+    client.post(f"/api/v1/customer-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/customer-invoices/{body['id']}/approve/")
+
+    posted = client.post(f"/api/v1/customer-invoices/{body['id']}/post/")
+    assert posted.status_code == 200, posted.content
+    journal = JournalEntry.objects.get(pk=posted.json()["journal_entry"])
+    balances = {
+        line.account.code: (line.debit, line.credit)
+        for line in journal.lines.select_related("account")
+    }
+    assert balances["1100-POST"] == (Decimal("107.50"), Decimal("0.00"))
+    assert balances["4000-POST"] == (Decimal("0.00"), Decimal("100.00"))
+    assert balances["2200-POST"] == (Decimal("0.00"), Decimal("7.50"))
+
+
+def test_wht_invoice_posting_requires_an_approved_treatment(
+    client_for, supplier, approver, vat, wht
+):
+    seed()
+    activate_live_invoices(approver)
+    creator = make_user("posting.wht@example.com")
+    client = client_for(creator)
+    body = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100", vat_tax=vat.pk, wht_tax=wht.pk)],
+        number="SUP-POST-WHT-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+
+    posted = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
+    assert posted.status_code == 409
+    assert "WHT" in posted.json()["error"]["message"]
+    assert not JournalEntry.objects.exists()
+
+
+def test_posting_refuses_a_missing_account_mapping(client_for, customer, approver):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    AccountRoleMapping.objects.all().delete()
+    creator = make_user("posting.mapping@example.com")
+    client = client_for(creator)
+    body = create_customer_invoice(client, customer, [line_payload()])
+    client.post(f"/api/v1/customer-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/customer-invoices/{body['id']}/approve/")
+
+    posted = client.post(f"/api/v1/customer-invoices/{body['id']}/post/")
+    assert posted.status_code == 409
+    assert "REVENUE" in posted.json()["error"]["message"]
+    assert not JournalEntry.objects.exists()
 
 
 def test_cancelled_invoice_preserves_number_and_blocks_reuse(client_for, supplier):

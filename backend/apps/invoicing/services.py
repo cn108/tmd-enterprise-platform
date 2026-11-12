@@ -19,6 +19,7 @@ from apps.accounting.models import AccountingSettings
 from apps.core.approvals import ApprovalError, register_approval
 from apps.core.models import ApprovalRecord, NumberingScheme, TaxProfile, create_audit_event
 from apps.core.numbering import NumberingError, allocate_document_number
+from apps.invoicing.exceptions import InvoiceConflict
 from apps.invoicing.models import (
     ZERO,
     CustomerInvoice,
@@ -35,11 +36,6 @@ from apps.invoicing.models import (
 )
 from apps.invoicing.nrs import build_payload, get_adapter
 from apps.procurement.numbering import next_number
-
-
-class InvoiceConflict(Exception):
-    """The invoice action is valid in shape but not allowed in this state."""
-
 
 ACTIVATION_GATES = (
     "management_roles_approved",
@@ -876,18 +872,12 @@ def cancel_payment(payment: SupplierPayment, actor, reason: str) -> SupplierPaym
     return payment
 
 
-def post_invoice(invoice, actor) -> None:
-    """Stage 7B posting entry point; deliberately blocked until activation."""
+def post_invoice(invoice, actor):
+    """Post an approved invoice to the ledger through the activation gate."""
 
-    settings = InvoiceSettings.load()
-    if not settings.can_issue:
-        raise InvoiceConflict(
-            "Stage 7B has not been authorised: production invoice issuance and "
-            "posting are disabled."
-        )
-    raise InvoiceConflict(
-        "Posting rules and account mappings are not configured for invoice posting."
-    )
+    from apps.invoicing.posting import post_invoice as post
+
+    return post(invoice, actor)
 
 
 def activation_blockers(settings: InvoiceSettings, checklist: dict) -> list[str]:

@@ -84,6 +84,7 @@ export const INVOICING_MODULE: ModuleConfig = {
         { key: 'tax_point_date', label: 'Tax point date' },
         { key: 'due_date', label: 'Due date' },
         { key: 'status', label: 'Status', kind: 'status' },
+        { key: 'journal_number', label: 'Ledger journal' },
         { key: 'match_status', label: 'Match status', kind: 'status' },
         { key: 'match_exceptions', label: 'Match exceptions' },
         { key: 'duplicate_status', label: 'Duplicate check', kind: 'status' },
@@ -282,6 +283,16 @@ export const INVOICING_MODULE: ModuleConfig = {
           ],
         },
         {
+          id: 'post',
+          label: 'Post to ledger',
+          path: 'post',
+          permission: 'invoicing.post_supplierinvoice',
+          confirm:
+            'Post this approved supplier invoice to the ledger? This creates an immutable journal entry.',
+          success: 'Supplier invoice posted to the ledger.',
+          statuses: ['approved'],
+        },
+        {
           id: 'attach-document',
           label: 'Attach document',
           path: 'attach-document',
@@ -301,7 +312,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           ],
         },
       ],
-      note: 'All records are test documents in Stage 7A. Posting to the ledger is disabled until Stage 7B approval.',
+      note: 'Posting to the ledger is available only after Stage 7B activation and an approved account mapping.',
     },
     {
       id: 'customer-invoices',
@@ -332,6 +343,7 @@ export const INVOICING_MODULE: ModuleConfig = {
         { key: 'tax_point_date', label: 'Tax point date' },
         { key: 'due_date', label: 'Due date' },
         { key: 'status', label: 'Status', kind: 'status' },
+        { key: 'journal_number', label: 'Ledger journal' },
         { key: 'subtotal', label: 'Subtotal' },
         { key: 'vat_total', label: 'VAT' },
         { key: 'wht_total', label: 'Customer WHT' },
@@ -483,8 +495,18 @@ export const INVOICING_MODULE: ModuleConfig = {
             },
           ],
         },
+        {
+          id: 'post',
+          label: 'Post to ledger',
+          path: 'post',
+          permission: 'invoicing.post_customerinvoice',
+          confirm:
+            'Post this approved customer invoice to the ledger? This creates an immutable journal entry.',
+          success: 'Customer invoice posted to the ledger.',
+          statuses: ['approved'],
+        },
       ],
-      note: 'Customer invoices remain drafts or approved test documents; issuance is a Stage 7B action.',
+      note: 'Posting to the ledger is available only after Stage 7B activation and an approved account mapping.',
     },
     {
       id: 'notes',

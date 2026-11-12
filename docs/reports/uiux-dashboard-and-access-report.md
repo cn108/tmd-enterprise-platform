@@ -117,7 +117,7 @@ Backend enforcement is unchanged: Django permission classes and workflow service
 | Backend reporting tests | **26 passed** |
 | Frontend unit tests | **52 passed** |
 | Frontend lint | **Passed** |
-| Frontend production build | **Passed** (dashboard stylesheet within the existing warning budget) |
+| Frontend production build | **Passed**; dashboard stylesheet is 7.99 kB, above the 6 kB warning budget but below the 8 kB error threshold |
 | Browser role review | **5 Playwright tests passed**, covering Management, Finance, Procurement, Warehouse, Project Manager, Auditor and System Administrator |
 | Original and improved screenshots | Captured in `docs/reports/evidence/uiux/` and reviewed in the browser |
 

@@ -135,12 +135,6 @@ DEFAULT_FROM_EMAIL = env_str(
 )
 EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT_SECONDS", 15)
 
-# A document still marked as test can only be emailed here. Production
-# activation removes the restriction on non-test approved invoices.
-INVOICE_EMAIL_TEST_RECIPIENT = env_str(
-    "INVOICE_EMAIL_TEST_RECIPIENT", "ccmtico1234@gmail.com"
-)
-
 # --- Authentication ---------------------------------------------------------
 AUTH_USER_MODEL = "identity.User"
 

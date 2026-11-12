@@ -270,7 +270,7 @@ export const INVOICING_MODULE: ModuleConfig = {
               type: 'text',
               required: true,
               defaultFromRow: 'supplier_email',
-              help: 'Test documents can only be sent to the configured company test mailbox.',
+              help: 'The generated PDF is attached to this email.',
             },
             { key: 'cc', label: 'CC', type: 'text', help: 'Separate multiple addresses with commas.' },
             {
@@ -472,7 +472,7 @@ export const INVOICING_MODULE: ModuleConfig = {
               type: 'text',
               required: true,
               defaultFromRow: 'customer_email',
-              help: 'Test documents can only be sent to the configured company test mailbox.',
+              help: 'The generated PDF is attached to this email.',
             },
             { key: 'cc', label: 'CC', type: 'text', help: 'Separate multiple addresses with commas.' },
             {

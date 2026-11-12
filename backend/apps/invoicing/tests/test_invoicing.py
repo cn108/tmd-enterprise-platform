@@ -393,7 +393,6 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <ccmtico1234@gmail.com>"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -420,12 +419,11 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
     assert message.attachments[0][1].startswith(b"%PDF")
 
 
-def test_test_invoice_email_is_limited_to_the_company_test_mailbox(
+def test_approved_test_invoice_can_be_emailed_to_an_external_customer(
     client_for, customer, approver, vat, settings, mailoutbox
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email.safety@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -441,9 +439,9 @@ def test_test_invoice_email_is_limited_to_the_company_test_mailbox(
         {"to": "customer@example.com"},
         format="json",
     )
-    assert external.status_code == 409
-    assert "test document" in external.json()["error"]["message"].lower()
-    assert len(mailoutbox) == 0
+    assert external.status_code == 200, external.content
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].to == ["customer@example.com"]
 
     draft = create_customer_invoice(
         client,
@@ -464,7 +462,6 @@ def test_approved_supplier_invoice_can_be_emailed(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("supplier.email@example.com")
     client = client_for(creator)
     invoice = create_supplier_invoice(
@@ -491,7 +488,6 @@ def test_only_an_authorised_user_can_email_an_invoice(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email.permission@example.com")
     client = client_for(creator)
     body = create_customer_invoice(

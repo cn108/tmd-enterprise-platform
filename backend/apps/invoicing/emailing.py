@@ -1,8 +1,6 @@
 """Send an approved invoice PDF from the configured company mailbox.
 
-The PDF is generated on demand and attached; no copy is persisted. A test
-document may only be sent to the configured internal test recipient so the
-``TEST DOCUMENT — NOT A TAX INVOICE`` banner cannot reach a real customer.
+The PDF is generated on demand and attached; no copy is persisted.
 """
 
 from __future__ import annotations
@@ -69,14 +67,6 @@ def _send(
 
     to = _address(recipient, "recipient")
     cc_addresses = _cc_addresses(cc)
-    if (invoice.is_test or invoice_settings.test_mode) and to.lower() != (
-        settings.INVOICE_EMAIL_TEST_RECIPIENT.lower()
-    ):
-        raise InvoiceEmailError(
-            "This is a test document. For safety it can only be emailed to "
-            f"{settings.INVOICE_EMAIL_TEST_RECIPIENT} until invoice production is authorised."
-        )
-
     company = invoice_settings.company_legal_name.strip() or "Tico McDon Limited"
     subject = f"Invoice {invoice.number} from {company}"
     body = (message or "").strip()

@@ -404,7 +404,7 @@ class Command(BaseCommand):
             defaults={
                 "test_mode": True,
                 "company_legal_name": "TICO MCDON LIMITED (UAT SYNTHETIC)",
-                "company_email": "tmdtico@gmail.com",
+                "company_email": "ccmtico1234@gmail.com",
                 "default_currency": "NGN",
                 "nrs_enabled": False,
             },

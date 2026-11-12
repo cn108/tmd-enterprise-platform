@@ -128,14 +128,18 @@ EMAIL_BACKEND = env_str("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBa
 EMAIL_HOST = env_str("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
-EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "tmdtico@gmail.com")
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "ccmtico1234@gmail.com")
 EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "Tico McDon Limited <tmdtico@gmail.com>")
+DEFAULT_FROM_EMAIL = env_str(
+    "DEFAULT_FROM_EMAIL", "Tico McDon Limited <ccmtico1234@gmail.com>"
+)
 EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT_SECONDS", 15)
 
 # A document still marked as test can only be emailed here. Production
 # activation removes the restriction on non-test approved invoices.
-INVOICE_EMAIL_TEST_RECIPIENT = env_str("INVOICE_EMAIL_TEST_RECIPIENT", "tmdtico@gmail.com")
+INVOICE_EMAIL_TEST_RECIPIENT = env_str(
+    "INVOICE_EMAIL_TEST_RECIPIENT", "ccmtico1234@gmail.com"
+)
 
 # --- Authentication ---------------------------------------------------------
 AUTH_USER_MODEL = "identity.User"

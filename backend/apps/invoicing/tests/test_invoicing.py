@@ -392,8 +392,8 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <tmdtico@gmail.com>"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <ccmtico1234@gmail.com>"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -406,16 +406,16 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
 
     response = client.post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "tmdtico@gmail.com", "cc": "", "message": "Please find the invoice attached."},
+        {"to": "ccmtico1234@gmail.com", "cc": "", "message": "Please find the invoice attached."},
         format="json",
     )
 
     assert response.status_code == 200, response.content
-    assert response.json()["to"] == "tmdtico@gmail.com"
+    assert response.json()["to"] == "ccmtico1234@gmail.com"
     assert len(mailoutbox) == 1
     message = mailoutbox[0]
-    assert message.from_email == "Tico McDon Limited <tmdtico@gmail.com>"
-    assert message.to == ["tmdtico@gmail.com"]
+    assert message.from_email == "Tico McDon Limited <ccmtico1234@gmail.com>"
+    assert message.to == ["ccmtico1234@gmail.com"]
     assert message.attachments[0][0] == f"{body['number']}.pdf"
     assert message.attachments[0][1].startswith(b"%PDF")
 
@@ -425,7 +425,7 @@ def test_test_invoice_email_is_limited_to_the_company_test_mailbox(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email.safety@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -452,7 +452,7 @@ def test_test_invoice_email_is_limited_to_the_company_test_mailbox(
     )
     response = client.post(
         f"/api/v1/customer-invoices/{draft['id']}/email/",
-        {"to": "tmdtico@gmail.com"},
+        {"to": "ccmtico1234@gmail.com"},
         format="json",
     )
     assert response.status_code == 409
@@ -464,7 +464,7 @@ def test_approved_supplier_invoice_can_be_emailed(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("supplier.email@example.com")
     client = client_for(creator)
     invoice = create_supplier_invoice(
@@ -478,7 +478,7 @@ def test_approved_supplier_invoice_can_be_emailed(
 
     response = client.post(
         f"/api/v1/supplier-invoices/{invoice['id']}/email/",
-        {"to": "tmdtico@gmail.com"},
+        {"to": "ccmtico1234@gmail.com"},
         format="json",
     )
     assert response.status_code == 200, response.content
@@ -491,7 +491,7 @@ def test_only_an_authorised_user_can_email_an_invoice(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.INVOICE_EMAIL_TEST_RECIPIENT = "tmdtico@gmail.com"
+    settings.INVOICE_EMAIL_TEST_RECIPIENT = "ccmtico1234@gmail.com"
     creator = make_user("customer.email.permission@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -509,7 +509,7 @@ def test_only_an_authorised_user_can_email_an_invoice(
     viewer_client = client_for(viewer)
     denied = viewer_client.post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "tmdtico@gmail.com"},
+        {"to": "ccmtico1234@gmail.com"},
         format="json",
     )
     assert denied.status_code == 403
@@ -518,7 +518,7 @@ def test_only_an_authorised_user_can_email_an_invoice(
     viewer.user_permissions.add(Permission.objects.get(codename="email_customerinvoice"))
     allowed = client_for(User.objects.get(pk=viewer.pk)).post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "tmdtico@gmail.com"},
+        {"to": "ccmtico1234@gmail.com"},
         format="json",
     )
     assert allowed.status_code == 200, allowed.content

@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { apiErrorMessage } from '../../core/auth.models';
 import { AuthService } from '../../core/auth.service';
+import { AccessRestrictedComponent } from '../../shared/access-restricted/access-restricted.component';
 import { fieldErrors } from '../workspace/resource-api.service';
 import { Row } from '../workspace/workspace-config';
 
@@ -63,6 +64,7 @@ type Tab = 'users' | 'roles';
 @Component({
   selector: 'app-administration',
   imports: [
+    AccessRestrictedComponent,
     FormsModule,
     MatButtonModule,
     MatCheckboxModule,

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -12,6 +13,7 @@ import { Subject, debounceTime } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/auth.models';
 import { AuthService } from '../../core/auth.service';
+import { AccessRestrictedComponent } from '../../shared/access-restricted/access-restricted.component';
 import { ConfirmDialogComponent, ConfirmResult } from './confirm-dialog.component';
 import { RecordDetailComponent } from './record-detail.component';
 import { RecordFormComponent, RecordFormData } from './record-form.component';
@@ -30,6 +32,7 @@ import {
 @Component({
   selector: 'app-workspace',
   imports: [
+    AccessRestrictedComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -49,11 +52,18 @@ export class WorkspaceComponent {
   private readonly key = this.route.snapshot.data['module'] as ModuleKey;
   private readonly search$ = new Subject<void>();
 
+  private readonly query = this.route.snapshot.queryParamMap;
+  private readonly requestedTab = this.query.get('tab');
   protected readonly config = MODULES[this.key];
-  protected readonly activeTab = signal(this.config.tabs[0].id);
+  protected readonly activeTab = signal(
+    this.config.tabs.some((tab) => tab.id === this.requestedTab)
+      ? this.requestedTab!
+      : this.config.tabs[0].id,
+  );
   protected readonly rows = signal<Row[]>([]);
   protected readonly count = signal(0);
   protected readonly loading = signal(true);
+  protected readonly accessDenied = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly search = signal('');
@@ -62,7 +72,16 @@ export class WorkspaceComponent {
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(25);
   protected readonly busy = signal(false);
-  protected readonly filterValues = signal<Record<string, string>>({});
+  protected readonly filterValues = signal<Record<string, string>>(
+    Object.fromEntries(
+      this.config.tabs
+        .find((tab) => tab.id === this.activeTab())
+        ?.filters?.map((filter) => [filter.key, this.query.get(filter.key) ?? ''])
+        .filter(([, value]) => value) ?? [],
+    ),
+  );
+  private readonly requestedRecord = this.query.get('record');
+  private deepLinkHandled = false;
 
   protected readonly resource = computed<ResourceConfig>(
     () => this.config.tabs.find((tab) => tab.id === this.activeTab()) ?? this.config.tabs[0],
@@ -85,6 +104,58 @@ export class WorkspaceComponent {
   /** Actions the signed-in user may not perform, shown once rather than as dead buttons. */
   protected readonly blockedActions = computed(() =>
     (this.resource().actions ?? []).filter((action) => !this.allowed(action.permission)),
+  );
+
+  protected readonly hasWriteControls = computed(() => {
+    const resource = this.resource();
+    return Boolean(
+      resource.create ||
+        resource.edit ||
+        resource.deactivate ||
+        (resource.actions ?? []).length,
+    );
+  });
+
+  protected readonly canPerformAnyWrite = computed(() => {
+    const resource = this.resource();
+    return Boolean(
+      (resource.create && this.allowed(resource.permission)) ||
+        (resource.edit &&
+          this.allowed(resource.editPermission ?? resource.permission)) ||
+        (resource.deactivate && this.allowed(resource.editPermission ?? resource.permission)) ||
+        (resource.actions ?? []).some((action) => this.allowed(action.permission)),
+    );
+  });
+
+  protected readonly hasRestrictedWrite = computed(() => {
+    const resource = this.resource();
+    return Boolean(
+      (resource.create && !this.allowed(resource.permission)) ||
+        (resource.edit &&
+          !this.allowed(resource.editPermission ?? resource.permission)) ||
+        this.blockedActions().length > 0,
+    );
+  });
+
+  protected readonly accessLabel = computed<string | null>(() => {
+    if (!this.hasWriteControls()) {
+      return null;
+    }
+    if (!this.canPerformAnyWrite()) {
+      return 'View only';
+    }
+    return this.hasRestrictedWrite() ? 'Limited actions' : null;
+  });
+
+  protected readonly accessTooltip = computed(() => {
+    if (this.accessLabel() === 'View only') {
+      return 'You can view this section. Changes are restricted to authorised personnel.';
+    }
+    return 'Some actions in this section are restricted for your account.';
+  });
+
+  protected readonly createTooltip = computed(
+    () => `You do not have permission to create ${this.resource().label.toLowerCase()}.`,
   );
 
   constructor() {
@@ -116,6 +187,8 @@ export class WorkspaceComponent {
     this.filterValues.set({});
     this.pageIndex.set(0);
     this.notice.set(null);
+    this.accessDenied.set(false);
+    this.deepLinkHandled = true;
     this.load();
   }
 
@@ -237,7 +310,11 @@ export class WorkspaceComponent {
   protected deactivate(row: Row): void {
     const resource = this.resource();
     const id = row['id'];
-    if (!resource.deactivate || typeof id !== 'number') {
+    if (
+      !resource.deactivate ||
+      typeof id !== 'number' ||
+      !this.allowed(resource.editPermission ?? resource.permission)
+    ) {
       return;
     }
     const label = formatValue(row['code'] ?? row['number'] ?? id);
@@ -357,6 +434,7 @@ export class WorkspaceComponent {
     const resource = this.resource();
     this.loading.set(true);
     this.error.set(null);
+    this.accessDenied.set(false);
     this.api
       .list(resource.endpoint, {
         page: this.pageIndex() + 1,
@@ -370,14 +448,44 @@ export class WorkspaceComponent {
           this.rows.set(page.rows);
           this.count.set(page.count);
           this.loading.set(false);
+          this.openRequestedRecord();
         },
         error: (error: unknown) => {
           this.rows.set([]);
           this.count.set(0);
-          this.error.set(apiErrorMessage(error));
           this.loading.set(false);
+          if (error instanceof HttpErrorResponse && error.status === 403) {
+            this.accessDenied.set(true);
+            return;
+          }
+          this.error.set(apiErrorMessage(error));
         },
       });
+  }
+
+  /** Applies dashboard deep links once: create dialog, record detail or list filter. */
+  private openRequestedRecord(): void {
+    if (this.deepLinkHandled) {
+      return;
+    }
+    this.deepLinkHandled = true;
+    if (this.query.get('new') === '1' && this.resource().create) {
+      if (this.allowed(this.resource().permission)) {
+        this.openForm({ resource: this.resource() });
+      }
+      return;
+    }
+    if (!this.requestedRecord) {
+      return;
+    }
+    const id = Number(this.requestedRecord);
+    if (!Number.isInteger(id) || id <= 0) {
+      return;
+    }
+    this.api.detail(this.resource().endpoint, id).subscribe({
+      next: (record) => this.openDetail(record),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
+    });
   }
 
   private openForm(data: RecordFormData): void {

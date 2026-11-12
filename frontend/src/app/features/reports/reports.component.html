@@ -1,3 +1,6 @@
+@if (!visibleTabs().length) {
+  <app-access-restricted section="the reporting workspace" />
+} @else {
 <section class="module" aria-labelledby="reports-heading">
   <header class="module__header no-print">
     <div>
@@ -32,14 +35,6 @@
       </button>
     }
   </nav>
-
-  @if (!visibleTabs().length) {
-    <p class="warnings" role="status">
-      Your account does not have reporting access. Ask an administrator for
-      <code>reporting.view_reporting</code>; financial statements additionally require
-      <code>reporting.view_financialreporting</code>.
-    </p>
-  }
 
   <section class="context">
     <div>
@@ -210,3 +205,4 @@
     when this report is run; refresh after posting new journals or approving source documents.
   </p>
 </section>
+}

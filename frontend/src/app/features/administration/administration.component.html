@@ -4,17 +4,14 @@
       <p class="eyebrow">Access control</p>
       <h1 id="admin-heading">Administration</h1>
       <p class="module__intro">
-        Accounts and roles. A role is a named bundle of backend permissions; the access
-        administrator decides what each role may do. No role or permission bundle is pre-set.
+        Manage user accounts and role assignments. Access is limited to authorised
+        administrators.
       </p>
     </div>
   </header>
 
   @if (!canViewUsers() && !canViewRoles()) {
-    <p class="permission">
-      Your account has neither <code>identity.view_user</code> nor <code>auth.view_group</code>.
-      Access administration is hidden and the API refuses these endpoints to your account.
-    </p>
+    <app-access-restricted section="access administration" />
   } @else {
     <nav class="tabs" aria-label="Administration section">
       @if (canViewUsers()) {

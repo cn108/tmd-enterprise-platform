@@ -1,11 +1,28 @@
 <section class="dashboard" aria-labelledby="dashboard-heading">
-  <div class="dashboard__intro">
-    <p class="eyebrow">Tico McDon Limited</p>
-    <h1 id="dashboard-heading">
-      Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}
-    </h1>
-    <p>Live operational view. Every figure below is read from the API.</p>
-  </div>
+  <header class="dashboard__header">
+    <div>
+      <p class="eyebrow">Tico McDon Limited</p>
+      <h1 id="dashboard-heading">
+        Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}
+      </h1>
+      @if (data()?.focus; as focus) {
+        <p class="focus-title">{{ focus.title }}</p>
+      }
+      <p class="dashboard__intro">
+        {{ data()?.focus?.description ?? 'Your operational summary is loading from the live system.' }}
+      </p>
+    </div>
+    <div class="dashboard__badges">
+      @if (data()?.test_mode) {
+        <span class="badge badge--test" title="Production invoice issuance is not authorised">
+          Test environment
+        </span>
+      }
+      @if (auth.user()?.roles?.length) {
+        <span class="badge">{{ auth.user()?.roles?.join(', ') }}</span>
+      }
+    </div>
+  </header>
 
   @if (auth.user()?.must_change_password) {
     <p class="notice" role="status">
@@ -13,140 +30,239 @@
     </p>
   }
 
-  <div class="dashboard__grid">
-    <section class="card" aria-labelledby="status-heading">
-      <h2 id="status-heading">System status</h2>
+  <form class="period" (ngSubmit)="applyCustom()" aria-label="Dashboard period">
+    <label>
+      <span>Period</span>
+      <select [value]="period()" (change)="setPeriod($any($event.target).value)">
+        <option value="this_month">This month</option>
+        <option value="last_month">Last month</option>
+        <option value="custom">Custom range</option>
+      </select>
+    </label>
+    @if (period() === 'custom') {
+      <label>
+        <span>From</span>
+        <input type="date" [value]="start()" (change)="setStart($any($event.target).value)" />
+      </label>
+      <label>
+        <span>To</span>
+        <input type="date" [value]="end()" (change)="setEnd($any($event.target).value)" />
+      </label>
+      <button type="submit" class="button button--primary">Apply</button>
+    }
+    <button type="button" class="button button--quiet" (click)="reload()">Refresh</button>
+    @if (data(); as dashboard) {
+      <span class="period__label">
+        {{ dashboard.period.start | date: 'd MMM y' }} – {{ dashboard.period.end | date: 'd MMM y' }}
+      </span>
+    }
+  </form>
 
-      @if (readiness(); as status) {
-        <p class="status status--ok">API reachable — {{ status.status }}</p>
-        <ul class="checks">
-          @for (entry of status.checks | keyvalue; track entry.key) {
+  @if (customError(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <div class="loading" role="status">Loading your dashboard…</div>
+  } @else if (error(); as message) {
+    <div class="empty-state" role="alert">
+      <h2>We could not load your dashboard</h2>
+      <p>{{ message }}</p>
+      <button type="button" class="button button--primary" (click)="reload()">Try again</button>
+    </div>
+  } @else if (data(); as dashboard) {
+    @for (notice of dashboard.notices; track notice) {
+      <p class="notice" role="status">{{ notice }}</p>
+    }
+
+    @if (dashboard.financial_overview?.length) {
+      <section class="section" aria-labelledby="financial-heading">
+        <div class="section__head">
+          <div>
+            <h2 id="financial-heading">Financial overview</h2>
+            <p>Document and payment values for the selected period. NGN unless stated.</p>
+          </div>
+        </div>
+        <div class="metrics">
+          @for (card of dashboard.financial_overview; track card.id) {
+            <article class="metric" [class.metric--warning]="card.tone === 'warning'">
+              <div class="metric__head">
+                <span class="metric__label">{{ card.label }}</span>
+                <span class="state" [class.state--test]="card.state === 'test'">
+                  {{ stateLabel(card.state) }}
+                </span>
+              </div>
+              @if (card.available) {
+                <p class="metric__value">
+                  {{ card.amount === null ? naira('0') : naira(card.amount) }}
+                </p>
+                <p class="metric__basis">{{ card.basis }}</p>
+                <p class="metric__note">
+                  {{ card.count }} {{ card.count === 1 ? 'record' : 'records' }}
+                  @if (card.note) {
+                    · {{ card.note }}
+                  }
+                </p>
+                <a class="metric__link" [routerLink]="card.link">Open records</a>
+              } @else {
+                <p class="metric__empty">No records in this period</p>
+                <p class="metric__basis">{{ card.basis }}</p>
+              }
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="section" aria-labelledby="actions-heading">
+      <div class="section__head">
+        <div>
+          <h2 id="actions-heading">Pending actions</h2>
+          <p>Items that need your review or decision.</p>
+        </div>
+      </div>
+      @if (dashboard.pending_actions.length) {
+        <ul class="action-list">
+          @for (action of dashboard.pending_actions; track action.id) {
             <li>
-              <span>{{ entry.key }}</span>
-              <strong>{{ entry.value }}</strong>
+              <a class="action" [routerLink]="action.link">
+                <span class="action__count">{{ action.count }}</span>
+                <span class="action__body">
+                  <strong>{{ action.label }}</strong>
+                  <span>{{ action.description }}</span>
+                </span>
+                <span class="action__open" aria-hidden="true">Review →</span>
+              </a>
             </li>
           }
         </ul>
-      } @else if (apiUnreachable()) {
-        <p class="status status--down">
-          API not reachable. Start the backend on <code>127.0.0.1:8000</code>.
-        </p>
       } @else {
-        <p class="status">Checking…</p>
+        <div class="empty-state empty-state--compact">
+          <h3>No items need your attention</h3>
+          <p>New approvals and reconciliation items will appear here.</p>
+        </div>
       }
     </section>
 
-    <section class="card" aria-labelledby="access-heading">
-      <h2 id="access-heading">Your access</h2>
-
-      @if (permissions().length > 0) {
-        <p class="muted">Permissions assigned to your account:</p>
-        <ul class="permissions">
-          @for (permission of permissions(); track permission) {
-            <li><code>{{ permission }}</code></li>
+    @if (dashboard.invoice_management?.length) {
+      <section class="section" aria-labelledby="invoices-heading">
+        <div class="section__head">
+          <div>
+            <h2 id="invoices-heading">Invoice management</h2>
+            <p>Approval queues, drafts and documents requiring follow-up.</p>
+          </div>
+          @if (!dashboard.issuance_authorised) {
+            <span class="state state--test">Issuance disabled</span>
           }
-        </ul>
-      } @else {
-        <p class="muted">
-          No roles or permissions are assigned to your account yet. Records you can read are
-          available; approvals, posting and stock-posting actions are refused by the API until an
-          administrator assigns your role.
-        </p>
-      }
-
-      @if (auth.user()?.roles?.length) {
-        <p class="muted">Roles: {{ auth.user()?.roles?.join(', ') }}</p>
-      }
-    </section>
-  </div>
-
-  <section class="queues" aria-labelledby="queues-heading">
-    <div class="queues__head">
-      <h2 id="queues-heading">Work queues</h2>
-      <button type="button" class="link-button" (click)="reloadQueues()">Refresh</button>
-    </div>
-
-    @if (queuesError(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
+        </div>
+        <div class="status-grid">
+          @for (row of dashboard.invoice_management; track row.id) {
+            <a class="status-card" [routerLink]="row.link" [class.status-card--warning]="row.tone === 'warning'">
+              <span class="status-card__count">{{ row.count }}</span>
+              <span class="status-card__label">{{ row.label }}</span>
+              <span class="status-card__basis">{{ row.basis }}</span>
+            </a>
+          }
+        </div>
+      </section>
     }
 
-    @if (queuesLoading()) {
-      <p class="muted">Loading queues…</p>
-    } @else if (queues().length > 0) {
-      <ul class="queue-list">
-        @for (queue of queues(); track queue.id) {
-          <li class="queue">
-            <span class="queue__count">{{ queue.count ?? '—' }}</span>
-            <div class="queue__body">
-              <span class="queue__label">{{ queue.label }}</span>
-              <p class="muted">{{ queue.description }}</p>
-            </div>
-            @if (queue.count === null) {
-              <span class="queue__blocked">Unavailable</span>
-            } @else if (queue.count === 0) {
-              <span class="queue__clear">Clear</span>
-            } @else if (mayAct(queue.permission)) {
-              <a class="queue__link" [routerLink]="queue.link">Open</a>
-            } @else {
-              <span class="queue__blocked">Requires {{ queue.permission }}</span>
+    @if (dashboard.operations; as operations) {
+      <section class="section" aria-labelledby="operations-heading">
+        <div class="section__head">
+          <div>
+            <h2 id="operations-heading">{{ operations.title }}</h2>
+            <p>{{ operations.description }}</p>
+          </div>
+        </div>
+        <div class="operations">
+          @for (card of operations.cards; track card.id) {
+            <a class="operation" [routerLink]="card.link">
+              <span class="operation__label">{{ card.label }}</span>
+              <strong class="operation__value">{{ operationValue(card) }}</strong>
+              <span class="operation__detail">{{ card.detail }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="split">
+      <section class="section" aria-labelledby="activity-heading">
+        <div class="section__head">
+          <div>
+            <h2 id="activity-heading">Recent activity</h2>
+            <p>Recorded document and approval events.</p>
+          </div>
+        </div>
+        @if (dashboard.recent_activity.length) {
+          <ul class="activity">
+            @for (item of dashboard.recent_activity; track item.id) {
+              <li>
+                <a [routerLink]="item.link">
+                  <span class="activity__dot" aria-hidden="true"></span>
+                  <span class="activity__body">
+                    <strong>{{ item.action }}</strong>
+                    <span>
+                      {{ item.reference || item.entity }}
+                      @if (item.reference) {
+                        · {{ item.entity }}
+                      }
+                    </span>
+                    <span class="activity__meta">{{ item.user }} · {{ activityTime(item.occurred_at) }}</span>
+                  </span>
+                </a>
+              </li>
             }
-          </li>
+          </ul>
+        } @else {
+          <div class="empty-state empty-state--compact">
+            <h3>No recent activity</h3>
+            <p>Recorded document events will appear here.</p>
+          </div>
         }
-      </ul>
-    }
-  </section>
+      </section>
 
-  <section class="modules" aria-labelledby="modules-heading">
-    <h2 id="modules-heading">Business modules</h2>
-    <div class="modules__grid">
-      <a class="module-card" routerLink="/master-data">
-        <span class="module-card__index">01</span>
-        <h3>Master data</h3>
-        <p>Suppliers, customers, catalogue, warehouses and projects.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/procurement">
-        <span class="module-card__index">02</span>
-        <h3>Procurement</h3>
-        <p>Purchase requests, orders, quotations and goods receipts.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/inventory">
-        <span class="module-card__index">03</span>
-        <h3>Inventory</h3>
-        <p>Balances, movements, reorder alerts and the stock ledger.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/accounting">
-        <span class="module-card__index">04</span>
-        <h3>Accounting</h3>
-        <p>Chart of accounts, journals and approved posting rules.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/banking">
-        <span class="module-card__index">05</span>
-        <h3>Banking</h3>
-        <p>Statement import, matching, reconciliations and petty cash.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/projects">
-        <span class="module-card__index">06</span>
-        <h3>Projects</h3>
-        <p>Budgets, commitments, project costs and profitability.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/services">
-        <span class="module-card__index">07</span>
-        <h3>Services</h3>
-        <p>Engineering and maintenance work orders, HSE and reports.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
-      <a class="module-card" routerLink="/leasing">
-        <span class="module-card__index">08</span>
-        <h3>Equipment leasing</h3>
-        <p>Equipment register, rental agreements, dispatch, returns and utilisation.</p>
-        <span class="module-card__link">Open module →</span>
-      </a>
+      @if (dashboard.quick_actions.length) {
+        <section class="section" aria-labelledby="quick-heading">
+          <div class="section__head">
+            <div>
+              <h2 id="quick-heading">Quick actions</h2>
+              <p>Shortcuts available to your role.</p>
+            </div>
+          </div>
+          <div class="quick-list">
+            @for (action of dashboard.quick_actions; track action.id) {
+              <a class="quick" [routerLink]="action.link">
+                <span class="quick__plus" aria-hidden="true">+</span>
+                <span>
+                  <strong>{{ action.label }}</strong>
+                  <span>{{ action.description }}</span>
+                </span>
+              </a>
+            }
+          </div>
+        </section>
+      }
     </div>
-  </section>
+
+    <section class="modules" aria-labelledby="modules-heading">
+      <div class="section__head">
+        <div>
+          <h2 id="modules-heading">Business modules</h2>
+          <p>Open a module to continue working.</p>
+        </div>
+      </div>
+      <div class="modules__grid">
+        @for (module of modules; track module.path) {
+          <a class="module-card" [routerLink]="module.path">
+            <span class="module-card__index">{{ module.index }}</span>
+            <h3>{{ module.label }}</h3>
+            <p>{{ module.text }}</p>
+            <span class="module-card__link">Open module →</span>
+          </a>
+        }
+      </div>
+    </section>
+  }
 </section>

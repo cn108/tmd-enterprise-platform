@@ -43,7 +43,9 @@ describe('WorkspaceComponent', () => {
         provideHttpClientTesting(),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { data: { module } } },
+          useValue: {
+            snapshot: { data: { module }, queryParamMap: { get: () => null } },
+          },
         },
         {
           provide: AuthService,
@@ -158,7 +160,8 @@ describe('WorkspaceComponent', () => {
     ).map((button) => button.textContent?.trim());
 
     expect(buttons).not.toContain('Approve');
-    expect(text(fixture)).toContain('procurement.approve_purchaserequest');
+    expect(text(fixture)).toContain('Limited actions');
+    expect(text(fixture)).not.toContain('procurement.approve_purchaserequest');
   });
 
   it('posts the approval to the lifecycle endpoint when the permission is held', async () => {
@@ -201,7 +204,25 @@ describe('WorkspaceComponent', () => {
     ).find((button) => button.textContent?.trim() === 'New account');
 
     expect(createButton?.disabled).toBe(true);
-    expect(text(fixture)).toContain('accounting.manage_accounts');
+    expect(text(fixture)).toContain('View only');
+    expect(text(fixture)).toContain('You have read-only access to this section.');
+    expect(text(fixture)).not.toContain('accounting.manage_accounts');
+  });
+
+  it('shows a polished access-restricted state without leaking records', async () => {
+    const fixture = await configure('accounting');
+    fixture.detectChanges();
+    http.expectOne(`/api/v1/accounts/${PAGE}`).flush(
+      { error: { code: 'permission_denied', message: 'Denied.', details: null } },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Access restricted');
+    expect(text).toContain('Return to dashboard');
+    expect(text).not.toContain('accounting.manage_accounts');
+    expect(fixture.nativeElement.querySelector('tbody')).toBeNull();
   });
 
   it('opens the create dialog for master data and reloads after a save', async () => {

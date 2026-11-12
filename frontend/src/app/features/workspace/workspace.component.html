@@ -2,7 +2,12 @@
   <header class="module__header">
     <div>
       <p class="eyebrow">Business module</p>
-      <h1 id="module-heading">{{ config.title }}</h1>
+      <div class="module__title">
+        <h1 id="module-heading">{{ config.title }}</h1>
+        @if (accessLabel(); as label) {
+          <span class="access-badge" [attr.title]="accessTooltip()">{{ label }}</span>
+        }
+      </div>
       <p class="module__intro">{{ config.intro }}</p>
     </div>
     <div class="module__meta">
@@ -27,6 +32,10 @@
     <p class="notice" role="status">{{ message }}</p>
   }
 
+  @if (accessDenied()) {
+    <app-access-restricted [section]="config.title" />
+  }
+
   @if (error(); as message) {
     <p class="error" role="alert">
       {{ message }}
@@ -38,6 +47,7 @@
     <mat-progress-bar mode="indeterminate" aria-label="Applying action" />
   }
 
+  @if (!accessDenied()) {
   <section class="panel" aria-labelledby="section-heading">
     <div class="panel__head">
       <h2 id="section-heading">{{ resource().label }}</h2>
@@ -72,23 +82,35 @@
         }
 
         @if (resource().create) {
-          <button
-            mat-flat-button
-            type="button"
-            (click)="create()"
-            [disabled]="!allowed(resource().permission)"
-          >
-            New {{ resource().singular }}
-          </button>
+          @if (allowed(resource().permission)) {
+            <button mat-flat-button type="button" (click)="create()">
+              New {{ resource().singular }}
+            </button>
+          } @else {
+            <span class="locked-action" [attr.title]="createTooltip()">
+              <button mat-flat-button type="button" disabled [attr.aria-label]="createTooltip()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" aria-hidden="true">
+                  <rect x="5" y="10" width="14" height="10" rx="2" stroke-width="1.7" />
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.7" />
+                </svg>
+                New {{ resource().singular }}
+              </button>
+            </span>
+          }
         }
         <button mat-button type="button" (click)="reload()">Refresh</button>
       </div>
     </div>
 
-    @if (resource().create && !allowed(resource().permission)) {
-      <p class="permission">
-        Writing here requires the <code>{{ resource().permission }}</code> permission, which your
-        account does not have. The API rejects the request regardless of the interface.
+    @if (accessLabel() === 'View only') {
+      <p class="access-note">
+        You have read-only access to this section. Editing is restricted to authorised
+        personnel.
+      </p>
+    } @else if (accessLabel() === 'Limited actions') {
+      <p class="access-note">
+        Some actions are restricted for your account. The actions you are authorised to use stay
+        available.
       </p>
     }
 
@@ -147,7 +169,11 @@
                   ) {
                     <button mat-button type="button" (click)="edit(row)">Edit</button>
                   }
-                  @if (resource().deactivate && row['is_active'] === true) {
+                  @if (
+                    resource().deactivate &&
+                    row['is_active'] === true &&
+                    allowed(resource().editPermission ?? resource().permission)
+                  ) {
                     <button mat-button type="button" (click)="deactivate(row)">Deactivate</button>
                   }
                   @for (action of actionsFor(row); track action.id) {
@@ -173,19 +199,9 @@
       <p class="count">{{ count() }} {{ count() === 1 ? 'record' : 'records' }}</p>
     }
 
-    @if (blockedActions().length > 0) {
-      <p class="permission">
-        Not available to your account:
-        @for (action of blockedActions(); track action.id) {
-          <span class="permission__item"
-            >{{ action.label }} (needs <code>{{ action.permission }}</code>)</span
-          >
-        }
-      </p>
-    }
-
     @if (resource().note; as note) {
       <p class="hint">{{ note }}</p>
     }
   </section>
+  }
 </section>

@@ -1,135 +1,232 @@
-import { KeyValuePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/auth.models';
 import { AuthService } from '../../core/auth.service';
-import { HealthService, Readiness } from '../../core/health.service';
-import { ResourceApi } from '../workspace/resource-api.service';
 
-interface QueueDefinition {
+type PeriodChoice = 'this_month' | 'last_month' | 'custom';
+
+interface Focus {
+  id: string;
+  title: string;
+  description: string;
+}
+
+interface DashboardCard {
+  id: string;
+  label: string;
+  amount: string | null;
+  count: number;
+  available: boolean;
+  basis: string;
+  state: 'test' | 'actual' | 'recorded' | 'no_data';
+  link: string;
+  note: string;
+  tone: 'neutral' | 'positive' | 'warning' | 'attention' | 'clear';
+}
+
+interface PendingAction {
+  id: string;
+  label: string;
+  count: number;
+  link: string;
+  description: string;
+  tone: string;
+}
+
+interface OperationCard {
+  id: string;
+  label: string;
+  value: string | number;
+  format: 'currency' | 'number' | 'empty';
+  detail: string;
+  link: string;
+}
+
+interface Activity {
+  id: number;
+  action: string;
+  entity: string;
+  reference: string;
+  user: string;
+  occurred_at: string;
+  link: string;
+}
+
+interface QuickAction {
   id: string;
   label: string;
   description: string;
-  endpoint: string;
   link: string;
-  filters?: Record<string, string>;
-  permission?: string;
 }
 
-interface QueueState extends QueueDefinition {
-  count: number | null;
+interface Dashboard {
+  generated_at: string;
+  currency: string;
+  period: { start: string; end: string };
+  focus: Focus;
+  issuance_authorised: boolean;
+  test_mode: boolean;
+  notices: string[];
+  financial_overview: DashboardCard[] | null;
+  invoice_management: DashboardCard[] | null;
+  pending_actions: PendingAction[];
+  quick_actions: QuickAction[];
+  operations: {
+    id: string;
+    title: string;
+    description: string;
+    cards: OperationCard[];
+  } | null;
+  recent_activity: Activity[];
 }
 
-/**
- * Queues are real list endpoints with a status filter; the count is the server's
- * `count` for the whole filtered set, not the number of rows on this page.
- */
-const QUEUES: QueueDefinition[] = [
-  {
-    id: 'requests',
-    label: 'Purchase requests awaiting approval',
-    description: 'Submitted requests that an authorised approver must decide.',
-    endpoint: '/api/v1/purchase-requests/',
-    link: '/procurement',
-    filters: { status: 'submitted' },
-    permission: 'procurement.approve_purchaserequest',
-  },
-  {
-    id: 'orders',
-    label: 'Purchase orders awaiting approval',
-    description: 'Orders held before issue to a supplier.',
-    endpoint: '/api/v1/purchase-orders/',
-    link: '/procurement',
-    filters: { status: 'submitted' },
-    permission: 'procurement.approve_purchaseorder',
-  },
-  {
-    id: 'journals',
-    label: 'Journals awaiting approval',
-    description: 'Draft journals submitted for a second person to review.',
-    endpoint: '/api/v1/journals/',
-    link: '/accounting',
-    filters: { status: 'submitted' },
-    permission: 'accounting.approve_journal',
-  },
-  {
-    id: 'alerts',
-    label: 'Reorder alerts',
-    description: 'Items at or below their recorded reorder level.',
-    endpoint: '/api/v1/reorder-alerts/',
-    link: '/inventory',
-  },
-];
+const MODULES = [
+  { index: '01', label: 'Master data', path: '/master-data', text: 'Suppliers, customers, catalogue, warehouses and projects.' },
+  { index: '02', label: 'Procurement', path: '/procurement', text: 'Purchase requests, orders, quotations and goods receipts.' },
+  { index: '03', label: 'Inventory', path: '/inventory', text: 'Balances, movements, reorder alerts and the stock ledger.' },
+  { index: '04', label: 'Accounting', path: '/accounting', text: 'Chart of accounts, journals and approved posting rules.' },
+  { index: '05', label: 'Banking', path: '/banking', text: 'Statement import, matching, reconciliations and petty cash.' },
+  { index: '06', label: 'Projects', path: '/projects', text: 'Budgets, commitments, project costs and profitability.' },
+  { index: '07', label: 'Services', path: '/services', text: 'Engineering and maintenance work orders, HSE and reports.' },
+  { index: '08', label: 'Leasing', path: '/leasing', text: 'Equipment register, rental agreements and utilisation.' },
+] as const;
 
 @Component({
   selector: 'app-dashboard',
-  imports: [KeyValuePipe, RouterLink],
+  imports: [DatePipe, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
-  private readonly health = inject(HealthService);
-  private readonly api = inject(ResourceApi);
+  private readonly http = inject(HttpClient);
   protected readonly auth = inject(AuthService);
+  protected readonly modules = MODULES;
 
-  protected readonly readiness = signal<Readiness | null>(null);
-  protected readonly apiUnreachable = signal(false);
-  protected readonly queues = signal<QueueState[]>([]);
-  protected readonly queuesLoading = signal(true);
-  protected readonly queuesError = signal<string | null>(null);
-
-  protected readonly permissions = () => this.auth.user()?.permissions ?? [];
+  protected readonly data = signal<Dashboard | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | null>(null);
+  protected readonly period = signal<PeriodChoice>('this_month');
+  protected readonly start = signal(this.monthStart(0));
+  protected readonly end = signal(this.today());
+  protected readonly customError = signal<string | null>(null);
 
   constructor() {
-    this.health.check().subscribe({
-      next: (status) => this.readiness.set(status),
-      error: () => this.apiUnreachable.set(true),
-    });
-    this.loadQueues();
+    this.load();
   }
 
-  protected mayAct(permission?: string): boolean {
-    return !permission || this.permissions().includes(permission);
+  protected setPeriod(value: string): void {
+    const choice = value as PeriodChoice;
+    this.period.set(choice);
+    this.customError.set(null);
+    if (choice === 'this_month') {
+      this.start.set(this.monthStart(0));
+      this.end.set(this.today());
+      this.load();
+    } else if (choice === 'last_month') {
+      const previous = new Date();
+      previous.setDate(1);
+      previous.setMonth(previous.getMonth() - 1);
+      this.start.set(this.toIso(previous));
+      this.end.set(this.toIso(new Date(previous.getFullYear(), previous.getMonth() + 1, 0)));
+      this.load();
+    }
   }
 
-  protected reloadQueues(): void {
-    this.loadQueues();
+  protected setStart(value: string): void {
+    this.start.set(value);
   }
 
-  private loadQueues(): void {
-    this.queuesLoading.set(true);
-    this.queuesError.set(null);
+  protected setEnd(value: string): void {
+    this.end.set(value);
+  }
 
-    const requests = Object.fromEntries(
-      QUEUES.map((queue) => [
-        queue.id,
-        this.api
-          .list(queue.endpoint, { page: 1, pageSize: 1, filters: queue.filters })
-          .pipe(catchError(() => of(null))),
-      ]),
-    );
+  protected applyCustom(): void {
+    if (!this.start() || !this.end()) {
+      this.customError.set('Choose a start and end date.');
+      return;
+    }
+    if (this.end() < this.start()) {
+      this.customError.set('The end date cannot precede the start date.');
+      return;
+    }
+    this.customError.set(null);
+    this.load();
+  }
 
-    forkJoin(requests).subscribe({
-      next: (results) => {
-        const states = QUEUES.map((queue) => {
-          const result = results[queue.id];
-          return { ...queue, count: result ? result.count : null };
-        });
-        this.queues.set(states);
-        this.queuesLoading.set(false);
-        if (states.some((state) => state.count === null)) {
-          this.queuesError.set(
-            'Some queues could not be loaded. The rest of the dashboard is still live.',
-          );
-        }
+  protected reload(): void {
+    this.load();
+  }
+
+  protected stateLabel(state: DashboardCard['state']): string {
+    return {
+      test: 'Test',
+      actual: 'Approved',
+      recorded: 'Recorded',
+      no_data: 'No data',
+    }[state];
+  }
+
+  protected naira(value: string | null): string {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+    }).format(Number(value ?? 0));
+  }
+
+  protected operationValue(card: OperationCard): string {
+    if (card.format === 'currency') {
+      return card.value === '' || card.value === null ? 'Not available' : this.naira(String(card.value));
+    }
+    if (card.format === 'empty' || card.value === '' || card.value === null) {
+      return 'Not available';
+    }
+    return new Intl.NumberFormat('en-NG').format(Number(card.value));
+  }
+
+  protected activityTime(value: string): string {
+    return new Intl.DateTimeFormat('en-NG', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+
+  private load(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    const params = new HttpParams().set('start', this.start()).set('end', this.end());
+    this.http.get<Dashboard>('/api/v1/dashboard/', { params }).subscribe({
+      next: (dashboard) => {
+        this.data.set(dashboard);
+        this.loading.set(false);
       },
       error: (error: unknown) => {
-        this.queues.set([]);
-        this.queuesError.set(apiErrorMessage(error));
-        this.queuesLoading.set(false);
+        this.data.set(null);
+        this.error.set(apiErrorMessage(error));
+        this.loading.set(false);
       },
     });
+  }
+
+  private today(): string {
+    return this.toIso(new Date());
+  }
+
+  private monthStart(offset: number): string {
+    const now = new Date();
+    return this.toIso(new Date(now.getFullYear(), now.getMonth() + offset, 1));
+  }
+
+  private toIso(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

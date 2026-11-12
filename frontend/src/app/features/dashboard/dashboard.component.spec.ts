@@ -3,13 +3,109 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { AuthService } from '../../core/auth.service';
 import { TEST_USER } from '../../core/testing/auth.fixtures';
-import { HealthService } from '../../core/health.service';
 import { DashboardComponent } from './dashboard.component';
+
+const DASHBOARD = {
+  generated_at: '2026-11-12T10:00:00Z',
+  currency: 'NGN',
+  period: { start: '2026-11-01', end: '2026-11-12' },
+  focus: {
+    id: 'management',
+    title: 'Management overview',
+    description: 'Company financial position, approvals and delivery commitments.',
+  },
+  issuance_authorised: false,
+  test_mode: true,
+  notices: ['Invoice issuance is in test mode.'],
+  financial_overview: [
+    {
+      id: 'customer_outstanding',
+      label: 'Outstanding customer invoices',
+      amount: '2500000.00',
+      count: 1,
+      available: true,
+      basis: 'Approved customer invoice balances, NGN',
+      state: 'test',
+      link: '/invoicing?tab=customer-invoices&status=approved',
+      note: 'Document balances, not a posted ledger total.',
+      tone: 'positive',
+    },
+    {
+      id: 'payments_received',
+      label: 'Payments received',
+      amount: null,
+      count: 0,
+      available: false,
+      basis: 'Customer receipts recorded in the selected period, NGN',
+      state: 'no_data',
+      link: '/banking?tab=bank-transactions',
+      note: '',
+      tone: 'positive',
+    },
+  ],
+  invoice_management: [
+    {
+      id: 'supplier_drafts',
+      label: 'Draft supplier invoices',
+      amount: null,
+      count: 2,
+      available: true,
+      basis: 'Supplier invoice drafts',
+      state: 'test',
+      link: '/invoicing?tab=supplier-invoices&status=draft',
+      note: '',
+      tone: 'neutral',
+    },
+  ],
+  pending_actions: [
+    {
+      id: 'purchase_requests',
+      label: 'Purchase requests awaiting your approval',
+      count: 3,
+      link: '/procurement?tab=requests&status=submitted',
+      description: 'Approved requests can be used to raise purchase orders.',
+      tone: 'attention',
+    },
+  ],
+  quick_actions: [
+    {
+      id: 'create_purchase_request',
+      label: 'Create purchase request',
+      description: 'Raise a request for goods or services.',
+      link: '/procurement?tab=requests&new=1',
+    },
+  ],
+  operations: {
+    id: 'portfolio',
+    title: 'Portfolio and commitments',
+    description: 'Company-wide delivery position.',
+    cards: [
+      {
+        id: 'active_projects',
+        label: 'Active projects',
+        value: 2,
+        format: 'number',
+        detail: 'Projects in the register',
+        link: '/projects?tab=projects&status=active',
+      },
+    ],
+  },
+  recent_activity: [
+    {
+      id: 1,
+      action: 'Supplier invoice submitted',
+      entity: 'Supplier invoice',
+      reference: 'SI-2026-0001',
+      user: 'UAT Finance Officer',
+      occurred_at: '2026-11-12T09:30:00Z',
+      link: '/invoicing?tab=supplier-invoices&record=1',
+    },
+  ],
+};
 
 describe('DashboardComponent', () => {
   let http: HttpTestingController;
@@ -22,10 +118,6 @@ describe('DashboardComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthService, useValue: { user: signal(TEST_USER).asReadonly() } },
-        {
-          provide: HealthService,
-          useValue: { check: () => of({ status: 'ok', checks: { database: 'ok' } }) },
-        },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -35,94 +127,84 @@ describe('DashboardComponent', () => {
     http.verify();
   });
 
-  function flushQueues(): void {
+  function flush(body: object = DASHBOARD): void {
     http
-      .expectOne('/api/v1/purchase-requests/?page=1&page_size=1&status=submitted')
-      .flush({ count: 2, results: [] });
-    http
-      .expectOne('/api/v1/purchase-orders/?page=1&page_size=1&status=submitted')
-      .flush({ count: 0, results: [] });
-    http
-      .expectOne('/api/v1/journals/?page=1&page_size=1&status=submitted')
-      .flush({ count: 1, results: [] });
-    http
-      .expectOne('/api/v1/reorder-alerts/?page=1&page_size=1')
-      .flush({ count: 3, rows: [] });
+      .expectOne((request) => request.url === '/api/v1/dashboard/')
+      .flush(body);
   }
 
-  it('greets the signed-in user', () => {
+  it('greets the signed-in user and names the role focus', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    flushQueues();
-    fixture.detectChanges();
-
-    const heading = fixture.nativeElement.querySelector('h1') as HTMLElement;
-    expect(heading.textContent).toContain('Ama Okafor');
-  });
-
-  it('shows the backend readiness reported by the API', () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-    flushQueues();
-    fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector('.status') as HTMLElement;
-    expect(status.textContent).toContain('API reachable');
-  });
-
-  it('renders live queue counts from the API', () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-    flushQueues();
-    fixture.detectChanges();
-
-    const counts = Array.from(
-      fixture.nativeElement.querySelectorAll('.queue__count') as NodeListOf<HTMLElement>,
-    ).map((element) => element.textContent?.trim());
-
-    expect(counts).toEqual(['2', '0', '1', '3']);
-  });
-
-  it('names the permission required instead of offering an unavailable approval', () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    fixture.detectChanges();
-    flushQueues();
+    flush();
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('procurement.approve_purchaserequest');
-
-    // The approval queue must not offer a link that leads only to a disabled action.
-    const approvalQueue = fixture.nativeElement.querySelector('.queue') as HTMLElement;
-    expect(approvalQueue.querySelector('.queue__link')).toBeNull();
-    expect(approvalQueue.textContent).toContain('Requires procurement.approve_purchaserequest');
+    expect(text).toContain('Ama Okafor');
+    expect(text).toContain('Management overview');
   });
 
-  it('does not present an empty queue as zero when the request fails', () => {
+  it('renders real API amounts, test state and an honest empty card', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-
-    http
-      .expectOne('/api/v1/purchase-requests/?page=1&page_size=1&status=submitted')
-      .flush(null, { status: 500, statusText: 'Server Error' });
-    http
-      .expectOne('/api/v1/purchase-orders/?page=1&page_size=1&status=submitted')
-      .flush({ count: 0, results: [] });
-    http
-      .expectOne('/api/v1/journals/?page=1&page_size=1&status=submitted')
-      .flush({ count: 0, results: [] });
-    http
-      .expectOne('/api/v1/reorder-alerts/?page=1&page_size=1')
-      .flush({ count: 0, rows: [] });
+    flush();
     fixture.detectChanges();
 
-    const counts = Array.from(
-      fixture.nativeElement.querySelectorAll('.queue__count') as NodeListOf<HTMLElement>,
-    ).map((element) => element.textContent?.trim());
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('₦2,500,000.00');
+    expect(text).toContain('Test');
+    expect(text).toContain('No records in this period');
+    expect(text).toContain('Draft supplier invoices');
+  });
 
-    expect(counts[0]).toBe('—');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Some queues could not be loaded',
-    );
+  it('does not show infrastructure status or raw permission identifiers', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('API reachable');
+    expect(text).not.toContain('accounting.');
+    expect(text).not.toContain('invoicing.');
+    expect(text).not.toContain('procurement.');
+  });
+
+  it('shows only the quick actions returned for the role', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Create purchase request');
+    expect(text).not.toContain('Upload bank statement');
+  });
+
+  it('shows an empty pending-actions state instead of a false zero', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush({ ...DASHBOARD, pending_actions: [], recent_activity: [] });
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No items need your attention');
+    expect(text).toContain('No recent activity');
+  });
+
+  it('keeps a retryable error when the dashboard cannot be loaded', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    http
+      .expectOne((request) => request.url === '/api/v1/dashboard/')
+      .flush(
+        { error: { code: 'server_error', message: 'Dashboard unavailable.', details: null } },
+        { status: 500, statusText: 'Server Error' },
+      );
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Dashboard unavailable.');
+    expect(text).toContain('Try again');
   });
 });

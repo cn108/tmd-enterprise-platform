@@ -28,6 +28,7 @@ from rest_framework.views import APIView
 from apps.accounting.models import Account
 from apps.accounting.services import Conflict
 from apps.core.models import create_audit_event
+from apps.reporting.dashboard import dashboard_payload
 from apps.reporting.services import report_payload
 from shared.exceptions import error_response
 
@@ -114,6 +115,22 @@ def _payload(request, name: str) -> dict:
         if account is None:
             raise UnknownReport("Unknown account.")
     return report_payload(name, start, end, account=account)
+
+
+class DashboardView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("start", OpenApiTypes.DATE, required=False),
+            OpenApiParameter("end", OpenApiTypes.DATE, required=False),
+        ],
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    def get(self, request):
+        try:
+            start, end = _dates(request)
+        except ValueError as exc:
+            return error_response("invalid_filter", str(exc), status.HTTP_400_BAD_REQUEST)
+        return Response(dashboard_payload(request.user, start, end))
 
 
 class ReportView(APIView):

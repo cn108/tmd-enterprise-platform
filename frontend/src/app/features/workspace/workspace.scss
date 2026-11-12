@@ -22,10 +22,29 @@
   color: var(--tmd-muted);
 }
 
+.module__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
 .module__header h1 {
   margin: 0;
   font-size: 1.6rem;
   color: var(--tmd-navy);
+}
+
+.access-badge {
+  padding: 0.18rem 0.5rem;
+  border: 1px solid #d9dfe8;
+  border-radius: 999px;
+  background: #f5f7fa;
+  color: var(--tmd-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .module__intro {
@@ -73,12 +92,24 @@
   color: #6b5320;
 }
 
-.permission code {
+.access-note {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-left: 2px solid #d9dfe8;
+  background: #f8fafc;
   font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--tmd-muted);
 }
 
-.permission__item + .permission__item::before {
-  content: ' · ';
+.locked-action {
+  display: inline-flex;
+}
+
+.locked-action button {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .text-button {

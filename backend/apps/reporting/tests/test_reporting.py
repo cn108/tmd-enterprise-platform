@@ -26,6 +26,7 @@ from apps.accounting.services import (
     submit_journal,
 )
 from apps.banking.models import BankAccount
+from apps.core.models import AuditEvent
 from apps.identity.models import User
 from apps.invoicing.models import SupplierInvoice
 from apps.parties.models import Party
@@ -135,6 +136,104 @@ class TestReportAccessAndValidation:
     def test_general_ledger_requires_an_account(self, auth_client):
         response = auth_client.get("/api/v1/reporting/general-ledger/")
         assert response.status_code == 400
+
+
+class TestDashboard:
+    def test_anonymous_dashboard_is_refused(self, api_client):
+        assert api_client.get("/api/v1/dashboard/").status_code == 401
+
+    def test_financial_summary_requires_financial_reporting_permission(
+        self, auth_client, operational_client
+    ):
+        full = auth_client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12")
+        assert full.status_code == 200
+        body = full.json()
+        assert body["financial_overview"] is not None
+        assert body["focus"]["id"] in {"finance", "management"}
+        assert "permission" not in str(body).lower()
+
+        limited = operational_client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12")
+        assert limited.status_code == 200
+        assert limited.json()["financial_overview"] is None
+        assert limited.json()["invoice_management"] is None
+        assert limited.json()["notices"] == []
+
+    def test_bad_dashboard_dates_are_rejected(self, auth_client):
+        response = auth_client.get("/api/v1/dashboard/?start=2026-12-01&end=2026-11-01")
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "invalid_filter"
+
+    def test_dashboard_focus_uses_capabilities_not_role_names(self, db):
+        project_user = actor("add_project", "change_project", "add_purchaseorder")
+        client = APIClient()
+        client.force_authenticate(user=project_user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        assert body["focus"]["id"] == "projects"
+        assert body["financial_overview"] is None
+        assert body["operations"]["id"] == "projects"
+
+        procurement_user = actor("add_purchaseorder", "view_purchaseorder")
+        client.force_authenticate(user=procurement_user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        assert body["focus"]["id"] == "procurement"
+        assert body["operations"]["id"] == "procurement"
+
+    def test_activity_is_scoped_to_the_role_focus(self, db):
+        user = actor(
+            "view_purchaseorder",
+            "view_supplierinvoice",
+            "view_supplierpayment",
+            "add_purchaseorder",
+        )
+        for action, entity_type, reference in (
+            ("supplier_invoice.approved", "supplier_invoice", "SI-77"),
+            ("supplier_payment.approved", "invoicing.supplierpayment", "PAY-77"),
+            ("purchase_order.approved", "purchase_order", "PO-77"),
+        ):
+            AuditEvent.objects.create(
+                actor=user,
+                action=action,
+                entity_type=entity_type,
+                after={"number": reference},
+                hash=uuid4().hex,
+            )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        assert body["focus"]["id"] == "procurement"
+        assert [row["reference"] for row in body["recent_activity"]] == ["PO-77"]
+
+    def test_activity_deduplicates_dual_approval_events(self, db):
+        user = actor("view_supplierpayment", "view_financialreporting")
+        for action, entity_type in (
+            ("approval.recorded", "payment"),
+            ("supplier_payment.approved", "invoicing.supplierpayment"),
+        ):
+            AuditEvent.objects.create(
+                actor=user,
+                action=action,
+                entity_type=entity_type,
+                after={"number": "PAY-88"},
+                hash=uuid4().hex,
+            )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        payment_rows = [
+            row for row in body["recent_activity"] if row["reference"] == "PAY-88"
+        ]
+        assert len(payment_rows) == 1
+
+    def test_dashboard_does_not_invent_payment_receipts(self, auth_client):
+        body = auth_client.get(
+            "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
+        ).json()
+        receipts = next(
+            card for card in body["financial_overview"] if card["id"] == "payments_received"
+        )
+        assert receipts["available"] is False
+        assert receipts["amount"] is None
+        assert receipts["state"] == "no_data"
 
 
 class TestFinancialReports:

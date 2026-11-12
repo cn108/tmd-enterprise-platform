@@ -90,3 +90,15 @@ None of these prevents controlled UAT. They are recorded for the UAT defect log.
 ## 7. Final statement
 
 The TMD Enterprise System is suitable for **controlled employee UAT on synthetic data**. It is **not suitable for production financial operations** on the evidence available. No production readiness is claimed.
+
+## 8. UI/UX addendum — dashboard and access presentation
+
+**Date:** 12 November 2026
+
+A follow-up review replaced the dashboard's API status and permission dump with role-aware financial, invoice, pending-action, activity and quick-action sections. It also replaced raw permission warnings with **View only**, **Limited actions** and **Access restricted** states, retaining backend enforcement.
+
+The review covered Management, Finance, Procurement, Warehouse, Project Manager, Auditor and System Administrator accounts on staging. Five focused browser tests passed, alongside 26 backend reporting tests, 52 frontend unit tests, frontend lint and the production build.
+
+Evidence and before/after screenshots: [`uiux-dashboard-and-access-report.md`](uiux-dashboard-and-access-report.md).
+
+Residual finding UAT-08 is partially addressed for the dashboard and the modules reviewed here; other create/edit controls should continue to be checked during UAT. Production activation remains disabled.

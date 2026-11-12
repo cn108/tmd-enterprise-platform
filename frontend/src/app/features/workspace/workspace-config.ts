@@ -1737,7 +1737,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'quote', label: 'Quotation', type: 'select', required: true, optionsEndpoint: '/api/v1/supplier-quotes/' },
           { key: 'reason', label: 'Selection reason', type: 'text', required: true },
         ],
-        note: 'Selecting a supplier needs the procurement.select_supplier permission; the selection is then used to raise the order.',
+        note: 'Supplier selection is restricted to authorised procurement personnel; the selected quotation is then used to raise the order.',
       },
       {
         id: 'schedules',
@@ -1904,7 +1904,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           ],
         },
         actions: [],
-        note: 'A receipt posts immutable stock movements. It needs the inventory.receive_stock permission.',
+        note: 'A receipt posts immutable stock movements. Recording receipts is restricted to authorised warehouse personnel.',
       },
       {
         id: 'alerts',
@@ -2333,7 +2333,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
   accounting: {
     title: 'Accounting',
     intro:
-      'The double-entry engine. No chart of accounts or posting rule is seeded: create only the accountant-approved accounts, then journals that the backend balances before they can be posted.',
+      'The double-entry engine. The chart of accounts is maintained only by authorised finance personnel, and every journal must balance before it can be posted.',
     tabs: [
       {
         id: 'accounts',
@@ -2374,7 +2374,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
             success: 'Account approved.',
           },
         ],
-        note: 'Account creation needs accounting.manage_accounts; approval needs accounting.approve_account. Neither permission is assigned yet, so the API will refuse these actions.',
+        note: 'Account creation and approval are restricted to authorised finance personnel. Approval is a separate duty from creating the account.',
       },
       {
         id: 'journals',
@@ -2480,7 +2480,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
             reason: { label: 'Reversal reason', required: true },
           },
         ],
-        note: 'Creation, approval and posting are three separate permissions; the backend enforces balancing, open periods and immutability.',
+        note: 'Creation, approval and posting are separate duties. The backend enforces balancing, open periods and immutability.',
       },
       {
         id: 'fiscal-years',

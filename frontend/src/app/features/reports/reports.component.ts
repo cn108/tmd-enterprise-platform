@@ -11,6 +11,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 
 import { apiErrorMessage } from '../../core/auth.models';
 import { AuthService } from '../../core/auth.service';
+import { AccessRestrictedComponent } from '../../shared/access-restricted/access-restricted.component';
 import { Row, formatValue } from '../workspace/workspace-config';
 
 interface ReportColumn {
@@ -167,6 +168,7 @@ const MONEY_KEYS = new Set([
 @Component({
   selector: 'app-reports',
   imports: [
+    AccessRestrictedComponent,
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,

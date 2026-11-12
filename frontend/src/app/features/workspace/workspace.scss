@@ -53,18 +53,6 @@
   color: var(--tmd-muted);
 }
 
-.module__meta {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.module__meta a {
-  color: var(--tmd-navy-soft);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 .error,
 .notice,
 .permission {

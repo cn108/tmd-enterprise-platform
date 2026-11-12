@@ -11,7 +11,7 @@ The dashboard is now an operational landing page rather than a connectivity and 
 
 The raw-permission warning on Accounting has been replaced by a compact **View only** state, a disabled creation control with a friendly tooltip, and a short read-only explanation. Pages the employee cannot read render a shared **Access restricted** state with no records and a return-to-dashboard action.
 
-The existing navy, gold and neutral palette, product header, module navigation, typography and page structure are retained.
+The existing navy, gold and neutral palette, product header, module navigation, typography and page structure are retained. The **API reference** link was removed from module and reporting headers because it served developers rather than operational employees and had no everyday business use for the signed-in user.
 
 ## 2. Before and after
 

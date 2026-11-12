@@ -77,6 +77,7 @@ test('accounting shows a polished read-only state and full controls to an author
   await page.goto('/accounting');
   await expect(page.getByText('View only')).toBeVisible();
   await expect(page.getByText('You have read-only access to this section.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'API reference' })).toHaveCount(0);
   const disabled = page.getByRole('button', { name: /You do not have permission to create/ });
   await expect(disabled).toBeDisabled();
   await expect(page.getByText(/accounting\.manage_accounts/)).toHaveCount(0);

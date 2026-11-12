@@ -19,6 +19,7 @@ interface Internals {
   onPageSize(event: Event): void;
   sortBy(column: { key: string; label: string; sortable?: boolean; sortKey?: string }): void;
   openCreate(event?: Event): void;
+  openView(row: Record<string, unknown>, event?: Event): void;
   toggleRow(row: Record<string, unknown>, event: Event): void;
   selectedCount(): number;
 }
@@ -30,7 +31,7 @@ function internals(fixture: ComponentFixture<MasterDataComponent>): Internals {
 describe('MasterDataComponent', () => {
   let http: HttpTestingController;
 
-  async function configure(permissions: string[] = []) {
+  async function configure(permissions: string[] = [], entity = 'suppliers') {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [MasterDataComponent],
@@ -40,7 +41,7 @@ describe('MasterDataComponent', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { data: { entity: 'suppliers' } } },
+          useValue: { snapshot: { data: { entity } } },
         },
         {
           provide: AuthService,
@@ -177,5 +178,34 @@ describe('MasterDataComponent', () => {
     const error = fixture.nativeElement.querySelector('.md-error') as HTMLElement;
     expect(error.textContent).toContain('Register unavailable.');
     expect(error.textContent).toContain('Retry');
+  });
+
+  it('offers bank-change decisions only for pending records', async () => {
+    const fixture = await configure(['parties.approve_bankaccountchange'], 'bank-changes');
+    fixture.detectChanges();
+    http
+      .expectOne((item) => item.url === '/api/v1/bank-account-change-requests/')
+      .flush({
+        count: 1,
+        results: [
+          {
+            id: 5,
+            supplier_code: 'SUP-001',
+            proposed_bank_name: 'Example Bank',
+            status: 'pending',
+          },
+        ],
+      });
+    fixture.detectChanges();
+
+    internals(fixture).openView({ id: 5, status: 'pending' });
+    http
+      .expectOne((item) => item.url === '/api/v1/bank-account-change-requests/5/')
+      .flush({ id: 5, supplier_code: 'SUP-001', proposed_bank_name: 'Example Bank', status: 'pending' });
+    fixture.detectChanges();
+
+    const panel = fixture.nativeElement.querySelector('.md-panel') as HTMLElement;
+    expect(panel.textContent).toContain('Approve change');
+    expect(panel.textContent).toContain('Reject change');
   });
 });

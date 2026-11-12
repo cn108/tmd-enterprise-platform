@@ -2,7 +2,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NgTemplateOutlet } from '@angular/common';
 import { A11yModule } from '@angular/cdk/a11y';
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { Component, ElementRef, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -20,6 +27,7 @@ import { AuthService } from '../../core/auth.service';
 import { ConfirmDialogComponent, ConfirmResult } from '../workspace/confirm-dialog.component';
 import { ResourceApi, fieldErrors } from '../workspace/resource-api.service';
 import {
+  ActionConfig,
   ColumnConfig,
   FieldConfig,
   Row,
@@ -63,7 +71,11 @@ export class MasterDataComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly search = signal('');
-  protected readonly sortKey = signal<string | null>('updated_at');
+  protected readonly sortKey = signal<string | null>(
+    this.entity.columns.some((column) => column.key === 'updated_at')
+      ? 'updated_at'
+      : null,
+  );
   protected readonly sortDir = signal<'asc' | 'desc'>('desc');
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(25);
@@ -78,14 +90,21 @@ export class MasterDataComponent {
   protected readonly panelSaving = signal(false);
   protected readonly options = signal<Record<string, SelectOption[]>>({});
   protected readonly form = new FormGroup<Record<string, AbstractControl>>({});
+  private readonly files = new Map<string, File>();
   private returnFocus: HTMLElement | null = null;
 
   protected readonly permissions = computed(() => this.auth.user()?.permissions ?? []);
   protected readonly canCreate = computed(() =>
+    this.entity.resource.create === true &&
     this.allowed(this.entity.createPermission ?? this.entity.resource.permission),
   );
   protected readonly canEdit = computed(() =>
-    this.allowed(this.entity.editPermission ?? this.entity.resource.editPermission ?? this.entity.resource.permission),
+    this.entity.resource.edit === true &&
+    this.allowed(
+      this.entity.editPermission ??
+        this.entity.resource.editPermission ??
+        this.entity.resource.permission,
+    ),
   );
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.count() / this.pageSize())),
@@ -129,6 +148,13 @@ export class MasterDataComponent {
   });
 
   constructor() {
+    afterNextRender(() => {
+      const nav = this.host.nativeElement.querySelector<HTMLElement>('.md-tabs');
+      const active = nav?.querySelector<HTMLElement>('a.is-active');
+      if (nav && active && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.clientWidth) / 2;
+      }
+    });
     this.search$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((value) => {
@@ -239,6 +265,12 @@ export class MasterDataComponent {
       const numeric = Number(row['rate']);
       return Number.isFinite(numeric) ? `${numeric.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')}%` : '—';
     }
+    if (column.kind === 'number' && row[column.key] !== null && row[column.key] !== undefined) {
+      const numeric = Number(row[column.key]);
+      if (Number.isFinite(numeric)) {
+        return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 4 }).format(numeric);
+      }
+    }
     return columnText(row, column);
   }
 
@@ -247,13 +279,13 @@ export class MasterDataComponent {
     if (column.key === 'is_active') {
       return value === 'true' ? 'success' : 'neutral';
     }
-    if (value === 'reviewed' || value === 'product') {
+    if (['reviewed', 'approved', 'active', 'issued', 'completed', 'product'].includes(value)) {
       return 'success';
     }
-    if (value === 'provisional' || value === 'service') {
+    if (['provisional', 'service', 'draft', 'pending', 'on_hold'].includes(value)) {
       return 'warning';
     }
-    if (value === 'rejected') {
+    if (['rejected', 'cancelled', 'inactive'].includes(value)) {
       return 'danger';
     }
     return 'info';
@@ -279,6 +311,67 @@ export class MasterDataComponent {
       }
       return next;
     });
+  }
+
+  protected actionsFor(row: Row | null): ActionConfig[] {
+    if (!row) {
+      return [];
+    }
+    const status = row['status'];
+    return (this.entity.resource.actions ?? []).filter(
+      (action) =>
+        this.allowed(action.permission) &&
+        (!action.statuses ||
+          (typeof status === 'string' && action.statuses.includes(status))) &&
+        !action.fields &&
+        !action.lines,
+    );
+  }
+
+  protected runAction(action: ActionConfig, event?: Event): void {
+    event?.stopPropagation();
+    const row = this.selectedRow();
+    const id = row?.['id'];
+    if (!row || typeof id !== 'number' || !this.allowed(action.permission)) {
+      return;
+    }
+    this.dialog
+      .open<ConfirmDialogComponent, {
+        title: string;
+        message: string;
+        confirmLabel: string;
+        reason?: { label: string; required: boolean };
+      }, ConfirmResult | null>(ConfirmDialogComponent, {
+        data: {
+          title: action.label,
+          message: action.confirm,
+          confirmLabel: action.label,
+          reason: action.reason,
+        },
+        maxWidth: '95vw',
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        const body = action.reason
+          ? { [action.reason.key ?? 'reason']: result.reason }
+          : {};
+        this.panelSaving.set(true);
+        this.resources.action(this.entity.endpoint, id, action.path, body).subscribe({
+          next: (updated) => {
+            this.panelSaving.set(false);
+            this.selectedRow.set(updated);
+            this.notice.set(action.success);
+            this.load();
+          },
+          error: (error: unknown) => {
+            this.panelSaving.set(false);
+            this.panelError.set(apiErrorMessage(error));
+          },
+        });
+      });
   }
 
   protected toggleAll(event: Event): void {
@@ -341,7 +434,11 @@ export class MasterDataComponent {
   }
 
   protected editable(row: Row): boolean {
-    return !(this.entity.key === 'tax-rates' && row['review_status'] === 'reviewed');
+    if (this.entity.key === 'tax-rates' && row['review_status'] === 'reviewed') {
+      return false;
+    }
+    const allowed = this.entity.resource.editableStatuses;
+    return !allowed || allowed.includes(String(row['status'] ?? ''));
   }
 
   protected closePanel(): void {
@@ -360,7 +457,8 @@ export class MasterDataComponent {
     }
     this.panelSaving.set(true);
     this.panelError.set(null);
-    const body = this.form.getRawValue();
+    const value = this.form.getRawValue();
+    const body = this.files.size ? this.multipartBody(value) : value;
     const row = this.selectedRow();
     const request =
       this.panelMode() === 'create'
@@ -403,6 +501,16 @@ export class MasterDataComponent {
 
   protected optionList(field: FieldConfig): SelectOption[] {
     return field.options ?? this.options()[field.key] ?? [];
+  }
+
+  protected onFile(field: FieldConfig, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.files.set(field.key, file);
+    } else {
+      this.files.delete(field.key);
+    }
   }
 
   protected deactivate(row: Row, event?: Event): void {
@@ -477,7 +585,17 @@ export class MasterDataComponent {
     if (!row) {
       return '';
     }
-    const label = row['legal_name'] ?? row['name'] ?? row['code'];
+    const label =
+      row['legal_name'] ??
+      row['name'] ??
+      row['title'] ??
+      row['reference'] ??
+      row['certificate_type'] ??
+      row['batch_number'] ??
+      row['serial'] ??
+      row['code'] ??
+      row['party_code'] ??
+      row['item_code'];
     return label === undefined || label === null ? `#${String(row['id'])}` : String(label);
   }
 
@@ -562,6 +680,7 @@ export class MasterDataComponent {
 
   private buildForm(row?: Row): void {
     Object.keys(this.form.controls).forEach((key) => this.form.removeControl(key));
+    this.files.clear();
     this.options.set({});
     for (const field of this.entity.fields) {
       const validators = field.required ? [Validators.required] : [];
@@ -583,6 +702,20 @@ export class MasterDataComponent {
         });
       }
     }
+  }
+
+  private multipartBody(value: Record<string, unknown>): FormData {
+    const body = new FormData();
+    for (const [key, item] of Object.entries(value)) {
+      if (item === null || item === undefined) {
+        continue;
+      }
+      body.append(key, typeof item === 'boolean' ? String(item) : String(item));
+    }
+    for (const [key, file] of this.files) {
+      body.append(key, file, file.name);
+    }
+    return body;
   }
 
   private focusFirstField(): void {

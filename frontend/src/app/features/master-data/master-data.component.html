@@ -38,30 +38,32 @@
       </label>
 
       <div class="md-toolbar__actions">
-        <details class="md-filter-menu">
-          <summary class="md-button md-button--ghost">
-            Filters
-            @if (activeFilters().length) {
-              <span class="md-filter-count">{{ activeFilters().length }}</span>
-            }
-          </summary>
-          <div class="md-filter-popover">
-            @for (filter of entity.filters; track filter.key) {
-              <label class="md-filter-field">
-                <span>{{ filter.label }}</span>
-                <select [value]="filterValue(filter.key)" (change)="setFilter(filter.key, $event)">
-                  <option value="">All</option>
-                  @for (option of filter.options; track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </label>
-            }
-            @if (activeFilters().length) {
-              <button type="button" class="md-link" (click)="clearAll()">Clear all</button>
-            }
-          </div>
-        </details>
+        @if (entity.filters.length) {
+          <details class="md-filter-menu">
+            <summary class="md-button md-button--ghost">
+              Filters
+              @if (activeFilters().length) {
+                <span class="md-filter-count">{{ activeFilters().length }}</span>
+              }
+            </summary>
+            <div class="md-filter-popover">
+              @for (filter of entity.filters; track filter.key) {
+                <label class="md-filter-field">
+                  <span>{{ filter.label }}</span>
+                  <select [value]="filterValue(filter.key)" (change)="setFilter(filter.key, $event)">
+                    <option value="">All</option>
+                    @for (option of filter.options; track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              @if (activeFilters().length) {
+                <button type="button" class="md-link" (click)="clearAll()">Clear all</button>
+              }
+            </div>
+          </details>
+        }
 
         <button type="button" class="md-button md-button--ghost" (click)="exportCsv()">
           Export CSV
@@ -91,7 +93,7 @@
       </div>
     </div>
 
-    <nav class="md-tabs" aria-label="Master data entities">
+    <nav class="md-tabs" aria-label="Master data entities" tabindex="0">
       @for (item of entities; track item.key) {
         <a
           [routerLink]="['/master-data', item.key]"
@@ -155,6 +157,7 @@
               class="md-head-cell"
               [class]="'md-head-cell col-' + column.key"
               [class.cell--number]="column.kind === 'number'"
+              [class.col-primary]="column.primary"
               role="columnheader"
               [attr.aria-sort]="column.sortable ? ariaSort(column) : null"
             >
@@ -219,6 +222,7 @@
                 <div
                   [class]="'cell col-' + column.key"
                   [class.cell--number]="column.kind === 'number'"
+                  [class.col-primary]="column.primary"
                   role="cell"
                 >
                   @if (column.kind === 'status') {
@@ -391,6 +395,16 @@
 
       <footer class="md-panel__footer">
         <button type="button" class="md-button md-button--ghost" (click)="closePanel()">Close</button>
+        @for (action of actionsFor(selectedRow()); track action.id) {
+          <button
+            type="button"
+            class="md-button md-button--ghost"
+            [disabled]="panelSaving()"
+            (click)="runAction(action, $event)"
+          >
+            {{ action.label }}
+          </button>
+        }
         @if (selectedRow() && entity.canDeactivate && canEdit() && selectedRow()?.['is_active'] === true) {
           <button type="button" class="md-button md-button--danger" (click)="deactivate(selectedRow()!, $event)">
             Deactivate
@@ -435,6 +449,12 @@
                   [formControlName]="field.key"
                   [attr.aria-invalid]="fieldError(field) ? 'true' : null"
                 ></textarea>
+              } @else if (field.type === 'file') {
+                <input
+                  [id]="'md-field-' + field.key"
+                  type="file"
+                  (change)="onFile(field, $event)"
+                />
               } @else {
                 <input
                   [id]="'md-field-' + field.key"

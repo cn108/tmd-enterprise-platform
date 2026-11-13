@@ -26,10 +26,13 @@ from apps.accounting.services import (
     submit_journal,
 )
 from apps.banking.models import BankAccount
+from apps.catalogue.models import CatalogueItem
 from apps.core.models import AuditEvent
 from apps.identity.models import User
-from apps.invoicing.models import SupplierInvoice
+from apps.invoicing.models import CustomerReceipt, SupplierInvoice
 from apps.parties.models import Party
+from apps.procurement.models import Destination, PurchaseOrder, PurchaseOrderLine, PurchaseRequest
+from apps.projects.models import BudgetLine, Project, ProjectBudget, ProjectCost
 from apps.reporting.models import ReportExport
 
 pytestmark = pytest.mark.django_db
@@ -186,8 +189,103 @@ class TestDashboard:
         modules = {row["id"]: row for row in body["module_access"]}
         assert modules["master-data"]["readable"] is True
         assert modules["reports"]["readable"] is True
+        assert modules["reports"]["access"] == "view_only"
         assert modules["procurement"]["readable"] is False
+        assert modules["procurement"]["access"] == "restricted"
         assert modules["administration"]["readable"] is False
+        assert modules["administration"]["access"] == "restricted"
+
+    def test_dashboard_marks_view_only_and_limited_modules(self, db):
+        view_only = actor("view_purchaseorder")
+        client = APIClient()
+        client.force_authenticate(user=view_only)
+        modules = {
+            row["id"]: row
+            for row in client.get(
+                "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
+            ).json()["module_access"]
+        }
+        assert modules["procurement"]["access"] == "view_only"
+
+        limited = actor("view_purchaseorder", "add_purchaseorder")
+        client.force_authenticate(user=limited)
+        modules = {
+            row["id"]: row
+            for row in client.get(
+                "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
+            ).json()["module_access"]
+        }
+        assert modules["procurement"]["access"] == "limited"
+
+    def test_dashboard_procurement_activity_uses_real_orders(self, db):
+        user = actor(
+            "view_purchaseorder",
+            "view_purchaserequest",
+            "view_goodsreceiptnote",
+            "view_financialreporting",
+        )
+        supplier = Party.objects.create(code="SUP-DASH", legal_name="Dashboard Supplier")
+        destination = Destination.objects.create(
+            kind=Destination.Kind.OTHER, location_name="Project site"
+        )
+        request = PurchaseRequest.objects.create(
+            number="PR-DASH-1", requester=user, destination=destination
+        )
+        order = PurchaseOrder.objects.create(
+            number="PO-DASH-1",
+            supplier=supplier,
+            request=request,
+            destination=destination,
+            status=PurchaseOrder.Status.ISSUED,
+        )
+        PurchaseOrderLine.objects.create(
+            order=order,
+            item=CatalogueItem.objects.create(code="ITEM-DASH", name="Cable"),
+            quantity=Decimal("2"),
+            unit_price=Decimal("50"),
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        activity = body["procurement_activity"]
+        assert activity is not None
+        cards = {row["id"]: row for row in activity["cards"]}
+        assert cards["open_orders"]["value"] == 1
+        assert cards["open_commitments"]["value"] == "100.00"
+        assert activity["recent_orders"][0]["number"] == "PO-DASH-1"
+
+    def test_dashboard_project_performance_uses_approved_budget_and_costs(self, db):
+        user = actor("view_project", "view_financialreporting")
+        project = Project.objects.create(
+            code="PRJ-DASH", name="Dashboard project", status=Project.Status.ACTIVE
+        )
+        budget = ProjectBudget.objects.create(
+            project=project,
+            version=1,
+            status=ProjectBudget.Status.APPROVED,
+            approved_by=user,
+            approved_at=timezone.now(),
+        )
+        BudgetLine.objects.create(
+            budget=budget, category="materials", description="Materials", amount=Decimal("1000")
+        )
+        ProjectCost.objects.create(
+            project=project,
+            cost_date=date(2026, 11, 1),
+            category="materials",
+            description="Site materials",
+            amount=Decimal("250"),
+            status=ProjectCost.Status.APPROVED,
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
+        performance = body["project_performance"]
+        assert performance is not None
+        assert performance["rows"][0]["code"] == "PRJ-DASH"
+        assert performance["rows"][0]["budget_total"] == "1000.00"
+        assert performance["rows"][0]["actual_total"] == "250.00"
+        assert performance["rows"][0]["utilisation_percent"] == "25.00"
 
     def test_activity_is_scoped_to_the_role_focus(self, db):
         user = actor(
@@ -245,6 +343,37 @@ class TestDashboard:
         assert receipts["available"] is False
         assert receipts["amount"] is None
         assert receipts["state"] == "no_data"
+
+    def test_dashboard_history_uses_recorded_receipts_and_permissions(
+        self, auth_client, operational_client
+    ):
+        customer = Party.objects.create(code="CUS-DASH", legal_name="Dashboard Customer")
+        CustomerReceipt.objects.create(
+            number="CR-DASH-1",
+            customer=customer,
+            receipt_date=date(2026, 11, 2),
+            amount=Decimal("125.00"),
+            method=CustomerReceipt.Method.BANK_TRANSFER,
+            status=CustomerReceipt.Status.APPROVED,
+        )
+        body = auth_client.get(
+            "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
+        ).json()
+        history = body["financial_history"]
+        assert len(history) == 6
+        assert history[0]["month"] == "2026-06-01"
+        assert history[-1]["month"] == "2026-11-01"
+        assert history[-1]["receipts"] == "125.00"
+        assert history[-1]["payments"] == "0.00"
+        receipt_card = next(
+            card for card in body["financial_overview"] if card["id"] == "payments_received"
+        )
+        assert receipt_card["amount"] == "125.00"
+
+        limited = operational_client.get(
+            "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
+        ).json()
+        assert limited["financial_history"] is None
 
 
 class TestFinancialReports:

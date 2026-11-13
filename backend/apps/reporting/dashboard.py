@@ -8,18 +8,20 @@ entirely when the signed-in user lacks permission to read their source module.
 
 from __future__ import annotations
 
-from datetime import date
+from calendar import monthrange
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import DecimalField, ExpressionWrapper, F, Q, Sum
 from django.utils import timezone
 
-from apps.banking.models import BankTransaction, Reconciliation, StatementLine
+from apps.banking.models import Reconciliation, StatementLine
 from apps.core.models import AuditEvent
 from apps.inventory.models import StockMovement
 from apps.inventory.services import PolicyNotConfigured, reorder_alerts, valuation_rows
 from apps.invoicing.models import (
     CustomerInvoice,
+    CustomerReceipt,
     InvoiceNote,
     InvoiceSettings,
     SupplierInvoice,
@@ -62,6 +64,7 @@ def _card(
     link: str = "",
     note: str = "",
     tone: str = "neutral",
+    change_percent: Decimal | None = None,
 ) -> dict:
     return {
         "id": identifier,
@@ -74,6 +77,9 @@ def _card(
         "link": link,
         "note": note,
         "tone": tone,
+        "change_percent": (
+            f"{change_percent.quantize(CENT)}" if change_percent is not None else None
+        ),
     }
 
 
@@ -106,6 +112,20 @@ def _can(user, permission: str) -> bool:
     return user.has_perm(permission)
 
 
+def _shift_month(value: date, offset: int) -> date:
+    """Move to the first day of a month without installing a date helper."""
+
+    index = value.year * 12 + value.month - 1 + offset
+    year, month = divmod(index, 12)
+    return date(year, month + 1, 1)
+
+
+def _change_percent(current: Decimal, previous: Decimal) -> Decimal | None:
+    if previous <= ZERO:
+        return None
+    return (current - previous) / previous * 100
+
+
 def _financial_overview(user, start: date, end: date) -> list[dict] | None:
     if not _can(user, "reporting.view_financialreporting"):
         return None
@@ -128,20 +148,36 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
     )["total"]
     supplier_due_total = supplier_due.aggregate(total=Sum(SUPPLIER_BALANCE))["total"]
 
-    receipts = BankTransaction.objects.filter(
-        source_type=BankTransaction.Source.CUSTOMER_RECEIPT,
-        status__in=[BankTransaction.Status.RECORDED, BankTransaction.Status.RECONCILED],
-        transaction_date__gte=start,
-        transaction_date__lte=end,
+    receipts_base = CustomerReceipt.objects.filter(
+        status__in=[
+            CustomerReceipt.Status.RECORDED,
+            CustomerReceipt.Status.SUBMITTED,
+            CustomerReceipt.Status.APPROVED,
+            CustomerReceipt.Status.POSTED,
+        ],
         currency="NGN",
         amount__gt=ZERO,
     )
-    payments = SupplierPayment.objects.filter(
+    payments_base = SupplierPayment.objects.filter(
         status=SupplierPayment.Status.RECORDED,
-        payment_date__gte=start,
-        payment_date__lte=end,
         currency="NGN",
     )
+    receipts = receipts_base.filter(receipt_date__gte=start, receipt_date__lte=end)
+    payments = payments_base.filter(payment_date__gte=start, payment_date__lte=end)
+
+    period_days = (end - start).days + 1
+    previous_end = start - timedelta(days=1)
+    previous_start = previous_end - timedelta(days=period_days - 1)
+    current_receipts = receipts.aggregate(total=Sum("amount"))["total"]
+    current_payments = payments.aggregate(total=Sum("amount"))["total"]
+    previous_receipts = receipts_base.filter(
+        receipt_date__gte=previous_start, receipt_date__lte=previous_end
+    ).aggregate(total=Sum("amount"))["total"]
+    previous_payments = payments_base.filter(
+        payment_date__gte=previous_start, payment_date__lte=previous_end
+    ).aggregate(total=Sum("amount"))["total"]
+    receipts_change = _change_percent(current_receipts or ZERO, previous_receipts or ZERO)
+    payments_change = _change_percent(current_payments or ZERO, previous_payments or ZERO)
 
     other_customer_currency = (
         approved_customers.exclude(currency="NGN").filter(balance__gt=ZERO).count()
@@ -208,22 +244,21 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
         ),
         _card(
             "payments_received",
-            "Payments received",
-            amount=receipts.aggregate(total=Sum("amount"))["total"],
+            "Payments received (this period)",
+            amount=current_receipts,
             count=receipts.count(),
-            available=BankTransaction.objects.filter(
-                source_type=BankTransaction.Source.CUSTOMER_RECEIPT
-            ).exists(),
+            available=CustomerReceipt.objects.exists(),
             basis="Customer receipts recorded in the selected period, NGN",
             state="recorded",
-            link="/banking?tab=bank-transactions",
-            note="Recorded receipts; not all are necessarily bank-reconciled.",
+            link="/invoicing?tab=customer-receipts",
+            note="Recorded receipts; unallocated amounts remain customer credit.",
             tone="positive",
+            change_percent=receipts_change,
         ),
         _card(
             "payments_made",
-            "Payments made",
-            amount=payments.aggregate(total=Sum("amount"))["total"],
+            "Payments made (this period)",
+            amount=current_payments,
             count=payments.count(),
             available=SupplierPayment.objects.exists(),
             basis="Supplier payments recorded in the selected period, NGN",
@@ -231,8 +266,53 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
             link="/invoicing?tab=payments&status=recorded",
             note="Externally recorded payments; execution status is shown in the payment record.",
             tone="positive",
+            change_percent=payments_change,
         ),
     ]
+
+
+def _financial_history(end: date) -> list[dict]:
+    """Six calendar months of recorded receipts and payments, ending at ``end``."""
+
+    receipts = CustomerReceipt.objects.filter(
+        status__in=[
+            CustomerReceipt.Status.RECORDED,
+            CustomerReceipt.Status.SUBMITTED,
+            CustomerReceipt.Status.APPROVED,
+            CustomerReceipt.Status.POSTED,
+        ],
+        currency="NGN",
+        amount__gt=ZERO,
+    )
+    payments = SupplierPayment.objects.filter(
+        status=SupplierPayment.Status.RECORDED,
+        currency="NGN",
+    )
+    final_month = end.replace(day=1)
+    rows = []
+    for offset in range(-5, 1):
+        month_start = _shift_month(final_month, offset)
+        month_end = date(
+            month_start.year,
+            month_start.month,
+            monthrange(month_start.year, month_start.month)[1],
+        )
+        if month_start == final_month:
+            month_end = min(month_end, end)
+        receipts_total = receipts.filter(
+            receipt_date__gte=month_start, receipt_date__lte=month_end
+        ).aggregate(total=Sum("amount"))["total"]
+        payments_total = payments.filter(
+            payment_date__gte=month_start, payment_date__lte=month_end
+        ).aggregate(total=Sum("amount"))["total"]
+        rows.append(
+            {
+                "month": month_start.isoformat(),
+                "receipts": _money(receipts_total),
+                "payments": _money(payments_total),
+            }
+        )
+    return rows
 
 
 def _invoice_management(user, *, issued: bool) -> list[dict] | None:
@@ -747,6 +827,170 @@ def _operations(user, focus_id: str) -> dict | None:
     return None
 
 
+def _procurement_activity(user, start: date, end: date) -> dict | None:
+    """Authorised procurement workload and the latest orders."""
+
+    can_orders = _can(user, "procurement.view_purchaseorder")
+    can_requests = _can(user, "procurement.view_purchaserequest")
+    can_receipts = _can(user, "procurement.view_goodsreceiptnote")
+    if not (can_orders or can_requests or can_receipts):
+        return None
+
+    open_statuses = [
+        PurchaseOrder.Status.APPROVED,
+        PurchaseOrder.Status.ISSUED,
+        PurchaseOrder.Status.PARTIALLY_RECEIVED,
+    ]
+    cards: list[dict] = []
+    recent_orders: list[dict] = []
+
+    if can_orders:
+        open_orders = PurchaseOrder.objects.filter(status__in=open_statuses).prefetch_related(
+            "lines"
+        )
+        cards.extend(
+            [
+                {
+                    "id": "open_orders",
+                    "label": "Open purchase orders",
+                    "value": open_orders.count(),
+                    "format": "number",
+                    "detail": "Approved, issued or partly received",
+                    "link": "/procurement?tab=orders",
+                },
+                {
+                    "id": "open_commitments",
+                    "label": "Open order value",
+                    "value": _money(sum((order.total_value for order in open_orders), ZERO)),
+                    "format": "currency",
+                    "detail": "Value of open purchase orders, NGN",
+                    "link": "/procurement?tab=orders",
+                },
+                {
+                    "id": "deliveries_due",
+                    "label": "Deliveries overdue",
+                    "value": DeliverySchedule.objects.filter(
+                        order_line__order__status__in=open_statuses,
+                        due_date__lt=TODAY(),
+                        quantity__gt=F("quantity_delivered"),
+                    ).count(),
+                    "format": "number",
+                    "detail": "Open schedules past their due date",
+                    "link": "/procurement?tab=schedules",
+                },
+            ]
+        )
+        recent_orders = [
+            {
+                "id": order.pk,
+                "number": order.number,
+                "supplier": order.supplier.legal_name,
+                "status": order.status,
+                "created_at": order.created_at.isoformat(),
+                "total_value": _money(order.total_value),
+                "link": f"/procurement?tab=orders&record={order.pk}",
+            }
+            for order in PurchaseOrder.objects.select_related("supplier")
+            .prefetch_related("lines")
+            .order_by("-created_at")[:5]
+        ]
+
+    if can_requests:
+        cards.append(
+            {
+                "id": "requests_awaiting_approval",
+                "label": "Requests awaiting approval",
+                "value": PurchaseRequest.objects.filter(
+                    status=PurchaseRequest.Status.SUBMITTED
+                ).count(),
+                "format": "number",
+                "detail": "Submitted purchase requests",
+                "link": "/procurement?tab=requests&status=submitted",
+            }
+        )
+
+    if can_receipts:
+        cards.append(
+            {
+                "id": "receipts_period",
+                "label": "Goods receipts in period",
+                "value": GoodsReceiptNote.objects.filter(
+                    received_at__gte=start, received_at__lte=end
+                ).count(),
+                "format": "number",
+                "detail": "Receipts recorded in the selected period",
+                "link": "/procurement?tab=receipts",
+            }
+        )
+
+    return {
+        "title": "Procurement activity",
+        "description": "Open orders, approvals and deliveries from the procurement register.",
+        "cards": cards[:4],
+        "recent_orders": recent_orders,
+    }
+
+
+def _project_performance(user) -> dict | None:
+    """Budget, actual and commitment position for the projects this user may read."""
+
+    if not _can(user, "projects.view_project"):
+        return None
+    project_queryset = _allowed_project_queryset(user).filter(
+        status__in=[Project.Status.ACTIVE, Project.Status.ON_HOLD]
+    ).order_by("code")
+    project_count = project_queryset.count()
+    projects = project_queryset[:6]
+    rows = []
+    totals = {"budget": ZERO, "actual": ZERO, "open_commitment": ZERO, "available": ZERO}
+    for project in projects:
+        summary = cost_summary(project)
+        budget = Decimal(summary["budget"]["total"])
+        actual = Decimal(summary["actual_total"])
+        open_commitment = Decimal(summary["open_commitment"])
+        available = Decimal(summary["available_budget"] or ZERO)
+        used = actual + open_commitment
+        percent = (used / budget * 100) if budget > ZERO else None
+        totals["budget"] += budget
+        totals["actual"] += actual
+        totals["open_commitment"] += open_commitment
+        totals["available"] += available
+        rows.append(
+            {
+                "id": project.pk,
+                "code": project.code,
+                "name": project.name,
+                "status": project.status,
+                "budget_total": _money(budget),
+                "actual_total": _money(actual),
+                "open_commitment": _money(open_commitment),
+                "available_budget": _money(available),
+                "utilisation_percent": f"{percent:.2f}" if percent is not None else None,
+                "link": f"/projects?tab=projects&record={project.pk}",
+            }
+        )
+    used_total = totals["actual"] + totals["open_commitment"]
+    utilisation = (
+        (used_total / totals["budget"] * 100) if totals["budget"] > ZERO else None
+    )
+    return {
+        "rows": rows,
+        "summary": {
+            "project_count": project_count,
+            "budget_total": _money(totals["budget"]),
+            "actual_total": _money(totals["actual"]),
+            "open_commitment": _money(totals["open_commitment"]),
+            "available_budget": _money(totals["available"]),
+            "used_total": _money(used_total),
+            "utilisation_percent": f"{utilisation:.2f}" if utilisation is not None else None,
+        },
+        "note": (
+            "Actual cost is approved supplier invoices, project stock issues and approved "
+            "direct costs. Open purchase orders remain commitments."
+        ),
+    }
+
+
 ACTIVITY_TYPES = {
     "invoicing.supplierinvoice": (
         "Supplier invoice",
@@ -888,7 +1132,7 @@ def _recent_activity(user, focus_id: str, limit: int = 8) -> list[dict]:
         for entity, value in ACTIVITY_TYPES.items()
         if _can(user, value[1])
     }
-    if focus_id in ACTIVITY_FOCUS:
+    if focus_id in ACTIVITY_FOCUS and focus_id != "finance":
         allowed = {
             entity: value
             for entity, value in allowed.items()
@@ -1019,16 +1263,92 @@ MODULE_ACCESS = (
 def _module_access(user) -> list[dict]:
     """Show every module, and label the ones this account cannot open."""
 
-    return [
-        {
-            "id": identifier,
-            "label": label,
-            "path": path,
-            "description": description,
-            "readable": not permissions or any(_can(user, item) for item in permissions),
-        }
-        for identifier, label, path, description, permissions in MODULE_ACCESS
-    ]
+    rows = []
+    for identifier, label, path, description, permissions in MODULE_ACCESS:
+        readable = not permissions or any(_can(user, item) for item in permissions)
+        write_permissions = MODULE_WRITE_PERMISSIONS.get(identifier, ())
+        if not readable:
+            access = "restricted"
+        elif not write_permissions:
+            access = "standard"
+        elif not any(_can(user, item) for item in write_permissions):
+            access = "view_only"
+        elif all(_can(user, item) for item in write_permissions):
+            access = "full"
+        else:
+            access = "limited"
+        rows.append(
+            {
+                "id": identifier,
+                "label": label,
+                "path": path,
+                "description": description,
+                "readable": readable,
+                "access": access,
+            }
+        )
+    return rows
+
+
+MODULE_WRITE_PERMISSIONS = {
+    "master-data": (
+        "parties.add_party",
+        "parties.change_party",
+        "catalogue.add_catalogueitem",
+        "catalogue.change_catalogueitem",
+        "warehousing.add_warehouse",
+        "warehousing.change_warehouse",
+    ),
+    "procurement": (
+        "procurement.add_purchaserequest",
+        "procurement.change_purchaserequest",
+        "procurement.add_purchaseorder",
+        "procurement.change_purchaseorder",
+        "procurement.add_goodsreceiptnote",
+        "procurement.approve_purchaserequest",
+        "procurement.approve_purchaseorder",
+    ),
+    "inventory": (
+        "inventory.add_stockmovement",
+        "inventory.receive_stock",
+        "inventory.issue_stock",
+    ),
+    "accounting": (
+        "accounting.add_account",
+        "accounting.change_account",
+        "accounting.add_journalentry",
+        "accounting.approve_journal",
+        "accounting.post_journal",
+    ),
+    "invoicing": (
+        "invoicing.add_supplierinvoice",
+        "invoicing.add_customerinvoice",
+        "invoicing.add_invoicenote",
+        "invoicing.add_supplierpayment",
+        "invoicing.approve_supplierinvoice",
+        "invoicing.approve_customerinvoice",
+        "invoicing.approve_payment",
+        "invoicing.approve_invoicenote",
+        "invoicing.post_supplierinvoice",
+        "invoicing.post_customerinvoice",
+        "invoicing.post_supplierpayment",
+    ),
+    "banking": (
+        "banking.add_banktransaction",
+        "banking.match_banktransaction",
+        "banking.approve_reconciliation",
+    ),
+    "projects": (
+        "projects.add_project",
+        "projects.change_project",
+        "projects.add_projectbudget",
+        "projects.approve_projectbudget",
+    ),
+    "services": ("services.add_workorder", "services.change_workorder"),
+    "leasing": ("leasing.add_equipment", "leasing.change_equipment"),
+    "reports": ("reporting.export_reporting",),
+    "administration": ("identity.add_user", "identity.change_user", "identity.change_group"),
+}
 
 
 def _quick_actions(user) -> list[dict]:
@@ -1172,10 +1492,13 @@ def dashboard_payload(user, start: date, end: date) -> dict:
         "test_mode": not settings.can_issue,
         "notices": notices,
         "financial_overview": financial,
+        "financial_history": _financial_history(end) if financial is not None else None,
         "invoice_management": invoice_rows,
         "pending_actions": actions,
         "module_access": _module_access(user),
         "quick_actions": _quick_actions(user),
         "operations": _operations(user, focus["id"]),
+        "procurement_activity": _procurement_activity(user, start, end),
+        "project_performance": _project_performance(user),
         "recent_activity": _recent_activity(user, focus["id"]),
     }

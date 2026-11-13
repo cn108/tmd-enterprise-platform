@@ -113,6 +113,11 @@ class CustomerSerializer(CodedSerializerMixin, serializers.ModelSerializer):
     def get_region(self, obj: Party) -> str:
         return _region(obj)
 
+    def validate_credit_limit(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Credit limit cannot be negative.")
+        return value
+
     def create(self, validated_data):
         validated_data["is_customer"] = True
         return super().create(validated_data)

@@ -285,9 +285,7 @@ def test_requests_are_visible_only_to_the_requester(auth_client):
     supplier = make_supplier()
     propose_bank_change(auth_client, supplier)
     stranger = User.objects.create_user(email="stranger@example.com", full_name="Stranger")
-    stranger.user_permissions.add(
-        Permission.objects.get(codename="view_bankaccountchangerequest")
-    )
+    stranger.user_permissions.add(Permission.objects.get(codename="view_bankaccountchangerequest"))
     client = APIClient()
     client.force_authenticate(user=stranger)
 
@@ -308,6 +306,7 @@ def test_master_data_requires_model_permissions():
     client.force_authenticate(user=employee)
 
     assert client.get("/api/v1/suppliers/").status_code == 403
+    assert client.get("/api/v1/parties/").status_code == 403
     assert (
         client.patch(
             f"/api/v1/suppliers/{supplier.pk}/", {"legal_name": "Changed"}, format="json"
@@ -319,12 +318,14 @@ def test_master_data_requires_model_permissions():
     employee = User.objects.get(pk=employee.pk)
     client.force_authenticate(user=employee)
     assert client.get("/api/v1/suppliers/").status_code == 200
+    assert client.get("/api/v1/parties/").status_code == 200
     assert (
         client.patch(
             f"/api/v1/suppliers/{supplier.pk}/", {"legal_name": "Changed"}, format="json"
         ).status_code
         == 403
     )
+
 
 def test_tax_registration_duplicate_is_refused(auth_client):
     supplier = make_supplier()
@@ -334,6 +335,17 @@ def test_tax_registration_duplicate_is_refused(auth_client):
     duplicate = auth_client.post("/api/v1/tax-registrations/", payload, format="json")
 
     assert duplicate.status_code == 400
+
+
+def test_customer_credit_limit_cannot_be_negative(auth_client):
+    response = auth_client.post(
+        "/api/v1/customers/",
+        {"code": "QA-NEG-CREDIT-TEST", "legal_name": "Negative credit", "credit_limit": "-1.00"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "credit_limit" in response.json()["error"]["details"]
 
 
 def test_contact_and_address_lists_accept_server_search(auth_client):
@@ -355,9 +367,7 @@ def test_contact_and_address_lists_accept_server_search(auth_client):
 def test_tax_registration_list_filters_inactive_records(auth_client):
     supplier = make_supplier()
     TaxRegistration.objects.create(party=supplier, scheme="TIN", number="TIN-1")
-    TaxRegistration.objects.create(
-        party=supplier, scheme="VAT", number="VAT-1", is_active=False
-    )
+    TaxRegistration.objects.create(party=supplier, scheme="VAT", number="VAT-1", is_active=False)
 
     response = auth_client.get("/api/v1/tax-registrations/?is_active=false")
 

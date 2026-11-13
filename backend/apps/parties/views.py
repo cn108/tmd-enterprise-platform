@@ -47,9 +47,11 @@ class SupplierCategoryViewSet(ProtectedMasterDataViewSet):
 
 
 class SupplierViewSet(ProtectedMasterDataViewSet):
-    queryset = Party.objects.filter(is_supplier=True).select_related(
-        "supplier_category"
-    ).prefetch_related("tax_registrations", "addresses")
+    queryset = (
+        Party.objects.filter(is_supplier=True)
+        .select_related("supplier_category")
+        .prefetch_related("tax_registrations", "addresses")
+    )
     serializer_class = SupplierSerializer
     search_fields = ("code", "legal_name", "trading_name", "email")
 
@@ -70,13 +72,14 @@ class CustomerViewSet(ProtectedMasterDataViewSet):
 class PartyViewSet(viewsets.ReadOnlyModelViewSet):
     """Every party, for contacts, addresses and tax registrations."""
 
+    queryset = Party.objects.all()
     serializer_class = PartyOptionSerializer
     permission_classes = [ModelPermission]
     search_fields = ("code", "legal_name", "trading_name")
     ordering_fields = ("code", "legal_name")
 
     def get_queryset(self):
-        queryset = Party.objects.all()
+        queryset = super().get_queryset()
         role = (self.request.query_params.get("role") or "").strip()
         if role == "supplier":
             queryset = queryset.filter(is_supplier=True)

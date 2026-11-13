@@ -221,6 +221,22 @@ class TestQuotations:
 
         assert response.status_code == 403
 
+    def test_rfq_invitation_detail_is_readable(self, auth_client):
+        destination = Destination.objects.create(kind="warehouse", warehouse=make_warehouse())
+        approved = make_approved_request(auth_client, destination.pk, make_item())
+        supplier = make_supplier()
+        rfq = auth_client.post("/api/v1/rfqs/", {"request": approved["id"]}, format="json").json()
+        invitation = auth_client.post(
+            "/api/v1/rfq-suppliers/",
+            {"rfq": rfq["id"], "supplier": supplier.pk},
+            format="json",
+        ).json()
+
+        response = auth_client.get(f"/api/v1/rfq-suppliers/{invitation['id']}/")
+
+        assert response.status_code == 200
+        assert response.json()["supplier_name"] == supplier.legal_name
+
     def test_a_supplier_can_be_selected_once(self, auth_client):
         destination = Destination.objects.create(kind="warehouse", warehouse=make_warehouse())
         approved = make_approved_request(auth_client, destination.pk, make_item())

@@ -193,6 +193,7 @@ class RfqSupplierViewSet(
     ProcurementViewPermissionMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
     view_permission = "procurement.view_rfqsupplier"

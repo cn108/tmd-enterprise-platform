@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -22,6 +23,26 @@ DEFAULT_REPORT = (
 )
 
 HEADERS = {
+    "company_profile.csv": [
+        "legal_name",
+        "trading_name",
+        "rc_number",
+        "tin",
+        "vat_registration_number",
+        "registered_address",
+        "email",
+        "phone",
+        "financial_year_end",
+        "reporting_currency",
+    ],
+    "employees.csv": [
+        "email",
+        "full_name",
+        "role",
+        "department",
+        "is_active",
+        "mfa_required",
+    ],
     "suppliers.csv": [
         "code",
         "legal_name",
@@ -58,6 +79,18 @@ HEADERS = {
     ],
     "products.csv": ["code", "name", "kind", "uom_code", "category_code", "is_active"],
     "warehouses.csv": ["code", "name", "site_name", "address"],
+    "equipment.csv": [
+        "code",
+        "name",
+        "category",
+        "ownership",
+        "serial_number",
+        "location",
+        "acquisition_date",
+        "acquisition_cost",
+        "currency",
+        "status",
+    ],
     "inventory_balances.csv": [
         "warehouse_code",
         "item_code",
@@ -100,11 +133,22 @@ HEADERS = {
         "total_value",
         "status",
     ],
+    "advances.csv": [
+        "party_type",
+        "party_code",
+        "reference",
+        "as_of",
+        "amount",
+        "currency",
+        "notes",
+    ],
 }
 
 PROJECT_STATUSES = {"draft", "active", "on_hold", "closed"}
 ITEM_KINDS = {"product", "service"}
 COMMITMENT_STATUSES = {"draft", "approved", "issued", "partially_received", "received"}
+EQUIPMENT_STATUSES = {"available", "reserved", "on_hire", "maintenance", "retired"}
+PARTY_TYPES = {"supplier", "customer"}
 
 
 class Validator:
@@ -245,6 +289,48 @@ class Validator:
                 seen[key] = index
 
     def validate(self) -> None:
+        company = self.rows["company_profile.csv"]
+        if len(company) != 1:
+            self.errors.append(
+                "company_profile.csv: exactly one legal company record is required "
+                f"(found {len(company)})"
+            )
+        for line, row in enumerate(company, start=2):
+            self.text("company_profile.csv", line, row, "legal_name")
+            self.text("company_profile.csv", line, row, "tin")
+            self.text("company_profile.csv", line, row, "registered_address")
+            self.text("company_profile.csv", line, row, "email")
+            self.currency("company_profile.csv", line, row, "reporting_currency")
+            year_end = row.get("financial_year_end", "").strip()
+            if year_end and not re.fullmatch(r"\d{2}-\d{2}", year_end):
+                self.error("company_profile.csv", line, "financial_year_end must use MM-DD")
+
+        employee_emails: set[str] = set()
+        for line, row in enumerate(self.rows["employees.csv"], start=2):
+            email = self.text("employees.csv", line, row, "email").lower()
+            if email and "@" not in email:
+                self.error("employees.csv", line, "email is not a valid address")
+            if email in employee_emails:
+                self.error("employees.csv", line, f"duplicate employee email {email}")
+            employee_emails.add(email)
+            self.text("employees.csv", line, row, "full_name")
+            self.text("employees.csv", line, row, "role")
+            self.text("employees.csv", line, row, "department")
+            self.boolean("employees.csv", line, row, "is_active")
+            self.boolean("employees.csv", line, row, "mfa_required")
+
+        for line, row in enumerate(self.rows["equipment.csv"], start=2):
+            self.text("equipment.csv", line, row, "name")
+            self.text("equipment.csv", line, row, "category")
+            self.text("equipment.csv", line, row, "location")
+            self.date("equipment.csv", line, row, "acquisition_date")
+            self.decimal("equipment.csv", line, row, "acquisition_cost")
+            self.currency("equipment.csv", line, row, "currency")
+            status = row.get("status", "").strip()
+            if status not in EQUIPMENT_STATUSES:
+                self.error("equipment.csv", line, f"unknown equipment status {status!r}")
+        self.unique("equipment.csv", self.rows["equipment.csv"], ("code",))
+
         suppliers = self.rows["suppliers.csv"]
         customers = self.rows["customers.csv"]
         projects = self.rows["projects.csv"]
@@ -275,6 +361,25 @@ class Validator:
         project_codes = {row.get("code", "").strip().upper() for row in projects}
         item_codes = {row.get("code", "").strip().upper() for row in products}
         warehouse_codes = {row.get("code", "").strip().upper() for row in warehouses}
+
+        for line, row in enumerate(self.rows["advances.csv"], start=2):
+            party_type = row.get("party_type", "").strip().lower()
+            party_code = row.get("party_code", "").strip().upper()
+            if party_type not in PARTY_TYPES:
+                self.error("advances.csv", line, "party_type must be supplier or customer")
+            elif party_type == "supplier" and party_code not in supplier_codes:
+                self.error("advances.csv", line, f"unknown supplier_code {party_code}")
+            elif party_type == "customer" and party_code not in customer_codes:
+                self.error("advances.csv", line, f"unknown customer_code {party_code}")
+            self.text("advances.csv", line, row, "reference")
+            self.decimal("advances.csv", line, row, "amount")
+            self.currency("advances.csv", line, row, "currency")
+            self.date("advances.csv", line, row, "as_of")
+        self.unique(
+            "advances.csv",
+            self.rows["advances.csv"],
+            ("party_type", "party_code", "reference"),
+        )
 
         for line, row in enumerate(projects, start=2):
             self.text("projects.csv", line, row, "name")

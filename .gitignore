@@ -36,9 +36,13 @@ fixtures/*.private.json
 node_modules/
 dist/
 .angular/
+test-results/
 npm-debug.log*
 yarn-error.log*
 .eslintcache
+
+# --- Generated browser evidence (may contain session cookies) ---
+docs/reports/evidence/adversarial/*.zip
 
 # --- Databases, dumps, archives ---
 *.dump

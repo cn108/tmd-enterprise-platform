@@ -1,0 +1,1046 @@
+{
+  "controlsExercised": 466,
+  "tabs": [
+    {
+      "module": "Master data",
+      "tab": "Suppliers",
+      "heading": "Suppliers",
+      "rows": 8,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 6
+    },
+    {
+      "module": "Master data",
+      "tab": "Customers",
+      "heading": "Customers",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 12
+    },
+    {
+      "module": "Master data",
+      "tab": "Catalogue",
+      "heading": "Catalogue",
+      "rows": 4,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 18
+    },
+    {
+      "module": "Master data",
+      "tab": "Warehouses",
+      "heading": "Warehouses",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 24
+    },
+    {
+      "module": "Master data",
+      "tab": "Projects",
+      "heading": "Projects",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 30
+    },
+    {
+      "module": "Master data",
+      "tab": "Supplier categories",
+      "heading": "Supplier categories",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 33
+    },
+    {
+      "module": "Master data",
+      "tab": "Contacts",
+      "heading": "Contacts",
+      "rows": 3,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 39
+    },
+    {
+      "module": "Master data",
+      "tab": "Addresses",
+      "heading": "Addresses",
+      "rows": 3,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 45
+    },
+    {
+      "module": "Master data",
+      "tab": "Tax registrations",
+      "heading": "Tax registrations",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 48
+    },
+    {
+      "module": "Master data",
+      "tab": "Supplier bank accounts",
+      "heading": "Supplier bank accounts",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 52
+    },
+    {
+      "module": "Master data",
+      "tab": "Bank changes",
+      "heading": "Bank changes",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 55
+    },
+    {
+      "module": "Master data",
+      "tab": "Compliance documents",
+      "heading": "Compliance documents",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 58
+    },
+    {
+      "module": "Master data",
+      "tab": "Document categories",
+      "heading": "Document categories",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 61
+    },
+    {
+      "module": "Master data",
+      "tab": "Documents",
+      "heading": "Documents",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 64
+    },
+    {
+      "module": "Master data",
+      "tab": "Product categories",
+      "heading": "Product categories",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 70
+    },
+    {
+      "module": "Master data",
+      "tab": "Units of measure",
+      "heading": "Units of measure",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 76
+    },
+    {
+      "module": "Master data",
+      "tab": "Manufacturers",
+      "heading": "Manufacturers",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 79
+    },
+    {
+      "module": "Master data",
+      "tab": "Item prices",
+      "heading": "Item prices",
+      "rows": 4,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 85
+    },
+    {
+      "module": "Master data",
+      "tab": "Specifications",
+      "heading": "Specifications",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 88
+    },
+    {
+      "module": "Master data",
+      "tab": "Batches",
+      "heading": "Batches",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 91
+    },
+    {
+      "module": "Master data",
+      "tab": "Serial numbers",
+      "heading": "Serial numbers",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 94
+    },
+    {
+      "module": "Master data",
+      "tab": "Certificates",
+      "heading": "Certificates",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 97
+    },
+    {
+      "module": "Master data",
+      "tab": "Storage locations",
+      "heading": "Storage locations",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 103
+    },
+    {
+      "module": "Master data",
+      "tab": "Departments",
+      "heading": "Departments",
+      "rows": 6,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 109
+    },
+    {
+      "module": "Master data",
+      "tab": "Cost centres",
+      "heading": "Cost centres",
+      "rows": 4,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 115
+    },
+    {
+      "module": "Master data",
+      "tab": "Destinations",
+      "heading": "Destinations",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 121
+    },
+    {
+      "module": "Master data",
+      "tab": "Project locations",
+      "heading": "Project locations",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 124
+    },
+    {
+      "module": "Master data",
+      "tab": "Customer contracts",
+      "heading": "Customer contracts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 130
+    },
+    {
+      "module": "Master data",
+      "tab": "Contract revisions",
+      "heading": "Contract revisions",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 133
+    },
+    {
+      "module": "Master data",
+      "tab": "Project budgets",
+      "heading": "Project budgets",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 139
+    },
+    {
+      "module": "Master data",
+      "tab": "Milestones",
+      "heading": "Milestones",
+      "rows": 3,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 145
+    },
+    {
+      "module": "Procurement",
+      "tab": "Purchase requests",
+      "heading": "Purchase requests",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 151
+    },
+    {
+      "module": "Procurement",
+      "tab": "Purchase orders",
+      "heading": "Purchase orders",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 157
+    },
+    {
+      "module": "Procurement",
+      "tab": "RFQs",
+      "heading": "RFQs",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 163
+    },
+    {
+      "module": "Procurement",
+      "tab": "RFQ invitations",
+      "heading": "RFQ invitations",
+      "rows": 3,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 169
+    },
+    {
+      "module": "Procurement",
+      "tab": "Quotations",
+      "heading": "Quotations",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 175
+    },
+    {
+      "module": "Procurement",
+      "tab": "Supplier selection",
+      "heading": "Supplier selection",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 178
+    },
+    {
+      "module": "Procurement",
+      "tab": "Delivery schedules",
+      "heading": "Delivery schedules",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 184
+    },
+    {
+      "module": "Procurement",
+      "tab": "Goods receipts",
+      "heading": "Goods receipts",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 188
+    },
+    {
+      "module": "Inventory",
+      "tab": "Balances",
+      "heading": "Balances",
+      "rows": 3,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 191
+    },
+    {
+      "module": "Inventory",
+      "tab": "Movements",
+      "heading": "Movements",
+      "rows": 6,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 195
+    },
+    {
+      "module": "Inventory",
+      "tab": "Stock receipts",
+      "heading": "Stock receipts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 201
+    },
+    {
+      "module": "Inventory",
+      "tab": "Reorder alerts",
+      "heading": "Reorder alerts",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 202
+    },
+    {
+      "module": "Inventory",
+      "tab": "Transfers",
+      "heading": "Transfers",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 205
+    },
+    {
+      "module": "Inventory",
+      "tab": "Issues",
+      "heading": "Issues",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 211
+    },
+    {
+      "module": "Inventory",
+      "tab": "Returns",
+      "heading": "Returns",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 214
+    },
+    {
+      "module": "Inventory",
+      "tab": "Adjustments",
+      "heading": "Adjustments",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 217
+    },
+    {
+      "module": "Inventory",
+      "tab": "Damaged stock",
+      "heading": "Damaged stock",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 220
+    },
+    {
+      "module": "Inventory",
+      "tab": "Stock counts",
+      "heading": "Stock counts",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 223
+    },
+    {
+      "module": "Inventory",
+      "tab": "Reservations",
+      "heading": "Reservations",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 226
+    },
+    {
+      "module": "Inventory",
+      "tab": "Reorder levels",
+      "heading": "Reorder levels",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 229
+    },
+    {
+      "module": "Accounting",
+      "tab": "Chart of accounts",
+      "heading": "Chart of accounts",
+      "rows": 12,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 235
+    },
+    {
+      "module": "Accounting",
+      "tab": "Journals",
+      "heading": "Journals",
+      "rows": 11,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 241
+    },
+    {
+      "module": "Accounting",
+      "tab": "Fiscal years",
+      "heading": "Fiscal years",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 247
+    },
+    {
+      "module": "Accounting",
+      "tab": "Accounting periods",
+      "heading": "Accounting periods",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 253
+    },
+    {
+      "module": "Accounting",
+      "tab": "Opening balances",
+      "heading": "Opening balances",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 256
+    },
+    {
+      "module": "Accounting",
+      "tab": "Posting rules",
+      "heading": "Posting rules",
+      "rows": 4,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 260
+    },
+    {
+      "module": "Invoices",
+      "tab": "Supplier invoices",
+      "heading": "Supplier invoices",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 266
+    },
+    {
+      "module": "Invoices",
+      "tab": "Customer invoices",
+      "heading": "Customer invoices",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 272
+    },
+    {
+      "module": "Invoices",
+      "tab": "Credit and debit notes",
+      "heading": "Credit and debit notes",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 275
+    },
+    {
+      "module": "Invoices",
+      "tab": "Supplier payments",
+      "heading": "Supplier payments",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 281
+    },
+    {
+      "module": "Invoices",
+      "tab": "Customer receipts",
+      "heading": "Customer receipts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 287
+    },
+    {
+      "module": "Invoices",
+      "tab": "Invoice settings",
+      "heading": "Invoice settings",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 291
+    },
+    {
+      "module": "Invoices",
+      "tab": "NRS submissions",
+      "heading": "NRS submissions",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 292
+    },
+    {
+      "module": "Banking",
+      "tab": "Banking dashboard",
+      "heading": "Banking dashboard",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 295
+    },
+    {
+      "module": "Banking",
+      "tab": "Bank accounts",
+      "heading": "Bank accounts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 301
+    },
+    {
+      "module": "Banking",
+      "tab": "Statements",
+      "heading": "Statements",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 307
+    },
+    {
+      "module": "Banking",
+      "tab": "Statement lines",
+      "heading": "Statement lines",
+      "rows": 2,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 311
+    },
+    {
+      "module": "Banking",
+      "tab": "Matching suggestions",
+      "heading": "Matching suggestions",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 312
+    },
+    {
+      "module": "Banking",
+      "tab": "Unmatched transactions",
+      "heading": "Unmatched transactions",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 313
+    },
+    {
+      "module": "Banking",
+      "tab": "Company bank transactions",
+      "heading": "Company bank transactions",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 319
+    },
+    {
+      "module": "Banking",
+      "tab": "Reconciliations",
+      "heading": "Reconciliations",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 323
+    },
+    {
+      "module": "Banking",
+      "tab": "Reconciliation report",
+      "heading": "Reconciliation report",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 326
+    },
+    {
+      "module": "Banking",
+      "tab": "Petty cash",
+      "heading": "Petty cash",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 329
+    },
+    {
+      "module": "Banking",
+      "tab": "Cash vouchers",
+      "heading": "Cash vouchers",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 332
+    },
+    {
+      "module": "Banking",
+      "tab": "Replenishments",
+      "heading": "Replenishments",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 335
+    },
+    {
+      "module": "Banking",
+      "tab": "Account transfers",
+      "heading": "Account transfers",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 338
+    },
+    {
+      "module": "Projects",
+      "tab": "Project dashboard",
+      "heading": "Project dashboard",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 341
+    },
+    {
+      "module": "Projects",
+      "tab": "Profitability",
+      "heading": "Profitability",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 344
+    },
+    {
+      "module": "Projects",
+      "tab": "Projects",
+      "heading": "Projects",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 350
+    },
+    {
+      "module": "Projects",
+      "tab": "Contracts",
+      "heading": "Contracts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 356
+    },
+    {
+      "module": "Projects",
+      "tab": "Contract revisions",
+      "heading": "Contract revisions",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 359
+    },
+    {
+      "module": "Projects",
+      "tab": "Budgets",
+      "heading": "Budgets",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 365
+    },
+    {
+      "module": "Projects",
+      "tab": "Milestones",
+      "heading": "Milestones",
+      "rows": 3,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 371
+    },
+    {
+      "module": "Projects",
+      "tab": "Direct costs",
+      "heading": "Direct costs",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 377
+    },
+    {
+      "module": "Projects",
+      "tab": "Project documents",
+      "heading": "Project documents",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 378
+    },
+    {
+      "module": "Services",
+      "tab": "Work orders",
+      "heading": "Work orders",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 384
+    },
+    {
+      "module": "Services",
+      "tab": "Service contracts",
+      "heading": "Service contracts",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 390
+    },
+    {
+      "module": "Services",
+      "tab": "Assignments",
+      "heading": "Assignments",
+      "rows": 0,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 391
+    },
+    {
+      "module": "Services",
+      "tab": "Progress history",
+      "heading": "Progress history",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 394
+    },
+    {
+      "module": "Services",
+      "tab": "Checklists",
+      "heading": "Checklists",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 400
+    },
+    {
+      "module": "Services",
+      "tab": "HSE records",
+      "heading": "HSE records",
+      "rows": 0,
+      "create": "opened",
+      "sortClicked": false,
+      "viewOpened": false,
+      "controlsExercised": 403
+    },
+    {
+      "module": "Services",
+      "tab": "Completion reports",
+      "heading": "Completion reports",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 409
+    },
+    {
+      "module": "Leasing",
+      "tab": "Equipment register",
+      "heading": "Equipment register",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 415
+    },
+    {
+      "module": "Leasing",
+      "tab": "Equipment categories",
+      "heading": "Equipment categories",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 421
+    },
+    {
+      "module": "Leasing",
+      "tab": "Rental rates",
+      "heading": "Rental rates",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 427
+    },
+    {
+      "module": "Leasing",
+      "tab": "Rental agreements",
+      "heading": "Rental agreements",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 433
+    },
+    {
+      "module": "Leasing",
+      "tab": "Reservations",
+      "heading": "Reservations",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 439
+    },
+    {
+      "module": "Leasing",
+      "tab": "Dispatch and returns",
+      "heading": "Dispatch and returns",
+      "rows": 2,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 445
+    },
+    {
+      "module": "Leasing",
+      "tab": "Inspections and damage",
+      "heading": "Inspections and damage",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 451
+    },
+    {
+      "module": "Leasing",
+      "tab": "Maintenance",
+      "heading": "Maintenance",
+      "rows": 1,
+      "create": "opened",
+      "sortClicked": true,
+      "viewOpened": true,
+      "controlsExercised": 457
+    },
+    {
+      "module": "Leasing",
+      "tab": "Utilisation",
+      "heading": "Utilisation",
+      "rows": 2,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 460
+    },
+    {
+      "module": "Leasing",
+      "tab": "Operational warnings",
+      "heading": "Operational warnings",
+      "rows": 1,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 463
+    },
+    {
+      "module": "Leasing",
+      "tab": "Availability",
+      "heading": "Availability",
+      "rows": 2,
+      "create": "absent",
+      "sortClicked": false,
+      "viewOpened": true,
+      "controlsExercised": 466
+    }
+  ],
+  "pageErrors": []
+}

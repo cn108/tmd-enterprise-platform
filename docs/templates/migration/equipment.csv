@@ -1,0 +1,2 @@
+code,name,category,ownership,serial_number,location,acquisition_date,acquisition_cost,currency,status
+SAMPLE-EQP-001,Sample Generator,Plant,owned,SN-SAMPLE-001,Main Yard,2025-06-01,2500000.00,NGN,available

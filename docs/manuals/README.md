@@ -1,13 +1,14 @@
 # TMD manuals
 
-**Version:** 12 November 2026
+**Version:** 13 November 2026
 **System:** Tico McDon Limited enterprise platform (Angular + Django REST)
-**Status:** suitable for development, UAT and training. Production financial activation and NRS submission remain blocked pending the approvals in `docs/reports/phase-7b-activation-blockers.md`.
+**Status:** technically complete for controlled UAT and training; production deployment, financial activation and NRS submission remain blocked pending the approvals in `docs/reports/final-production-readiness-report.md`.
 
 ## Manual set
 
 | Audience | Manual |
 | --- | --- |
+| Owner / Managing Director | [Owner and Managing Director manual](owner-managing-director-manual.md) |
 | All employees | [Employee user manual](employee-user-manual.md) |
 | System administrators | [Administrator manual](administrator-manual.md) |
 | Procurement | [Procurement manual](procurement-manual.md) |
@@ -21,6 +22,8 @@
 | Support desk | [Troubleshooting guide](troubleshooting-guide.md) |
 | Technical staff | [System architecture](system-architecture.md) |
 | Integrators | [API documentation](api-documentation.md) |
+| Technical staff / operations | [Maintenance procedures](maintenance-procedures.md) |
+| Management / operations | [30-day post-launch monitoring plan](post-launch-monitoring-plan.md) |
 
 ## Safety rules
 

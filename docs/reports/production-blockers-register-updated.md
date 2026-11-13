@@ -1,11 +1,11 @@
 # Production blockers register — updated after UAT
 
-**Status date:** 12 November 2026
+**Status date:** 13 November 2026
 **Rule:** none of these blockers may be waived by a UAT pass. Production finance, payments, invoicing and NRS remain unauthorized.
 
 | ID | Severity | Blocker | Owner | Required evidence to close | Status |
 | --- | --- | --- | --- | --- | --- |
-| PB-01 | **Critical** | MFA is not implemented or enforced for privileged roles | Security / Identity lead | TOTP or WebAuthn enrolment, challenge at login, recovery codes, role enforcement, negative and recovery tests | Open |
+| PB-01 | **Critical** | MFA was not implemented or enforced for privileged roles | Security / Identity lead | TOTP enrolment, login challenge, recovery codes, role/global enforcement, replay and recovery tests | **Closed technically** — TOTP, recovery codes, reset command and production enforcement implemented; 5 backend and 2 frontend tests pass |
 | PB-02 | **Critical** | Production chart of accounts and account-role mappings are unapproved | Finance Controller / Accountant | Signed chart, every posting rule mapped to approved accounts, reconciliation test | Open |
 | PB-03 | **Critical** | Opening balances are not approved or imported | Finance Controller | Signed opening trial balance, controlled import, reconciliation to source, audit trail | Open |
 | PB-04 | **Critical** | Tax policy (VAT, WHT, tax IDs, NRS) is unverified | Accountant / Tax adviser | Written tax opinion, approved rates and treatments, NRS test credentials and sandbox evidence | Open |

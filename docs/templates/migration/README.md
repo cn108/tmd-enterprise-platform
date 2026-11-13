@@ -6,17 +6,21 @@ These CSV files define the controlled import format for a staging trial. The exa
 
 | File | Purpose | Key references |
 | --- | --- | --- |
+| `company_profile.csv` | Legal name, RC/TIN/VAT numbers, registered address, year end and reporting currency | exactly one row |
+| `employees.csv` | User identity, role, department, active and MFA-required flags | unique `email`; role names from the approved matrix |
 | `suppliers.csv` | Supplier master data | unique `code` |
 | `customers.csv` | Customer master data | unique `code` |
 | `projects.csv` | Projects and approved budget totals | `customer_code` |
 | `products.csv` | Products and services | `uom_code`, `category_code` must exist in the approved catalogue |
 | `warehouses.csv` | Warehouse locations | unique `code` |
+| `equipment.csv` | Owned or leased equipment and assets | unique `code` |
 | `inventory_balances.csv` | Opening stock quantities and unit costs | `warehouse_code`, `item_code` |
 | `supplier_invoices.csv` | Outstanding supplier invoices | `supplier_code` |
 | `customer_invoices.csv` | Outstanding customer invoices | `customer_code`, optional `project_code` |
 | `bank_balances.csv` | Opening bank statement balances | existing company bank account code |
 | `opening_trial_balance.csv` | Account-level opening debit/credit | approved `account_code` |
 | `commitments.csv` | Outstanding purchase commitments | `supplier_code` |
+| `advances.csv` | Supplier and customer advances | `party_type` + `party_code`; unique reference per party |
 
 ## Rules
 

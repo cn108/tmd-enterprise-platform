@@ -1,5 +1,7 @@
 # Development gap register — 12 November 2026
 
+> **Historical snapshot.** MFA (G-33) and general API throttling were subsequently implemented on 13 November 2026. See `final-project-completion-report.md`, `final-security-assessment.md` and the UAT defect register for the current status. The remaining accounting/tax and infrastructure items in this register are still valid.
+
 **Basis:** technical review dated 12 November 2026.
 **Environment:** synthetic `tmd_staging`.
 **Production activation:** disabled. No live issuance, ledger posting, payment execution or

@@ -1,0 +1,2 @@
+email,full_name,role,department,is_active,mfa_required
+sample.user@example.invalid,Sample User,Finance Officer,Finance,true,true

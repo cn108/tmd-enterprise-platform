@@ -4,9 +4,12 @@
 
 1. Open the TMD platform URL supplied by your administrator.
 2. Enter your work email and password.
-3. If your account is locked after repeated failures, wait for the lockout period or contact an administrator. Do not share passwords.
+3. If your administrator requires multi-factor authentication (MFA), open the authenticator app and enter the current six-digit code. On first use, scan the setup key or add the account manually, then keep the one-time recovery codes in a safe place.
+4. If your account is locked after repeated failures, wait for the lockout period or contact an administrator. Do not share passwords, authenticator codes or recovery codes.
 
 Sessions expire after one hour of inactivity and after twelve hours in total. Use **Sign out** on a shared computer.
+
+If you lose your authenticator, contact an administrator. Recovery requires identity verification and is recorded in the audit trail. Do not ask another user to sign in for you.
 
 ## 2. Navigation
 

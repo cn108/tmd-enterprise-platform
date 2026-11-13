@@ -1,19 +1,19 @@
 Phase 11 backup and restoration test
-Executed: 2026-11-12T05:05:06Z
+Executed: 2026-11-13T01:42:53Z
 Live source database: tmd (read only)
 Synthetic verification source: tmd_restore_source (isolated, removed after verification)
 Restore target: tmd_restore_test (isolated, removed after verification)
-Base backup: tmd-20261112T050434Z.dump
-Base backup SHA256: 1ca865045479b719748875231752ab8da9e0b4d94458a0272d79fee871ffeffb
-Verification dump SHA256: f5ac5150d1165c3cdb8bec5dbe943f2f75eae3a7b0eb65fdc8a3f4070d6ab0d8
-Media archive: tmd-media-20261112T050434Z.tar.gz
-Media archive SHA256: af1946236890c86c671e220d2e9256a9516428bf1bc082ae38d6c84e5a75880c
+Base backup: tmd-20261113T014216Z.dump
+Base backup SHA256: b87c2715e21eaf5c750ebbfa9e141c041fbbbe33d03d2ed0df90cf7b69d20875
+Verification dump SHA256: a3ac0a98f4c4f9564ee68210eb34791de0789507899f63bd35c9f79e3fc647c2
+Media archive: tmd-media-20261113T014216Z.tar.gz
+Media archive SHA256: 798bb4a570f1b87c316105aa04f5b1a0cad3c13a9faecafecea73a25e2cdd310
 
-Migrations: source=63 restored=63
+Migrations: source=72 restored=72
 Journals: source=1 restored=1
 Journal lines: source=2 restored=2
 Debits: source=125.50 restored=125.50
 Credits: source=125.50 restored=125.50
-Private documents: source=101 restored=101
+Private documents: source=476 restored=476
 Ledger balanced after restore: yes
 Result: PASS

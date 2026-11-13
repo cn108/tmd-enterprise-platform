@@ -1,6 +1,6 @@
 # Role-based access acceptance
 
-Staging database: `tmd_staging`
+Staging database: `tmd_qa_adversarial_20261113`
 Roles exercised: 10; checks: 130
 All checks passed: **True**
 

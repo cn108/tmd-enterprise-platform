@@ -1,5 +1,5 @@
 {
-  "database": "tmd_staging",
+  "database": "tmd_qa_adversarial_20261113",
   "workflows": {
     "A_procurement_to_inventory": {
       "passed": true,

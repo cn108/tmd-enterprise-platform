@@ -1,5 +1,7 @@
 # Final TMD UAT report
 
+> **Current-status note (13 November 2026).** MFA and general API throttling were implemented after this report. See `final-security-assessment.md` and `final-business-acceptance-report.md`.
+
 **Date:** 12 November 2026
 **Scope:** the existing TMD Enterprise System — procurement, inventory, accounting, invoicing, banking, projects, services, leasing and reporting.
 **Environment:** isolated `tmd_staging`; synthetic company and employees only.

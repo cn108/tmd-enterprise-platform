@@ -1,0 +1,526 @@
+{
+  "database": "tmd_qa_adversarial_20261113",
+  "base_url": "http://127.0.0.1:8000",
+  "test_mode": true,
+  "can_issue": false,
+  "roles": {
+    "system_admin": "admin@staging.tmd.local",
+    "management": "management@staging.tmd.local",
+    "accountant": "accountant@staging.tmd.local",
+    "controller": "controller@staging.tmd.local",
+    "finance": "finance@staging.tmd.local",
+    "procurement": "procurement@staging.tmd.local",
+    "project": "project@staging.tmd.local",
+    "store": "store@staging.tmd.local",
+    "operations": "operations@staging.tmd.local",
+    "auditor": "auditor@staging.tmd.local"
+  },
+  "checks": 45,
+  "failures": [],
+  "session_checks": [
+    {
+      "name": "csrf_bootstrap",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "name": "session_login",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "name": "session_cookie_attributes",
+      "cookies": [
+        "csrftoken",
+        "sessionid"
+      ],
+      "set_cookie_headers": [
+        "HttpOnly"
+      ],
+      "pass": true
+    },
+    {
+      "name": "session_me",
+      "status": 200,
+      "pass": true
+    },
+    {
+      "name": "mutation_without_csrf",
+      "status": 403,
+      "pass": true
+    },
+    {
+      "name": "mutation_with_foreign_origin",
+      "status": 403,
+      "pass": true
+    },
+    {
+      "name": "logout_invalidates_session",
+      "status": 204,
+      "post_logout_me": 401,
+      "pass": true
+    }
+  ],
+  "session_failures": [],
+  "results": [
+    {
+      "name": "operations_cannot_read_bank",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "operations_cannot_read_supplier_invoices",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "procurement_cannot_read_access_users",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "finance_cannot_write_access_roles",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "management_cannot_create_users",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "auditor_cannot_create_supplier",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission to perform this action."
+    },
+    {
+      "name": "management_cannot_create_supplier",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission to perform this action."
+    },
+    {
+      "name": "admin_missing_object_is_404",
+      "expected": [
+        404
+      ],
+      "pass": true,
+      "status": 404,
+      "message": "No CustomerInvoice matches the given query."
+    },
+    {
+      "name": "operations_missing_object_is_forbidden",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "customer_pdf_requires_invoice_permission",
+      "expected": [
+        403
+      ],
+      "pass": true,
+      "status": 403,
+      "message": "You do not have permission for this action."
+    },
+    {
+      "name": "anonymous_cannot_read_invoice",
+      "expected": [
+        401,
+        403
+      ],
+      "pass": true,
+      "status": 401,
+      "message": "Authentication credentials were not provided."
+    },
+    {
+      "name": "supplier_missing_fields",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 10,
+      "records_after": 10
+    },
+    {
+      "name": "supplier_negative_terms",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 10,
+      "records_after": 10
+    },
+    {
+      "name": "supplier_invalid_email",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 10,
+      "records_after": 10
+    },
+    {
+      "name": "supplier_overlong_name",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 10,
+      "records_after": 10
+    },
+    {
+      "name": "customer_negative_credit_limit",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 10,
+      "records_after": 10
+    },
+    {
+      "name": "supplier_duplicate_code",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid."
+    },
+    {
+      "name": "parties_table_survives_sql_like_input",
+      "expected": [
+        200
+      ],
+      "pass": true,
+      "status": 200,
+      "message": "",
+      "rows_after_sql_like_record": true
+    },
+    {
+      "name": "sql_like_search_is_data_not_query",
+      "expected": [
+        200
+      ],
+      "pass": true,
+      "status": 200,
+      "message": "",
+      "returned_xss": true,
+      "returned_sqli": true
+    },
+    {
+      "name": "purchase_request_empty",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "purchase_request_no_lines",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "purchase_request_zero_quantity",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "purchase_request_negative_quantity",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "purchase_request_unknown_item",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_empty",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_no_lines",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_zero_quantity",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_negative_price",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_invalid_date",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_oversized_amount",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "customer_invoice_overlong_description",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "repeat_submit_purchase_request",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a draft request can be submitted."
+    },
+    {
+      "name": "repeat_approve_purchase_request",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a submitted request can be approved."
+    },
+    {
+      "name": "receive_order_without_lines",
+      "expected": [
+        400,
+        409
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid."
+    },
+    {
+      "name": "repeat_submit_supplier_invoice",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a draft supplier invoice can be submitted."
+    },
+    {
+      "name": "repeat_approve_supplier_invoice",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a submitted supplier invoice can be approved."
+    },
+    {
+      "name": "edit_approved_supplier_invoice",
+      "expected": [
+        400,
+        409
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "One or more fields are invalid."
+    },
+    {
+      "name": "repeat_approve_customer_invoice",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a submitted customer invoice can be approved."
+    },
+    {
+      "name": "repeat_approve_reconciliation",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only a submitted reconciliation can be approved."
+    },
+    {
+      "name": "repeat_accept_work_order",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only completed work can be accepted."
+    },
+    {
+      "name": "dispatch_closed_rental",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only an approved or active agreement can dispatch equipment."
+    },
+    {
+      "name": "post_posted_journal",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "Only an approved journal can be posted."
+    },
+    {
+      "name": "close_closed_period",
+      "expected": [
+        409
+      ],
+      "pass": true,
+      "status": 409,
+      "message": "This period is already closed."
+    },
+    {
+      "name": "receipt_over_allocation",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "The allocation exceeds the unapplied receipt amount.",
+      "records_before": 1,
+      "records_after": 1
+    },
+    {
+      "name": "receipt_wrong_customer_invoice",
+      "expected": [
+        400
+      ],
+      "pass": true,
+      "status": 400,
+      "message": "The invoice belongs to a different customer.",
+      "records_before": 1,
+      "records_after": 1
+    }
+  ],
+  "xss_fixture": {
+    "code": "QA-XSS-001",
+    "legal_name": "QA <script>window.__qaXss=1</script> Supplier"
+  },
+  "sql_like_fixture": {
+    "code": "QA-SQL-001",
+    "legal_name": "QA Robert'); DROP TABLE parties_party;-- Supplier"
+  },
+  "supplier_count_before_create_probes": 8,
+  "supplier_count_after_create_probes": 8
+}

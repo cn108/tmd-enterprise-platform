@@ -54,9 +54,14 @@ Do not set `InvoiceSettings.test_mode` to false or populate activation fields me
 
 - Absolute session timeout: 12 hours; inactivity cookie age: 1 hour.
 - Failed sign-ins are rate-limited and lock out by username and IP.
+- Production requires MFA for every user (`MFA_REQUIRED_FOR_ALL_USERS=true`). Users enrol a TOTP authenticator at first sign-in and receive one-time recovery codes. The per-user **Require MFA at next sign-in** checkbox can enforce enrolment earlier.
+- Reset a lost authenticator only after verifying the person's identity: `python manage.py reset_mfa user@company.example`. Use `--disable-requirement` only for a documented recovery case; the user must re-enrol before the next normal sign-in when MFA is required.
+- The API applies configurable per-user, anonymous, login and MFA throttles. Production defaults are `5000/hour`, `120/hour`, `10/min` and `10/min`; tune them only with an approved capacity decision.
 - Production requires HTTPS, secure cookies, HSTS and a private database.
 - Secrets belong in the deployment secret store, never in source code, chat or screenshots.
 - Review audit logs for unusual approvals, exports, downloads and permission changes.
+
+MFA secrets are encrypted with `MFA_ENCRYPTION_KEY` and are never displayed after enrolment. Changing that key without retaining the previous key makes existing authenticators unusable; plan a controlled re-enrolment instead of rotating it casually.
 
 ## 6. Backups and restores
 

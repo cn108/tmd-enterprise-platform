@@ -182,7 +182,7 @@ second journal.
 **Finding: delivery is implemented and configured; there is no recipient allowlist by
 design.**
 
-- Sender: `Tico McDon Limited <ccmtico1234@gmail.com>`.
+- Sender: personal demonstration mailbox (redacted); production now requires a company-controlled identity.
 - SMTP credentials live in git-ignored `backend/.env`; they are not in the repository.
 - Approved supplier and customer invoice PDFs can be emailed to any valid address.
 - The earlier test-mailbox restriction was deliberately removed in the previous session.

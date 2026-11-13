@@ -1,5 +1,7 @@
 # Full-system security audit
 
+> **Current-status note (13 November 2026).** MFA and general API throttling were implemented after this audit. See `final-security-assessment.md` for the current assessment; this document remains the historical baseline.
+
 **Date:** 12 November 2026
 **Scope:** Django API, Angular SPA, authentication, authorization, data protection, uploads, dependency and deployment configuration.
 **Reference:** OWASP ASVS 4.0 themes, adapted to a session-authenticated single-tenant enterprise application.

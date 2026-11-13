@@ -1,0 +1,241 @@
+{
+  "database": "tmd_qa_adversarial_20261113",
+  "generated_for": "TMD formal UAT",
+  "roles": {
+    "System Administrator": {
+      "email": "admin@staging.tmd.local",
+      "permissions": 631,
+      "mfa_required": false,
+      "get_access_users": 200,
+      "get_access_roles": 200,
+      "post_access_users": 400,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    },
+    "Management": {
+      "email": "management@staging.tmd.local",
+      "permissions": 142,
+      "mfa_required": false,
+      "get_access_users": 200,
+      "get_access_roles": 200,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    },
+    "Accountant": {
+      "email": "accountant@staging.tmd.local",
+      "permissions": 194,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    },
+    "Finance Controller": {
+      "email": "controller@staging.tmd.local",
+      "permissions": 148,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    },
+    "Finance Officer": {
+      "email": "finance@staging.tmd.local",
+      "permissions": 154,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    },
+    "Procurement Officer": {
+      "email": "procurement@staging.tmd.local",
+      "permissions": 158,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 403,
+      "get_financial_statements": 403
+    },
+    "Project Manager": {
+      "email": "project@staging.tmd.local",
+      "permissions": 172,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 403,
+      "get_financial_statements": 403
+    },
+    "Storekeeper": {
+      "email": "store@staging.tmd.local",
+      "permissions": 118,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 403,
+      "get_financial_statements": 403
+    },
+    "Operations / HSE": {
+      "email": "operations@staging.tmd.local",
+      "permissions": 138,
+      "mfa_required": false,
+      "get_access_users": 403,
+      "get_access_roles": 403,
+      "post_access_users": 403,
+      "get_supplier_invoices": 403,
+      "get_company_bank_accounts": 403,
+      "get_financial_statements": 403
+    },
+    "Auditor": {
+      "email": "auditor@staging.tmd.local",
+      "permissions": 132,
+      "mfa_required": false,
+      "get_access_users": 200,
+      "get_access_roles": 200,
+      "post_access_users": 403,
+      "get_supplier_invoices": 200,
+      "get_company_bank_accounts": 200,
+      "get_financial_statements": 200
+    }
+  },
+  "admin_read_only": {
+    "Management": {
+      "get_users": 200,
+      "get_roles": 200,
+      "post_users": 403
+    },
+    "Auditor": {
+      "get_users": 200,
+      "get_roles": 200,
+      "post_users": 403
+    }
+  },
+  "admin_read_only_pass": true,
+  "procurement_workflow": {
+    "request_number": "PR-2026-0005",
+    "request_id": 5,
+    "created_status": "draft",
+    "created_http": 201,
+    "submitted_status": "submitted",
+    "submitted_http": 200,
+    "approved_status": "approved",
+    "approved_by": "management@staging.tmd.local",
+    "approved_http": 200,
+    "approvals_required": 1,
+    "approvals_recorded": 1,
+    "pass": true
+  },
+  "restricted_access": {
+    "auditor_create_purchase_request": 403,
+    "operations_supplier_invoices": 403,
+    "operations_company_bank_accounts": 403
+  },
+  "restricted_access_pass": true,
+  "seeded_workflow": {
+    "approved_request": 5,
+    "purchase_orders": 1,
+    "purchase_order_statuses": [
+      "partially_received"
+    ],
+    "supplier_invoices": 1,
+    "supplier_invoice_match_statuses": [
+      "matched"
+    ],
+    "reconciliations": 1,
+    "reconciliation_statuses": [
+      "approved"
+    ],
+    "service_work_orders": 1,
+    "service_work_order_statuses": [
+      "accepted"
+    ],
+    "rental_agreements": 1,
+    "rental_statuses": [
+      "closed"
+    ],
+    "posted_journals": 11,
+    "journal_statuses": [
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted",
+      "posted"
+    ],
+    "active_period": {
+      "name": "November 2026 (UAT)",
+      "status": "open"
+    }
+  },
+  "production_controls": {
+    "invoice_test_mode": true,
+    "invoice_can_issue": false,
+    "invoice_activated_at": null,
+    "nrs_enabled": false,
+    "nrs_environment": "",
+    "supplier_payment_statuses": [
+      "recorded"
+    ],
+    "supplier_payment_execution_statuses": [
+      "recorded"
+    ],
+    "pass": true
+  },
+  "throttling": {
+    "default_throttle_classes": [
+      "rest_framework.throttling.UserRateThrottle",
+      "rest_framework.throttling.AnonRateThrottle"
+    ],
+    "default_throttle_rates": {
+      "user": "20000/hour",
+      "anon": "5000/hour",
+      "login": "120/min",
+      "mfa": "60/min",
+      "password_reset": "20/hour"
+    },
+    "general_api_rate_limit": true,
+    "login_rate_limit": true,
+    "axes_enabled": true,
+    "axes_failure_limit": 5,
+    "axes_cooloff_hours": 1
+  },
+  "mfa": {
+    "flag_present": true,
+    "enrolment_endpoint": true,
+    "challenge_endpoint": true,
+    "challenge_issued_on_login": true,
+    "recovery_codes": true,
+    "enforcement_configured": false,
+    "enforcement_in_uat": false,
+    "pass": true,
+    "note": "TOTP enrolment, one-time challenges and recovery codes are implemented. Production defaults MFA_REQUIRED_FOR_ALL_USERS=true."
+  },
+  "checks": {
+    "ten_roles_loaded": true,
+    "management_admin_read_only": true,
+    "procurement_approval_workflow": true,
+    "restricted_access": true,
+    "production_controls_disabled": true
+  },
+  "all_technical_checks_passed": true
+}

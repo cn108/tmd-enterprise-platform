@@ -14,9 +14,10 @@ Session cookie authentication:
 
 1. `GET /api/v1/auth/csrf/` obtains the CSRF cookie.
 2. `POST /api/v1/auth/login/` with email and password.
-3. Send `X-CSRFToken` on POST/PUT/PATCH/DELETE.
-4. `GET /api/v1/auth/me/` returns the current user, roles and permissions.
-5. `POST /api/v1/auth/logout/`.
+3. If login returns `mfa_required` or `mfa_enrollment_required` (HTTP 401), complete the MFA step before a session exists.
+4. Send `X-CSRFToken` on POST/PUT/PATCH/DELETE.
+5. `GET /api/v1/auth/me/` returns the current user, roles and permissions.
+6. `POST /api/v1/auth/logout/`.
 
 Authentication endpoints:
 
@@ -24,6 +25,9 @@ Authentication endpoints:
 | --- | --- | --- |
 | GET | `auth/csrf/` | Set CSRF cookie |
 | POST | `auth/login/` | Sign in |
+| POST | `auth/mfa/setup/` | Create/refresh a TOTP device for an enrolment challenge |
+| POST | `auth/mfa/confirm/` | Confirm enrolment with a TOTP code; starts the session |
+| POST | `auth/mfa/verify/` | Complete a login challenge with a TOTP or recovery code; starts the session |
 | POST | `auth/logout/` | Sign out |
 | GET | `auth/me/` | Current user and permissions |
 | POST | `auth/password/change/` | Change password |
@@ -67,6 +71,8 @@ Errors use an envelope:
 ```
 
 Common statuses: 400 invalid input, 401 not signed in, 403 permission denied, 404 not found, 409 conflict/immutable record, 429 throttled, 500 unexpected server error.
+
+MFA challenge tokens are single-use, expire after `MFA_CHALLENGE_TTL_SECONDS` (default 300), and are signed so they cannot be altered by the client. The MFA setup response is the only time the TOTP secret is returned; recovery codes are single-use and shown once.
 
 ## 5. Endpoint groups
 
@@ -115,3 +121,7 @@ Uploads are multipart form data. Allowed extensions and maximum size are configu
 ## 9. Versioning
 
 The current API is `/api/v1`. Breaking changes require a new version. The NRS adapter boundary is present but no network submission is implemented.
+
+## 10. Rate limits
+
+`DEFAULT_THROTTLE_CLASSES` applies authenticated and anonymous rate limits to every API view. Authentication, MFA and password-reset endpoints use scoped rates. A caller receiving HTTP 429 must wait for the retry window; do not loop or create a second account. Production defaults are documented in `infra/prod/.env.example`.

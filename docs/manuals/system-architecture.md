@@ -17,7 +17,7 @@ The frontend never calculates a financial total for a formal report. It renders 
 
 | App | Responsibility |
 | --- | --- |
-| `identity` | Users, sign-in/out, password change/reset, roles, access review, session timeout |
+| `identity` | Users, sign-in/out, TOTP MFA, recovery codes, password change/reset, roles, access review, session timeout |
 | `core` | Health, audit events, policy decisions, approvals, numbering, governance API |
 | `organisation` | Departments, cost centres, destinations |
 | `parties` | Suppliers, customers, contacts, addresses, tax registrations, bank accounts, bank-change requests, compliance documents |
@@ -74,6 +74,8 @@ Approved supplier invoices, project stock issues and approved direct costs contr
 - Fail-closed default permission: authenticated only.
 - Model/action permissions and approval checks in services; hiding a button is not a control.
 - Login lockout, password validators, absolute and inactivity session timeouts.
+- TOTP MFA with encrypted device secrets, one-time login challenges and recovery codes; production enforcement is on by default.
+- Configurable per-user, anonymous, login and MFA throttles alongside Axes lockout.
 - Private uploads, extension and size validation, checksums and audited downloads.
 - Production HTTPS, HSTS, secure cookies, CSRF trusted origins, CSP and security headers.
 - Secrets from environment/secret store; production settings refuse missing secrets.

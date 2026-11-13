@@ -695,7 +695,7 @@ def record_replenishment(replenishment: PettyCashReplenishment, user) -> PettyCa
 
 def sync_supplier_payment(payment) -> BankTransaction | None:
     """Create the company-side expectation for a recorded supplier payment."""
-    if not payment.bank_account_id or not payment.company_bank_account_id:
+    if not payment.company_bank_account_id:
         return None
     if payment.status != "recorded":
         return None
@@ -719,6 +719,47 @@ def sync_supplier_payment(payment) -> BankTransaction | None:
         transaction.currency = payment.currency
         transaction.amount = -payment.amount
         transaction.reference = payment.external_reference or payment.number
+        transaction.save()
+    return transaction
+
+
+def sync_customer_receipt(receipt) -> BankTransaction | None:
+    """Create or void the company-side bank expectation for a customer receipt.
+
+    A recorded receipt is an expectation, not proof of bank credit. The
+    transaction stays unreconciled until a user explicitly matches it.
+    """
+    existing = BankTransaction.objects.filter(
+        source_type=BankTransaction.Source.CUSTOMER_RECEIPT,
+        source_id=receipt.pk,
+    ).first()
+    if receipt.status in {"cancelled", "rejected"}:
+        if existing is not None and existing.status != BankTransaction.Status.RECONCILED:
+            existing.status = BankTransaction.Status.VOID
+            existing.save(update_fields=["status"])
+        return existing
+    if not receipt.company_bank_account_id:
+        return existing
+    transaction, created = BankTransaction.objects.get_or_create(
+        source_type=BankTransaction.Source.CUSTOMER_RECEIPT,
+        source_id=receipt.pk,
+        defaults={
+            "number": next_number("BTX"),
+            "bank_account": receipt.company_bank_account,
+            "transaction_date": receipt.receipt_date,
+            "description": f"Customer receipt {receipt.number}",
+            "reference": receipt.external_reference or receipt.number,
+            "currency": receipt.currency,
+            "amount": receipt.amount,
+            "status": BankTransaction.Status.RECORDED,
+        },
+    )
+    if not created:
+        transaction.bank_account = receipt.company_bank_account
+        transaction.transaction_date = receipt.receipt_date
+        transaction.currency = receipt.currency
+        transaction.amount = receipt.amount
+        transaction.reference = receipt.external_reference or receipt.number
         transaction.save()
     return transaction
 

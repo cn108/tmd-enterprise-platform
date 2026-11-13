@@ -7,6 +7,7 @@ details come from settings or are shown as not configured.
 
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -17,11 +18,92 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from apps.invoicing.models import CustomerInvoice, InvoiceNote, InvoiceSettings, SupplierInvoice
+from apps.invoicing.models import (
+    CustomerInvoice,
+    CustomerReceipt,
+    InvoiceNote,
+    InvoiceSettings,
+    SupplierInvoice,
+)
+from apps.invoicing.services import customer_statement_data
 
 
 def _safe(value) -> str:
     return escape(str(value or ""))
+
+
+def customer_statement_pdf(receipt: CustomerReceipt, download: bool = False) -> FileResponse:
+    settings = InvoiceSettings.load()
+    start = date(receipt.receipt_date.year, 1, 1)
+    data = customer_statement_data(receipt.customer, start, receipt.receipt_date)
+    buffer = BytesIO()
+    styles = getSampleStyleSheet()
+    story = _banner(settings, receipt.is_test)
+    story += _header(
+        settings,
+        "CUSTOMER ACCOUNT STATEMENT",
+        [
+            ("Customer", receipt.customer.legal_name),
+            ("Customer code", receipt.customer.code),
+            ("Period", f"{start:%d %b %Y} to {receipt.receipt_date:%d %b %Y}"),
+            ("Currency", receipt.currency),
+        ],
+    )
+    story.append(
+        _total_table(
+            [
+                ("Opening balance", f"{receipt.currency} {data['opening']}"),
+                ("Closing balance", f"{receipt.currency} {data['closing']}"),
+                ("Outstanding invoices", f"{receipt.currency} {data['outstanding']}"),
+                ("Unapplied receipts", f"{receipt.currency} {data['unapplied']}"),
+            ]
+        )
+    )
+    story.append(Spacer(1, 5 * mm))
+    rows = [
+        [
+            row["date"].strftime("%d %b %Y"),
+            row["type"],
+            row["reference"],
+            row["detail"] or "",
+            f"{row['debit']}" if row["debit"] else "",
+            f"{row['credit']}" if row["credit"] else "",
+            f"{row['balance']}",
+        ]
+        for row in data["rows"]
+    ]
+    if not rows:
+        rows = [["", "No movements in the period", "", "", "", "", ""]]
+    story.append(
+        _lines_table(
+            ["Date", "Type", "Reference", "Detail", "Debit", "Credit", "Balance"],
+            [[_safe(cell) for cell in row] for row in rows],
+            [24 * mm, 24 * mm, 25 * mm, 43 * mm, 20 * mm, 20 * mm, 24 * mm],
+        )
+    )
+    story.append(Spacer(1, 5 * mm))
+    story.append(
+        Paragraph(
+            "This statement is generated from approved customer invoices, approved notes and "
+            "recorded receipts. Unapplied receipts are credits on account. It is a test "
+            "document while invoice production is disabled.",
+            styles["Italic"],
+        )
+    )
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
+    )
+    document.build(story)
+    return _response(
+        buffer,
+        f"customer-statement-{_safe(receipt.customer.code)}-{receipt.receipt_date}.pdf",
+        download,
+    )
 
 
 def _response(buffer: BytesIO, filename: str, download: bool) -> FileResponse:

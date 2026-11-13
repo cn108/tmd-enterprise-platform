@@ -18,6 +18,8 @@ from apps.invoicing.emailing import (
 )
 from apps.invoicing.models import (
     CustomerInvoice,
+    CustomerReceipt,
+    CustomerReceiptAllocation,
     InvoiceNote,
     InvoiceSettings,
     NrsSubmission,
@@ -25,9 +27,17 @@ from apps.invoicing.models import (
     SupplierPayment,
     money,
 )
-from apps.invoicing.pdf import customer_invoice_pdf, invoice_note_pdf, supplier_invoice_pdf
+from apps.invoicing.pdf import (
+    customer_invoice_pdf,
+    customer_statement_pdf,
+    invoice_note_pdf,
+    supplier_invoice_pdf,
+)
 from apps.invoicing.serializers import (
     CustomerInvoiceSerializer,
+    CustomerReceiptAllocationRequestSerializer,
+    CustomerReceiptAllocationSerializer,
+    CustomerReceiptSerializer,
     InvoiceEmailSerializer,
     InvoiceNoteSerializer,
     InvoiceSettingsSerializer,
@@ -40,24 +50,31 @@ from apps.invoicing.serializers import (
 from apps.invoicing.services import (
     InvoiceConflict,
     activate_invoices,
+    allocate_customer_receipt,
     allocate_payment,
     approve_customer_invoice,
+    approve_customer_receipt,
     approve_note,
     approve_payment,
     approve_supplier_invoice,
     cancel_customer_invoice,
+    cancel_customer_receipt,
     cancel_note,
     cancel_payment,
     cancel_supplier_invoice,
     duplicate_candidates,
+    post_customer_receipt,
     post_invoice,
     post_supplier_payment,
     record_payment,
     reject_customer_invoice,
+    reject_customer_receipt,
     reject_note,
     reject_payment,
     reject_supplier_invoice,
+    reverse_customer_receipt_allocation,
     submit_customer_invoice,
+    submit_customer_receipt,
     submit_note,
     submit_payment,
     submit_supplier_invoice,
@@ -514,6 +531,181 @@ class InvoiceNoteViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     def pdf(self, request, pk=None):
         note = self.get_object()
         return invoice_note_pdf(note, download=request.query_params.get("download") == "1")
+
+
+class CustomerReceiptViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
+    view_permission = "invoicing.view_customerreceipt"
+    queryset = CustomerReceipt.objects.select_related(
+        "customer", "company_bank_account", "journal_entry", "reversal_entry"
+    ).prefetch_related(
+        "allocations__invoice"
+    )
+    serializer_class = CustomerReceiptSerializer
+    search_fields = ("number", "customer__legal_name", "external_reference")
+    ordering_fields = ("number", "receipt_date", "amount", "status", "created_at")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        for name in ("status", "customer"):
+            value = (self.request.query_params.get(name) or "").strip()
+            if value:
+                queryset = queryset.filter(**{name: value})
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        _require(request, "invoicing.add_customerreceipt")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        return error_response(
+            "invalid_state",
+            "A recorded receipt is changed by allocation or cancellation, not by editing it.",
+            status.HTTP_409_CONFLICT,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        return error_response(
+            "delete_not_permitted",
+            "Receipts are cancelled, never deleted; the number record is preserved.",
+            status.HTTP_409_CONFLICT,
+        )
+
+    @action(detail=True, methods=["post"])
+    def allocate(self, request, pk=None):
+        _require(request, "invoicing.allocate_customerreceipt")
+        receipt = self.get_object()
+        payload = CustomerReceiptAllocationRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        invoice = CustomerInvoice.objects.filter(pk=payload.validated_data["invoice"]).first()
+        if invoice is None:
+            return error_response(
+                "not_found", "Unknown customer invoice.", status.HTTP_404_NOT_FOUND
+            )
+        try:
+            allocation = allocate_customer_receipt(
+                receipt.pk, invoice, payload.validated_data["amount"], request.user
+            )
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        return Response(
+            {
+                "id": allocation.pk,
+                "invoice": invoice.pk,
+                "invoice_number": invoice.number,
+                "amount": str(allocation.amount),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        _require(request, "invoicing.cancel_customerreceipt")
+        try:
+            receipt = cancel_customer_receipt(
+                self.get_object(), request.user, (request.data.get("reason") or "").strip()
+            )
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        return Response(self.get_serializer(receipt).data)
+
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        _require(request, "invoicing.change_customerreceipt")
+        try:
+            receipt = submit_customer_receipt(self.get_object(), request.user)
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        return Response(self.get_serializer(receipt).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        _require(request, "invoicing.approve_customerreceipt")
+        try:
+            receipt = approve_customer_receipt(
+                self.get_object(), request.user, (request.data.get("notes") or "").strip()
+            )
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        return Response(self.get_serializer(receipt).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        _require(request, "invoicing.approve_customerreceipt")
+        try:
+            receipt = reject_customer_receipt(
+                self.get_object(), request.user, (request.data.get("reason") or "").strip()
+            )
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        return Response(self.get_serializer(receipt).data)
+
+    @action(detail=True, methods=["post"])
+    def post(self, request, pk=None):
+        _require(request, "invoicing.post_customerreceipt")
+        key = (
+            request.headers.get("Idempotency-Key")
+            or request.data.get("idempotency_key")
+            or f"receipt-post-{pk}"
+        ).strip()
+        try:
+            receipt = self.get_object()
+            journal, replayed = post_customer_receipt(receipt, request.user, key)
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        receipt.refresh_from_db()
+        return Response(
+            {
+                "detail": f"{receipt.number} posted to {journal.number}.",
+                "journal_entry": journal.pk,
+                "journal_number": journal.number,
+                "replayed": replayed,
+                "receipt": self.get_serializer(receipt).data,
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="reverse-allocation")
+    def reverse_allocation(self, request, pk=None):
+        _require(request, "invoicing.allocate_customerreceipt")
+        receipt = self.get_object()
+        allocation = receipt.allocations.filter(pk=request.data.get("allocation")).first()
+        if allocation is None:
+            return error_response(
+                "not_found", "Unknown allocation on this receipt.", status.HTTP_404_NOT_FOUND
+            )
+        try:
+            reverse_customer_receipt_allocation(
+                allocation, request.user, (request.data.get("reason") or "").strip()
+            )
+        except InvoiceConflict as exc:
+            return _conflict(exc)
+        receipt = self.get_queryset().get(pk=receipt.pk)
+        return Response(self.get_serializer(receipt).data)
+
+    @action(detail=True, methods=["get"])
+    def statement(self, request, pk=None):
+        receipt = self.get_object()
+        return customer_statement_pdf(receipt, download=request.query_params.get("download") == "1")
+
+
+class CustomerReceiptAllocationViewSet(InvoiceViewPermissionMixin, viewsets.ReadOnlyModelViewSet):
+    """Read-only allocation register used by the receipt reversal control."""
+
+    view_permission = "invoicing.view_customerreceipt"
+    queryset = CustomerReceiptAllocation.objects.select_related(
+        "receipt", "invoice"
+    ).order_by("-id")
+    serializer_class = CustomerReceiptAllocationSerializer
+    search_fields = ("receipt__number", "invoice__number")
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        receipt = (self.request.query_params.get("receipt") or "").strip()
+        if receipt:
+            queryset = queryset.filter(receipt_id=receipt)
+        reversed_value = (self.request.query_params.get("is_reversed") or "").strip()
+        if reversed_value in {"true", "false"}:
+            queryset = queryset.filter(is_reversed=reversed_value == "true")
+        return queryset
 
 
 class SupplierPaymentViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):

@@ -23,6 +23,8 @@ from apps.invoicing.exceptions import InvoiceConflict
 from apps.invoicing.models import (
     ZERO,
     CustomerInvoice,
+    CustomerReceipt,
+    CustomerReceiptAllocation,
     IdempotencyRecord,
     InvoiceNote,
     InvoiceSettings,
@@ -155,7 +157,29 @@ def recalculate_customer_invoice(invoice: CustomerInvoice) -> CustomerInvoice:
             ZERO,
         )
     )
-    invoice.balance = money(invoice.total - invoice.credited_total + invoice.debited_total)
+    invoice.amount_paid = money(
+        sum(
+            (
+                allocation.amount
+                for allocation in invoice.receipt_allocations.filter(
+                    is_reversed=False,
+                    receipt__status__in=[
+                        CustomerReceipt.Status.RECORDED,
+                        CustomerReceipt.Status.SUBMITTED,
+                        CustomerReceipt.Status.APPROVED,
+                        CustomerReceipt.Status.POSTED,
+                    ],
+                )
+            ),
+            ZERO,
+        )
+    )
+    invoice.balance = money(
+        invoice.total
+        - invoice.credited_total
+        + invoice.debited_total
+        - invoice.amount_paid
+    )
     if invoice.balance < ZERO:
         raise InvoiceConflict("Approved notes exceed the customer invoice value.")
     invoice.save(
@@ -166,11 +190,460 @@ def recalculate_customer_invoice(invoice: CustomerInvoice) -> CustomerInvoice:
             "total",
             "credited_total",
             "debited_total",
+            "amount_paid",
             "balance",
             "updated_at",
         ]
     )
     return invoice
+
+
+def _validate_customer_receipt_allocation(
+    receipt: CustomerReceipt,
+    invoice: CustomerInvoice,
+    amount,
+    already_allocated,
+) -> Decimal:
+    amount = money(amount)
+    if amount <= ZERO:
+        raise InvoiceConflict("An allocation must be greater than zero.")
+    if invoice.customer_id != receipt.customer_id:
+        raise InvoiceConflict("The invoice belongs to a different customer.")
+    if invoice.currency != receipt.currency:
+        raise InvoiceConflict("The receipt and invoice currencies must match.")
+    if invoice.status != CustomerInvoice.Status.APPROVED:
+        raise InvoiceConflict("Only an approved customer invoice can receive a receipt.")
+    available_receipt = money(receipt.amount - already_allocated)
+    if amount > available_receipt:
+        raise InvoiceConflict("The allocation exceeds the unapplied receipt amount.")
+    if amount > max(invoice.balance, ZERO):
+        raise InvoiceConflict("The allocation exceeds the invoice balance.")
+    return amount
+
+
+@transaction.atomic
+def record_customer_receipt(
+    *,
+    customer,
+    receipt_date,
+    currency,
+    amount,
+    method,
+    external_reference,
+    notes,
+    company_bank_account,
+    allocations,
+    user,
+) -> CustomerReceipt:
+    amount = money(amount)
+    if amount <= ZERO:
+        raise InvoiceConflict("A customer receipt must be greater than zero.")
+    if not customer.is_customer or not customer.is_active:
+        raise InvoiceConflict("Choose an active customer.")
+    settings = InvoiceSettings.load()
+    receipt = CustomerReceipt.objects.create(
+        number=next_number("RCT"),
+        customer=customer,
+        receipt_date=receipt_date,
+        currency=currency,
+        amount=amount,
+        method=method,
+        external_reference=external_reference,
+        notes=notes,
+        company_bank_account=company_bank_account,
+        is_test=not settings.can_issue,
+        created_by=user,
+        updated_by=user,
+    )
+    allocated = ZERO
+    seen: set[int] = set()
+    for payload in allocations:
+        invoice = (
+            CustomerInvoice.objects.select_for_update()
+            .filter(pk=payload["invoice"].pk)
+            .first()
+        )
+        if invoice is None:
+            raise InvoiceConflict("Unknown customer invoice.")
+        if invoice.pk in seen:
+            raise InvoiceConflict("Each invoice may appear only once on a receipt.")
+        seen.add(invoice.pk)
+        value = _validate_customer_receipt_allocation(
+            receipt, invoice, payload["amount"], allocated
+        )
+        CustomerReceiptAllocation.objects.create(
+            receipt=receipt,
+            invoice=invoice,
+            amount=value,
+            created_by=user,
+            updated_by=user,
+        )
+        allocated = money(allocated + value)
+        recalculate_customer_invoice(invoice)
+    receipt.allocated_amount = allocated
+    receipt.save(update_fields=["allocated_amount", "updated_at"])
+    create_audit_event(
+        actor=user,
+        action="customer_receipt.recorded",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={
+            "number": receipt.number,
+            "amount": str(receipt.amount),
+            "allocated": str(receipt.allocated_amount),
+        },
+    )
+    from apps.banking.services import sync_customer_receipt
+
+    sync_customer_receipt(receipt)
+    return receipt
+
+
+@transaction.atomic
+def allocate_customer_receipt(receipt_id, invoice, amount, user) -> CustomerReceiptAllocation:
+    receipt = CustomerReceipt.objects.select_for_update().filter(pk=receipt_id).first()
+    if receipt is None:
+        raise InvoiceConflict("Unknown customer receipt.")
+    if receipt.status != CustomerReceipt.Status.RECORDED:
+        raise InvoiceConflict("A cancelled receipt cannot be allocated.")
+    invoice = CustomerInvoice.objects.select_for_update().filter(pk=invoice.pk).first()
+    if invoice is None:
+        raise InvoiceConflict("Unknown customer invoice.")
+    if CustomerReceiptAllocation.objects.filter(
+        receipt=receipt, invoice=invoice, is_reversed=False
+    ).exists():
+        raise InvoiceConflict("This invoice already has an allocation on the receipt.")
+    value = _validate_customer_receipt_allocation(
+        receipt, invoice, amount, receipt.allocated_amount
+    )
+    allocation = CustomerReceiptAllocation.objects.create(
+        receipt=receipt,
+        invoice=invoice,
+        amount=value,
+        created_by=user,
+        updated_by=user,
+    )
+    receipt.allocated_amount = money(receipt.allocated_amount + value)
+    receipt.save(update_fields=["allocated_amount", "updated_at"])
+    recalculate_customer_invoice(invoice)
+    create_audit_event(
+        actor=user,
+        action="customer_receipt.allocated",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"invoice": invoice.number, "amount": str(value)},
+    )
+    return allocation
+
+
+@transaction.atomic
+def reverse_customer_receipt_allocation(
+    allocation: CustomerReceiptAllocation, user, reason: str
+) -> CustomerReceiptAllocation:
+    allocation = (
+        CustomerReceiptAllocation.objects.select_for_update()
+        .select_related("receipt", "invoice")
+        .get(pk=allocation.pk)
+    )
+    receipt = CustomerReceipt.objects.select_for_update().get(pk=allocation.receipt_id)
+    invoice = CustomerInvoice.objects.select_for_update().get(pk=allocation.invoice_id)
+    if receipt.status != CustomerReceipt.Status.RECORDED:
+        raise InvoiceConflict("An allocation can be reversed only before the receipt is submitted.")
+    if allocation.is_reversed:
+        raise InvoiceConflict("This allocation is already reversed.")
+    if not reason.strip():
+        raise InvoiceConflict("A reversal reason is required.")
+    allocation.is_reversed = True
+    allocation.reversed_by = user
+    allocation.reversed_at = timezone.now()
+    allocation.reversal_reason = reason.strip()
+    allocation.updated_by = user
+    allocation.save(
+        update_fields=[
+            "is_reversed",
+            "reversed_by",
+            "reversed_at",
+            "reversal_reason",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    receipt.allocated_amount = money(
+        sum(
+            (
+                item.amount
+                for item in receipt.allocations.filter(is_reversed=False)
+            ),
+            ZERO,
+        )
+    )
+    receipt.save(update_fields=["allocated_amount", "updated_at"])
+    recalculate_customer_invoice(invoice)
+    create_audit_event(
+        actor=user,
+        action="customer_receipt.allocation_reversed",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"invoice": invoice.number, "amount": str(allocation.amount), "reason": reason},
+    )
+    return allocation
+
+
+def submit_customer_receipt(receipt: CustomerReceipt, user) -> CustomerReceipt:
+    receipt = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
+    if receipt.status != CustomerReceipt.Status.RECORDED:
+        raise InvoiceConflict("Only a recorded receipt can be submitted for approval.")
+    receipt.status = CustomerReceipt.Status.SUBMITTED
+    receipt.submitted_at = timezone.now()
+    receipt.updated_by = user
+    receipt.save(update_fields=["status", "submitted_at", "updated_by", "updated_at"])
+    create_audit_event(
+        actor=user,
+        action="customer_receipt.submitted",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"status": receipt.status},
+    )
+    return receipt
+
+
+def approve_customer_receipt(receipt: CustomerReceipt, approver, notes: str = ""):
+    receipt = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
+    if receipt.status != CustomerReceipt.Status.SUBMITTED:
+        raise InvoiceConflict("Only a submitted receipt can be approved.")
+    if receipt.created_by_id == approver.pk:
+        raise InvoiceConflict("A receipt cannot be approved by its creator.")
+    try:
+        outcome = register_approval(
+            document_type="customer_receipt",
+            document_id=receipt.pk,
+            approver=approver,
+            amount=receipt.amount,
+            creators={receipt.created_by_id},
+            notes=notes,
+            actor=approver,
+        )
+    except ApprovalError as exc:
+        raise InvoiceConflict(str(exc)) from exc
+    if outcome.final:
+        receipt.status = CustomerReceipt.Status.APPROVED
+        receipt.approved_by = approver
+        receipt.approved_at = timezone.now()
+        receipt.updated_by = approver
+        receipt.save(
+            update_fields=[
+                "status",
+                "approved_by",
+                "approved_at",
+                "updated_by",
+                "updated_at",
+            ]
+        )
+    create_audit_event(
+        actor=approver,
+        action="customer_receipt.approved",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"status": receipt.status, "approvals_recorded": outcome.recorded},
+    )
+    return receipt
+
+
+def reject_customer_receipt(receipt: CustomerReceipt, approver, reason: str) -> CustomerReceipt:
+    receipt = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
+    if receipt.status != CustomerReceipt.Status.SUBMITTED:
+        raise InvoiceConflict("Only a submitted receipt can be rejected.")
+    if not reason.strip():
+        raise InvoiceConflict("A rejection reason is required.")
+    receipt.status = CustomerReceipt.Status.REJECTED
+    receipt.rejection_reason = reason.strip()
+    receipt.updated_by = approver
+    receipt.save(
+        update_fields=["status", "rejection_reason", "updated_by", "updated_at"]
+    )
+    create_audit_event(
+        actor=approver,
+        action="customer_receipt.rejected",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"status": receipt.status, "reason": reason},
+    )
+    return receipt
+
+
+@transaction.atomic
+def cancel_customer_receipt(receipt: CustomerReceipt, user, reason: str) -> CustomerReceipt:
+    receipt = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
+    if receipt.status == CustomerReceipt.Status.CANCELLED:
+        raise InvoiceConflict("This receipt is already cancelled.")
+    if receipt.status not in {
+        CustomerReceipt.Status.RECORDED,
+        CustomerReceipt.Status.APPROVED,
+        CustomerReceipt.Status.POSTED,
+    }:
+        raise InvoiceConflict(
+            "Only a recorded, approved or posted receipt can be cancelled."
+        )
+    if not reason.strip():
+        raise InvoiceConflict("A cancellation reason is required.")
+    from apps.banking.models import BankTransaction
+
+    bank_transaction = BankTransaction.objects.filter(
+        source_type=BankTransaction.Source.CUSTOMER_RECEIPT,
+        source_id=receipt.pk,
+    ).first()
+    if (
+        bank_transaction is not None
+        and bank_transaction.status == BankTransaction.Status.RECONCILED
+    ):
+        raise InvoiceConflict(
+            "This receipt is linked to a reconciled bank transaction. "
+            "Reverse the reconciliation match before cancelling the receipt."
+        )
+    invoice_ids = list(receipt.allocations.values_list("invoice_id", flat=True))
+    reversal = None
+    if receipt.status == CustomerReceipt.Status.POSTED:
+        if receipt.journal_entry_id is None:
+            raise InvoiceConflict(
+                "The receipt is marked posted but has no journal. Inspect it before cancelling."
+            )
+        from apps.accounting.services import Conflict as AccountingConflict
+        from apps.accounting.services import reverse_journal
+        from apps.invoicing.posting import _period_for_date
+
+        today = timezone.localdate()
+        try:
+            reversal = reverse_journal(
+                receipt.journal_entry,
+                user,
+                reason.strip(),
+                period=_period_for_date(today, "receipt reversal"),
+                journal_date=today,
+            )
+        except AccountingConflict as exc:
+            raise InvoiceConflict(str(exc)) from exc
+    receipt.status = CustomerReceipt.Status.CANCELLED
+    receipt.reversal_entry = reversal
+    receipt.cancelled_at = timezone.now()
+    receipt.cancel_reason = reason
+    receipt.updated_by = user
+    receipt.save(
+        update_fields=[
+            "status",
+            "reversal_entry",
+            "cancelled_at",
+            "cancel_reason",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    for invoice in CustomerInvoice.objects.select_for_update().filter(pk__in=invoice_ids):
+        recalculate_customer_invoice(invoice)
+    create_audit_event(
+        actor=user,
+        action="customer_receipt.cancelled",
+        entity_type="invoicing.customerreceipt",
+        entity_id=receipt.pk,
+        after={"number": receipt.number, "reason": reason},
+    )
+    from apps.banking.services import sync_customer_receipt
+
+    sync_customer_receipt(receipt)
+    return receipt
+
+
+def customer_statement_data(customer, start: date, end: date) -> dict:
+    """Customer ledger presentation built from approved invoices, notes and receipts."""
+    if start > end:
+        raise InvoiceConflict("The statement start date must be before the end date.")
+    entries: list[dict] = []
+    invoices = CustomerInvoice.objects.filter(
+        customer=customer,
+        status=CustomerInvoice.Status.APPROVED,
+        invoice_date__lte=end,
+    )
+    for invoice in invoices:
+        entries.append(
+            {
+                "date": invoice.invoice_date,
+                "type": "Invoice",
+                "reference": invoice.number,
+                "debit": invoice.total,
+                "credit": ZERO,
+                "detail": invoice.customer_reference,
+            }
+        )
+    notes = InvoiceNote.objects.filter(
+        customer_invoice__customer=customer,
+        status=InvoiceNote.Status.APPROVED,
+        note_date__lte=end,
+    )
+    for note in notes:
+        is_credit = note.note_type == InvoiceNote.NoteType.CREDIT
+        entries.append(
+            {
+                "date": note.note_date,
+                "type": "Credit note" if is_credit else "Debit note",
+                "reference": note.number,
+                "debit": ZERO if is_credit else note.total,
+                "credit": note.total if is_credit else ZERO,
+                "detail": note.reason,
+            }
+        )
+    receipts = CustomerReceipt.objects.filter(
+        customer=customer,
+        status__in=[
+            CustomerReceipt.Status.RECORDED,
+            CustomerReceipt.Status.SUBMITTED,
+            CustomerReceipt.Status.APPROVED,
+            CustomerReceipt.Status.POSTED,
+        ],
+        receipt_date__lte=end,
+    )
+    for receipt in receipts:
+        entries.append(
+            {
+                "date": receipt.receipt_date,
+                "type": "Receipt",
+                "reference": receipt.number,
+                "debit": ZERO,
+                "credit": receipt.amount,
+                "detail": receipt.external_reference,
+            }
+        )
+    entries.sort(key=lambda item: (item["date"], item["reference"]))
+    opening = ZERO
+    rows = []
+    running = ZERO
+    for entry in entries:
+        if entry["date"] < start:
+            opening = money(opening + entry["debit"] - entry["credit"])
+            continue
+        running = money(running + entry["debit"] - entry["credit"])
+        rows.append({**entry, "balance": money(opening + running)})
+    outstanding = sum(
+        (
+            invoice.balance
+            for invoice in invoices
+            if invoice.balance > ZERO
+        ),
+        ZERO,
+    )
+    return {
+        "customer": customer,
+        "start": start,
+        "end": end,
+        "opening": money(opening),
+        "rows": rows,
+        "closing": money(opening + running),
+        "outstanding": money(outstanding),
+        "unapplied": money(
+            sum(
+                (receipt.unallocated_amount for receipt in receipts),
+                ZERO,
+            )
+        ),
+    }
 
 
 def recalculate_note(note: InvoiceNote) -> InvoiceNote:
@@ -538,6 +1011,13 @@ def cancel_customer_invoice(invoice: CustomerInvoice, actor, reason: str) -> Cus
         raise InvoiceConflict("This customer invoice is already cancelled.")
     if not reason.strip():
         raise InvoiceConflict("A cancellation reason is required.")
+    if invoice.receipt_allocations.filter(is_reversed=False).exclude(
+        receipt__status=CustomerReceipt.Status.CANCELLED
+    ).exists():
+        raise InvoiceConflict(
+            "This invoice has active receipt allocations. Reverse them before "
+            "cancelling the invoice so receipt and invoice balances stay consistent."
+        )
     before = {"status": invoice.status}
     invoice.status = CustomerInvoice.Status.CANCELLED
     invoice.cancelled_at = timezone.now()
@@ -888,6 +1368,14 @@ def post_supplier_payment(payment, actor, idempotency_key: str = ""):
     return post(payment, actor, idempotency_key)
 
 
+def post_customer_receipt(receipt, actor, idempotency_key: str = ""):
+    """Post an approved customer receipt through the same activation gate."""
+
+    from apps.invoicing.posting import post_customer_receipt as post
+
+    return post(receipt, actor, idempotency_key)
+
+
 def activation_blockers(settings: InvoiceSettings, checklist: dict) -> list[str]:
     blockers = [
         gate.replace("_", " ") for gate in ACTIVATION_GATES if not bool(checklist.get(gate))
@@ -1005,11 +1493,17 @@ __all__ = [
     "activate_invoices",
     "activation_blockers",
     "allocate_payment",
+    "allocate_customer_receipt",
+    "reverse_customer_receipt_allocation",
+    "submit_customer_receipt",
+    "approve_customer_receipt",
+    "reject_customer_receipt",
     "approve_customer_invoice",
     "approve_note",
     "approve_payment",
     "approve_supplier_invoice",
     "cancel_customer_invoice",
+    "cancel_customer_receipt",
     "cancel_note",
     "cancel_payment",
     "cancel_supplier_invoice",
@@ -1023,9 +1517,11 @@ __all__ = [
     "next_supplier_invoice_number",
     "post_invoice",
     "post_supplier_payment",
+    "post_customer_receipt",
     "recalculate_customer_invoice",
     "recalculate_note",
     "recalculate_supplier_invoice",
+    "record_customer_receipt",
     "record_payment",
     "reject_customer_invoice",
     "reject_note",
@@ -1036,4 +1532,5 @@ __all__ = [
     "submit_payment",
     "submit_supplier_invoice",
     "submit_to_nrs",
+    "customer_statement_data",
 ]

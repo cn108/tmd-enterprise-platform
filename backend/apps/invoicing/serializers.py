@@ -12,6 +12,8 @@ from apps.documents.models import DocumentLink
 from apps.invoicing.models import (
     CustomerInvoice,
     CustomerInvoiceLine,
+    CustomerReceipt,
+    CustomerReceiptAllocation,
     InvoiceNote,
     InvoiceNoteLine,
     InvoiceSettings,
@@ -36,6 +38,7 @@ from apps.invoicing.services import (
     recalculate_customer_invoice,
     recalculate_note,
     recalculate_supplier_invoice,
+    record_customer_receipt,
 )
 
 
@@ -530,6 +533,7 @@ class CustomerInvoiceSerializer(serializers.ModelSerializer):
     approvals_recorded = serializers.SerializerMethodField()
     approval_policy = serializers.SerializerMethodField()
     net_receivable = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
+    payment_status = serializers.CharField(read_only=True)
 
     class Meta:
         model = CustomerInvoice
@@ -554,6 +558,8 @@ class CustomerInvoiceSerializer(serializers.ModelSerializer):
             "credited_total",
             "debited_total",
             "balance",
+            "amount_paid",
+            "payment_status",
             "net_receivable",
             "test_document",
             "notes",
@@ -584,6 +590,7 @@ class CustomerInvoiceSerializer(serializers.ModelSerializer):
             "debited_total",
             "balance",
             "submitted_at",
+            "amount_paid",
             "approved_by",
             "approved_at",
             "rejection_reason",
@@ -1149,3 +1156,169 @@ class PaymentAllocationRequestSerializer(serializers.Serializer):
         if value <= 0:
             raise serializers.ValidationError("Amount must be greater than zero.")
         return money(value)
+
+
+class CustomerReceiptAllocationSerializer(serializers.ModelSerializer):
+    invoice_number = serializers.CharField(source="invoice.number", read_only=True)
+    receipt_number = serializers.CharField(source="receipt.number", read_only=True)
+    label = serializers.SerializerMethodField()
+    invoice_balance = serializers.DecimalField(
+        source="invoice.balance", max_digits=18, decimal_places=2, read_only=True
+    )
+
+    class Meta:
+        model = CustomerReceiptAllocation
+        fields = [
+            "id",
+            "label",
+            "receipt",
+            "receipt_number",
+            "invoice",
+            "invoice_number",
+            "invoice_balance",
+            "amount",
+            "is_reversed",
+            "reversal_reason",
+            "reversed_at",
+        ]
+        read_only_fields = ["id", "receipt"]
+
+    def get_label(self, obj) -> str:
+        return f"{obj.receipt.number} / {obj.invoice.number} — {obj.amount}"
+
+
+class CustomerReceiptAllocationRequestSerializer(serializers.Serializer):
+    invoice = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return money(value)
+
+
+class CustomerReceiptSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.legal_name", read_only=True)
+    company_bank_account_name = serializers.CharField(
+        source="company_bank_account.name", read_only=True, default=None
+    )
+    test_document = serializers.BooleanField(source="is_test", read_only=True)
+    unallocated_amount = serializers.DecimalField(
+        max_digits=18, decimal_places=2, read_only=True
+    )
+    allocations = CustomerReceiptAllocationSerializer(many=True, read_only=True)
+    allocation_summary = serializers.SerializerMethodField()
+    journal_number = serializers.CharField(
+        source="journal_entry.number", read_only=True, default=None
+    )
+    reversal_journal_number = serializers.CharField(
+        source="reversal_entry.number", read_only=True, default=None
+    )
+    approvals_required = serializers.SerializerMethodField()
+    approvals_recorded = serializers.SerializerMethodField()
+    approval_policy = serializers.SerializerMethodField()
+    lines = serializers.ListField(
+        child=serializers.DictField(), write_only=True, required=False
+    )
+
+    class Meta:
+        model = CustomerReceipt
+        fields = [
+            "id",
+            "number",
+            "customer",
+            "customer_name",
+            "receipt_date",
+            "currency",
+            "amount",
+            "allocated_amount",
+            "unallocated_amount",
+            "method",
+            "company_bank_account",
+            "company_bank_account_name",
+            "external_reference",
+            "status",
+            "test_document",
+            "notes",
+            "journal_number",
+            "reversal_journal_number",
+            "approvals_required",
+            "approvals_recorded",
+            "approval_policy",
+            "cancelled_at",
+            "cancel_reason",
+            "allocations",
+            "allocation_summary",
+            "lines",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "number",
+            "allocated_amount",
+            "status",
+            "cancelled_at",
+            "cancel_reason",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_allocation_summary(self, obj) -> str:
+        return ", ".join(
+            f"{item.invoice.number} {item.amount}"
+            for item in obj.allocations.all()
+            if not item.is_reversed
+        )
+
+    def get_approvals_required(self, obj) -> int:
+        return approval_state("customer_receipt", obj.pk, obj.amount)["required"]
+
+    def get_approvals_recorded(self, obj) -> int:
+        return approval_state("customer_receipt", obj.pk, obj.amount)["recorded"]
+
+    def get_approval_policy(self, obj):
+        return approval_state("customer_receipt", obj.pk, obj.amount)["policy"]
+
+    def validate(self, attrs):
+        lines = attrs.get("lines") or []
+        company_account = attrs.get("company_bank_account")
+        if company_account is not None:
+            currency = attrs.get("currency", "NGN")
+            if company_account.currency != currency:
+                raise serializers.ValidationError(
+                    {"company_bank_account": "The company account currency must match the receipt."}
+                )
+        for line in lines:
+            try:
+                invoice = CustomerInvoice.objects.get(pk=line.get("invoice"))
+                amount = money(line.get("amount"))
+            except (CustomerInvoice.DoesNotExist, TypeError, ValueError):
+                raise serializers.ValidationError(
+                    {"lines": "Each allocation needs a valid invoice and amount."}
+                ) from None
+            if amount <= 0:
+                raise serializers.ValidationError(
+                    {"lines": "Each allocation must be greater than zero."}
+                )
+            line["invoice"] = invoice
+            line["amount"] = amount
+        return attrs
+
+    def create(self, validated_data):
+        lines = validated_data.pop("lines", [])
+        try:
+            return record_customer_receipt(
+                customer=validated_data["customer"],
+                receipt_date=validated_data["receipt_date"],
+                currency=validated_data.get("currency", "NGN"),
+                amount=validated_data["amount"],
+                method=validated_data["method"],
+                external_reference=validated_data.get("external_reference", ""),
+                notes=validated_data.get("notes", ""),
+                company_bank_account=validated_data.get("company_bank_account"),
+                allocations=lines,
+                user=self.context["request"].user,
+            )
+        except InvoiceConflict as exc:
+            raise serializers.ValidationError({"detail": str(exc)}) from exc

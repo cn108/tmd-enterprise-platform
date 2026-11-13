@@ -74,6 +74,7 @@ class ApprovalPolicy(TimeStampedModel):
         SUPPLIER_INVOICE = "supplier_invoice", "Supplier invoice"
         PAYMENT = "payment", "Payment"
         CUSTOMER_INVOICE = "customer_invoice", "Customer invoice"
+        CUSTOMER_RECEIPT = "customer_receipt", "Customer receipt"
         INVOICE_NOTE = "invoice_note", "Credit or debit note"
         STOCK_ADJUSTMENT = "stock_adjustment", "Stock adjustment"
         JOURNAL = "journal", "Journal"

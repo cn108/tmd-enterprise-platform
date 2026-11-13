@@ -16,6 +16,7 @@ supplies those through the existing accounting configuration.
 from __future__ import annotations
 
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounting.models import AccountingPeriod, AccountRole, JournalEntry
 from apps.accounting.services import Conflict as AccountingConflict
@@ -25,6 +26,7 @@ from apps.invoicing.exceptions import InvoiceConflict
 from apps.invoicing.models import (
     ZERO,
     CustomerInvoice,
+    CustomerReceipt,
     IdempotencyRecord,
     InvoiceNote,
     InvoiceSettings,
@@ -419,6 +421,148 @@ def post_supplier_payment(payment: SupplierPayment, actor, idempotency_key: str 
         actor=actor,
         action="supplier_payment.posted",
         entity_type="invoicing.supplierpayment",
+        entity_id=locked.pk,
+        after={
+            "number": locked.number,
+            "journal": journal.number,
+            "amount": str(locked.amount),
+            "allocated": str(allocated),
+        },
+    )
+    _remember_post(scope, idempotency_key, journal)
+    return journal, False
+
+
+@transaction.atomic
+def post_customer_receipt(receipt: CustomerReceipt, actor, idempotency_key: str = ""):
+    """Post an approved customer receipt, returning ``(journal, replayed)``."""
+
+    locked = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
+    scope = f"customer_receipt.post:{locked.pk}"
+    replay = _replay_journal(scope, idempotency_key)
+    if replay is not None:
+        return replay, True
+
+    settings = InvoiceSettings.load()
+    if not settings.can_issue:
+        raise InvoiceConflict(
+            "Stage 7B has not been authorised: production receipt posting is disabled."
+        )
+    if locked.is_test:
+        raise InvoiceConflict("A test receipt cannot be posted to the ledger.")
+    if locked.status != CustomerReceipt.Status.APPROVED:
+        raise InvoiceConflict("Only an approved customer receipt can be posted.")
+    if locked.journal_entry_id is not None:
+        raise InvoiceConflict("This receipt has already been posted.")
+    if locked.currency != settings.default_currency:
+        raise InvoiceConflict(
+            "Foreign-currency receipt posting is not configured. "
+            "Use an approved FX policy before posting this receipt."
+        )
+
+    period = _period_for_date(locked.receipt_date, "receipt")
+    resolve = _account_resolver(locked.receipt_date)
+    allocations = list(
+        locked.allocations.select_related("invoice")
+        .filter(is_reversed=False)
+        .order_by("id")
+    )
+    allocated = sum((allocation.amount for allocation in allocations), ZERO)
+    if allocated > locked.amount:
+        raise InvoiceConflict("Receipt allocations exceed the recorded receipt amount.")
+    for allocation in allocations:
+        invoice = allocation.invoice
+        if invoice.status != CustomerInvoice.Status.APPROVED:
+            raise InvoiceConflict(
+                f"Allocated invoice {invoice.number} is no longer approved."
+            )
+        if invoice.journal_entry_id is None:
+            raise InvoiceConflict(
+                f"Invoice {invoice.number} must be posted before its receipt."
+            )
+        if invoice.invoice_notes.filter(status=InvoiceNote.Status.APPROVED).exists():
+            raise InvoiceConflict(
+                f"Invoice {invoice.number} has approved notes. Note posting is not "
+                "configured, so its receipt cannot be posted yet."
+            )
+        if invoice.currency != locked.currency:
+            raise InvoiceConflict(
+                f"Invoice {invoice.number} and the receipt use different currencies."
+            )
+
+    lines = []
+    if locked.method == CustomerReceipt.Method.CASH:
+        debit_account = resolve("CASH")
+    elif locked.company_bank_account_id and locked.company_bank_account.gl_account_id:
+        debit_account = locked.company_bank_account.gl_account
+        if not debit_account.is_approved or not debit_account.is_active:
+            raise InvoiceConflict(
+                "The receipt bank account has no approved, active ledger account."
+            )
+    else:
+        debit_account = resolve("BANK")
+
+    lines.append(
+        {
+            "account": debit_account,
+            "debit": locked.amount,
+            "credit": ZERO,
+            "description": f"Customer receipt {locked.number} - {locked.customer.legal_name}"[:255],
+            "party": locked.customer,
+        }
+    )
+    if allocated:
+        lines.append(
+            {
+                "account": resolve("AR_CONTROL"),
+                "debit": ZERO,
+                "credit": allocated,
+                "description": f"Receipt {locked.number} allocated to customer invoices"[:255],
+                "party": locked.customer,
+            }
+        )
+    unallocated = locked.amount - allocated
+    if unallocated:
+        lines.append(
+            {
+                "account": resolve("CUSTOMER_ADVANCES"),
+                "debit": ZERO,
+                "credit": unallocated,
+                "description": f"Unapplied customer receipt {locked.number}"[:255],
+                "party": locked.customer,
+            }
+        )
+
+    try:
+        journal = post_system_journal(
+            source_type=JournalEntry.Source.EVENT,
+            actor=actor,
+            journal_date=locked.receipt_date,
+            period=period,
+            description=f"Customer receipt {locked.number} - {locked.customer.legal_name}"[:255],
+            lines=lines,
+            event_reference=f"{locked._meta.label_lower}:{locked.pk}",
+        )
+    except AccountingConflict as exc:
+        raise InvoiceConflict(str(exc)) from exc
+
+    locked.journal_entry = journal
+    locked.status = CustomerReceipt.Status.POSTED
+    locked.posted_at = timezone.now()
+    locked.updated_by = actor
+    locked.save(
+        update_fields=[
+            "journal_entry",
+            "status",
+            "posted_at",
+            "updated_by",
+            "updated_at",
+        ]
+    )
+    create_audit_event(
+        actor=actor,
+        action="customer_receipt.posted",
+        entity_type="invoicing.customerreceipt",
         entity_id=locked.pk,
         after={
             "number": locked.number,

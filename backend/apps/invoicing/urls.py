@@ -11,6 +11,12 @@ router.register("supplier-invoices", views.SupplierInvoiceViewSet, basename="sup
 router.register("customer-invoices", views.CustomerInvoiceViewSet, basename="customer-invoice")
 router.register("invoice-notes", views.InvoiceNoteViewSet, basename="invoice-note")
 router.register("supplier-payments", views.SupplierPaymentViewSet, basename="supplier-payment")
+router.register("customer-receipts", views.CustomerReceiptViewSet, basename="customer-receipt")
+router.register(
+    "customer-receipt-allocations",
+    views.CustomerReceiptAllocationViewSet,
+    basename="customer-receipt-allocation",
+)
 router.register("invoice-settings", views.InvoiceSettingsViewSet, basename="invoice-settings")
 router.register("nrs-submissions", views.NrsSubmissionViewSet, basename="nrs-submission")
 

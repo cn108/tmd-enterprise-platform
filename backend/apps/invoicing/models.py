@@ -336,6 +336,7 @@ class CustomerInvoice(UserStampedModel):
     total = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
     credited_total = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
     debited_total = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
+    amount_paid = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
     balance = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
     is_test = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
@@ -385,6 +386,143 @@ class CustomerInvoice(UserStampedModel):
     @property
     def net_receivable(self) -> Decimal:
         return max(self.balance - self.wht_total, ZERO)
+
+    @property
+    def payment_status(self) -> str:
+        if self.amount_paid <= ZERO:
+            return "unpaid"
+        if self.balance <= ZERO:
+            return "paid"
+        return "part_paid"
+
+
+class CustomerReceipt(UserStampedModel):
+    """Money received from a customer and allocated to approved invoices.
+
+    This records an external receipt; it never executes a transfer. The
+    receipt is test-only while Stage 7B is closed and has no ledger journal
+    until an approved customer-receipt accounting policy exists.
+    """
+
+    class Status(models.TextChoices):
+        RECORDED = "recorded", "Recorded"
+        SUBMITTED = "submitted", "Submitted"
+        APPROVED = "approved", "Approved"
+        POSTED = "posted", "Posted to ledger"
+        REJECTED = "rejected", "Rejected"
+        CANCELLED = "cancelled", "Cancelled"
+
+    class Method(models.TextChoices):
+        BANK_TRANSFER = "bank_transfer", "Bank transfer"
+        CHEQUE = "cheque", "Cheque"
+        CASH = "cash", "Cash"
+        OTHER = "other", "Other"
+
+    number = models.CharField(max_length=24, unique=True)
+    customer = models.ForeignKey(
+        "parties.Party", on_delete=models.PROTECT, related_name="customer_receipts"
+    )
+    receipt_date = models.DateField()
+    currency = models.CharField(max_length=3, default="NGN")
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    allocated_amount = models.DecimalField(max_digits=18, decimal_places=2, default=ZERO)
+    method = models.CharField(max_length=16, choices=Method.choices)
+    external_reference = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RECORDED)
+    company_bank_account = models.ForeignKey(
+        "banking.BankAccount",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="customer_receipts",
+    )
+    is_test = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.CharField(max_length=255, blank=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    journal_entry = models.ForeignKey(
+        "accounting.JournalEntry",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="customer_receipts",
+    )
+    reversal_entry = models.ForeignKey(
+        "accounting.JournalEntry",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reversed_customer_receipts",
+    )
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-receipt_date", "-id"]
+        permissions = [
+            ("cancel_customerreceipt", "Can cancel a customer receipt"),
+            ("allocate_customerreceipt", "Can allocate a customer receipt"),
+            ("approve_customerreceipt", "Can approve a customer receipt"),
+            ("post_customerreceipt", "Can post a customer receipt to the ledger"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="customer_receipt_amount_positive"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(allocated_amount__gte=0),
+                name="customer_receipt_allocated_non_negative",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.number
+
+    @property
+    def unallocated_amount(self) -> Decimal:
+        return max(self.amount - self.allocated_amount, ZERO)
+
+
+class CustomerReceiptAllocation(UserStampedModel):
+    receipt = models.ForeignKey(
+        CustomerReceipt, on_delete=models.CASCADE, related_name="allocations"
+    )
+    invoice = models.ForeignKey(
+        CustomerInvoice, on_delete=models.PROTECT, related_name="receipt_allocations"
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    is_reversed = models.BooleanField(default=False)
+    reversed_by = models.ForeignKey(
+        "identity.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversal_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["receipt", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["receipt", "invoice"],
+                condition=models.Q(is_reversed=False),
+                name="unique_receipt_invoice_allocation",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0), name="receipt_allocation_amount_positive"
+            ),
+        ]
 
 
 class CustomerInvoiceLine(UserStampedModel):

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
 
@@ -9,6 +11,7 @@ import pytest
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db import close_old_connections
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -20,12 +23,16 @@ from apps.accounting.models import (
     FiscalYear,
     JournalEntry,
 )
+from apps.banking.models import BankAccount, BankTransaction
 from apps.catalogue.models import CatalogueItem
 from apps.core.models import ApprovalPolicy, TaxConfiguration
 from apps.documents.models import Document
 from apps.identity.models import User
 from apps.invoicing.models import (
     CustomerInvoice,
+    CustomerReceipt,
+    CustomerReceiptAllocation,
+    IdempotencyRecord,
     InvoiceSettings,
     NrsSubmission,
     PaymentAllocation,
@@ -225,6 +232,7 @@ def configure_invoice_posting(actor):
         "BANK": ("1010-POST", "asset", "debit"),
         "CASH": ("1000-POST", "asset", "debit"),
         "SUPPLIER_ADVANCES": ("1250-POST", "asset", "debit"),
+        "CUSTOMER_ADVANCES": ("2150-POST", "liability", "credit"),
     }
     now = timezone.now()
     for role_code, (code, account_type, normal_balance) in definitions.items():
@@ -469,7 +477,7 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
 ):
     seed()
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <ccmtico1234@gmail.com>"
+    settings.DEFAULT_FROM_EMAIL = "Tico McDon Limited <finance@example.test>"
     creator = make_user("customer.email@example.com")
     client = client_for(creator)
     body = create_customer_invoice(
@@ -482,16 +490,16 @@ def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
 
     response = client.post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "ccmtico1234@gmail.com", "cc": "", "message": "Please find the invoice attached."},
+        {"to": "finance@example.test", "cc": "", "message": "Please find the invoice attached."},
         format="json",
     )
 
     assert response.status_code == 200, response.content
-    assert response.json()["to"] == "ccmtico1234@gmail.com"
+    assert response.json()["to"] == "finance@example.test"
     assert len(mailoutbox) == 1
     message = mailoutbox[0]
-    assert message.from_email == "Tico McDon Limited <ccmtico1234@gmail.com>"
-    assert message.to == ["ccmtico1234@gmail.com"]
+    assert message.from_email == "Tico McDon Limited <finance@example.test>"
+    assert message.to == ["finance@example.test"]
     assert message.attachments[0][0] == f"{body['number']}.pdf"
     assert message.attachments[0][1].startswith(b"%PDF")
 
@@ -527,7 +535,7 @@ def test_approved_test_invoice_can_be_emailed_to_an_external_customer(
     )
     response = client.post(
         f"/api/v1/customer-invoices/{draft['id']}/email/",
-        {"to": "ccmtico1234@gmail.com"},
+        {"to": "finance@example.test"},
         format="json",
     )
     assert response.status_code == 409
@@ -552,7 +560,7 @@ def test_approved_supplier_invoice_can_be_emailed(
 
     response = client.post(
         f"/api/v1/supplier-invoices/{invoice['id']}/email/",
-        {"to": "ccmtico1234@gmail.com"},
+        {"to": "finance@example.test"},
         format="json",
     )
     assert response.status_code == 200, response.content
@@ -582,7 +590,7 @@ def test_only_an_authorised_user_can_email_an_invoice(
     viewer_client = client_for(viewer)
     denied = viewer_client.post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "ccmtico1234@gmail.com"},
+        {"to": "finance@example.test"},
         format="json",
     )
     assert denied.status_code == 403
@@ -591,7 +599,7 @@ def test_only_an_authorised_user_can_email_an_invoice(
     viewer.user_permissions.add(Permission.objects.get(codename="email_customerinvoice"))
     allowed = client_for(User.objects.get(pk=viewer.pk)).post(
         f"/api/v1/customer-invoices/{body['id']}/email/",
-        {"to": "ccmtico1234@gmail.com"},
+        {"to": "finance@example.test"},
         format="json",
     )
     assert allowed.status_code == 200, allowed.content
@@ -739,6 +747,190 @@ def test_nrs_is_disabled_and_activation_posting_are_blocked(
     posting = client.post(f"/api/v1/supplier-invoices/{supplier_invoice['id']}/post/")
     assert posting.status_code == 409
     assert "Stage 7B" in posting.json()["error"]["message"]
+
+
+def _approved_customer_invoice(client, client_for, customer, approver, amount, reference=""):
+    invoice = create_customer_invoice(
+        client,
+        customer,
+        [line_payload(quantity="1", unit_price=str(amount))],
+        customer_reference=reference,
+    )
+    assert client.post(f"/api/v1/customer-invoices/{invoice['id']}/submit/").status_code == 200
+    assert (
+        client_for(approver).post(f"/api/v1/customer-invoices/{invoice['id']}/approve/").status_code
+        == 200
+    )
+    return invoice
+
+
+def test_customer_receipt_allocates_partial_and_multiple_invoices(client_for, customer, approver):
+    seed()
+    creator = make_user("receipt.creator@example.com")
+    client = client_for(creator)
+    first = _approved_customer_invoice(client, client_for, customer, approver, 100, "PO-1")
+    second = _approved_customer_invoice(client, client_for, customer, approver, 50, "PO-2")
+
+    response = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "currency": "NGN",
+            "amount": "120",
+            "method": "bank_transfer",
+            "external_reference": "BANK-RCT-1",
+            "lines": [
+                {"invoice": first["id"], "amount": "70"},
+                {"invoice": second["id"], "amount": "30"},
+            ],
+        },
+        format="json",
+    )
+    assert response.status_code == 201, response.content
+    body = response.json()
+    assert body["allocated_amount"] == "100.00"
+    assert body["unallocated_amount"] == "20.00"
+    assert body["status"] == "recorded"
+    assert body["test_document"] is True
+    assert len(body["allocations"]) == 2
+
+    refreshed = client.get(f"/api/v1/customer-invoices/{first['id']}/").json()
+    assert refreshed["amount_paid"] == "70.00"
+    assert refreshed["balance"] == "30.00"
+    assert refreshed["payment_status"] == "part_paid"
+    second_row = client.get(f"/api/v1/customer-invoices/{second['id']}/").json()
+    assert second_row["balance"] == "20.00"
+
+    statement = client.get(f"/api/v1/customer-receipts/{body['id']}/statement/")
+    assert statement.status_code == 200
+    assert statement["Content-Type"] == "application/pdf"
+    assert pdf_bytes(statement).startswith(b"%PDF")
+
+
+def test_customer_receipt_rejects_over_allocation_and_wrong_customer(
+    client_for, customer, approver
+):
+    seed()
+    creator = make_user("receipt.guard@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    other = Party.objects.create(code="CUS-OTHER", legal_name="Other Customer", is_customer=True)
+
+    response = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "50",
+            "method": "cash",
+            "lines": [{"invoice": invoice["id"], "amount": "60"}],
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert CustomerReceipt.objects.count() == 0
+
+    response = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": other.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "50",
+            "method": "cash",
+            "lines": [{"invoice": invoice["id"], "amount": "10"}],
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert CustomerReceipt.objects.count() == 0
+
+
+def test_customer_receipt_cancellation_restores_invoice_balance(client_for, customer, approver):
+    seed()
+    creator = make_user("receipt.cancel@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "40",
+            "method": "bank_transfer",
+            "lines": [{"invoice": invoice["id"], "amount": "40"}],
+        },
+        format="json",
+    ).json()
+
+    assert client.post(f"/api/v1/customer-receipts/{receipt['id']}/cancel/", {}).status_code == 409
+    cancelled = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/cancel/",
+        {"reason": "Incorrect bank reference"},
+        format="json",
+    )
+    assert cancelled.status_code == 200, cancelled.content
+    assert cancelled.json()["status"] == "cancelled"
+    refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
+    assert refreshed["amount_paid"] == "0.00"
+    assert refreshed["balance"] == "100.00"
+
+    allocation = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+        {"invoice": invoice["id"], "amount": "10"},
+        format="json",
+    )
+    assert allocation.status_code == 409
+
+
+def test_customer_receipt_allocates_unapplied_funds_later(client_for, customer, approver):
+    seed()
+    creator = make_user("receipt.later@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "100",
+            "method": "bank_transfer",
+        },
+        format="json",
+    ).json()
+    assert receipt["allocated_amount"] == "0.00"
+
+    allocated = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+        {"invoice": invoice["id"], "amount": "60"},
+        format="json",
+    )
+    assert allocated.status_code == 201, allocated.content
+    refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
+    assert refreshed["amount_paid"] == "60.00"
+    assert refreshed["balance"] == "40.00"
+
+
+def test_customer_receipt_cannot_allocate_a_draft_invoice(client_for, customer):
+    seed()
+    creator = make_user("receipt.draft@example.com")
+    client = client_for(creator)
+    invoice = create_customer_invoice(
+        client, customer, [line_payload(quantity="1", unit_price="100")]
+    )
+    response = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "100",
+            "method": "cash",
+            "lines": [{"invoice": invoice["id"], "amount": "100"}],
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert CustomerReceipt.objects.count() == 0
 
 
 def test_activated_supplier_invoice_posts_a_balanced_ledger_journal(
@@ -898,6 +1090,31 @@ def test_wht_invoice_posting_requires_an_approved_treatment(
     assert not JournalEntry.objects.exists()
 
 
+def test_foreign_currency_invoice_posting_remains_blocked(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.fx@example.com")
+    client = client_for(creator)
+    body = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-POST-FX-1",
+        match_exempt_reason="Service.",
+        currency="USD",
+    )
+    client.post(f"/api/v1/supplier-invoices/{body['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+
+    posted = client.post(f"/api/v1/supplier-invoices/{body['id']}/post/")
+    assert posted.status_code == 409
+    assert "Foreign-currency" in posted.json()["error"]["message"]
+    assert not JournalEntry.objects.exists()
+
+
 def test_posting_refuses_gross_invoice_when_an_approved_note_exists(
     client_for, supplier, approver
 ):
@@ -923,6 +1140,46 @@ def test_posting_refuses_gross_invoice_when_an_approved_note_exists(
             "note_date": "2026-11-13",
             "reason": "Price correction",
             "lines": [{"description": "Credit", "quantity": "1", "unit_price": "20"}],
+        },
+        format="json",
+    )
+    assert note.status_code == 201, note.content
+    note_id = note.json()["id"]
+    client.post(f"/api/v1/invoice-notes/{note_id}/submit/")
+    approved = client_for(approver).post(f"/api/v1/invoice-notes/{note_id}/approve/")
+    assert approved.status_code == 200, approved.content
+
+    posted = client.post(f"/api/v1/supplier-invoices/{invoice['id']}/post/")
+    assert posted.status_code == 409
+    assert "approved credit or debit notes" in posted.json()["error"]["message"]
+    assert not JournalEntry.objects.exists()
+
+
+def test_posting_refuses_gross_invoice_when_an_approved_debit_note_exists(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.debit.note@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-POST-DEBIT-NOTE-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+    note = client.post(
+        "/api/v1/invoice-notes/",
+        {
+            "note_type": "debit",
+            "supplier_invoice": invoice["id"],
+            "note_date": "2026-11-13",
+            "reason": "Additional works",
+            "lines": [{"description": "Debit", "quantity": "1", "unit_price": "20"}],
         },
         format="json",
     )
@@ -1402,3 +1659,504 @@ def test_tax_rate_must_be_a_percentage_and_dates_must_be_ordered(client_for):
     )
     assert reversed_dates.status_code == 400
     assert "effective_to" in reversed_dates.json()["error"]["details"]
+
+
+def test_supplier_payment_can_be_rejected_and_cancelled(client_for, supplier, approver):
+    seed()
+    creator = make_user("payment.lifecycle@example.com")
+    client = client_for(creator)
+    payload = {
+        "supplier": supplier.pk,
+        "payment_date": "2026-11-16",
+        "currency": "NGN",
+        "amount": "75",
+        "method": "bank_transfer",
+    }
+    rejected_payment = client.post("/api/v1/supplier-payments/", payload, format="json")
+    assert rejected_payment.status_code == 201, rejected_payment.content
+    rejected_id = rejected_payment.json()["id"]
+    client.post(f"/api/v1/supplier-payments/{rejected_id}/submit/")
+    rejected = client_for(approver).post(
+        f"/api/v1/supplier-payments/{rejected_id}/reject/",
+        {"reason": "Incorrect supplier reference."},
+        format="json",
+    )
+    assert rejected.status_code == 200, rejected.content
+    payment = SupplierPayment.objects.get(pk=rejected_id)
+    assert payment.status == SupplierPayment.Status.REJECTED
+    assert payment.rejection_reason == "Incorrect supplier reference."
+    assert client.post(f"/api/v1/supplier-payments/{rejected_id}/record/", {}).status_code == 409
+
+    cancelled_payment = client.post(
+        "/api/v1/supplier-payments/",
+        {**payload, "external_reference": "CANCEL-1"},
+        format="json",
+    )
+    assert cancelled_payment.status_code == 201, cancelled_payment.content
+    cancelled_id = cancelled_payment.json()["id"]
+    client.post(f"/api/v1/supplier-payments/{cancelled_id}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-payments/{cancelled_id}/approve/")
+    cancelled = client.post(
+        f"/api/v1/supplier-payments/{cancelled_id}/cancel/",
+        {"reason": "Duplicate payment instruction."},
+        format="json",
+    )
+    assert cancelled.status_code == 200, cancelled.content
+    payment = SupplierPayment.objects.get(pk=cancelled_id)
+    assert payment.status == SupplierPayment.Status.CANCELLED
+    assert payment.execution_status == SupplierPayment.ExecutionStatus.CANCELLED
+    assert payment.cancel_reason == "Duplicate payment instruction."
+
+
+def test_allocated_payment_cannot_be_cancelled(client_for, supplier, approver):
+    seed()
+    creator = make_user("payment.cancel.allocated@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-CANCEL-ALLOC-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+    payment = client.post(
+        "/api/v1/supplier-payments/",
+        {
+            "supplier": supplier.pk,
+            "payment_date": "2026-11-16",
+            "currency": "NGN",
+            "amount": "100",
+            "method": "bank_transfer",
+        },
+        format="json",
+    )
+    payment_id = payment.json()["id"]
+    client.post(f"/api/v1/supplier-payments/{payment_id}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-payments/{payment_id}/approve/")
+    client.post(f"/api/v1/supplier-payments/{payment_id}/record/", {}, format="json")
+    allocation = client.post(
+        f"/api/v1/supplier-payments/{payment_id}/allocate/",
+        {"supplier_invoice": invoice["id"], "amount": "100"},
+        format="json",
+    )
+    assert allocation.status_code == 201, allocation.content
+
+    response = client.post(
+        f"/api/v1/supplier-payments/{payment_id}/cancel/",
+        {"reason": "Attempted cancellation."},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert "allocations" in response.json()["error"]["message"]
+    assert SupplierPayment.objects.get(pk=payment_id).status == SupplierPayment.Status.RECORDED
+
+
+def test_failed_posting_transaction_rolls_back_journal_and_receipt(
+    client_for, supplier, approver, monkeypatch
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.rollback@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-POST-ROLLBACK-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+
+    from apps.invoicing import posting
+
+    def fail_receipt(*args, **kwargs):
+        raise RuntimeError("Simulated receipt failure.")
+
+    monkeypatch.setattr(posting, "_remember_post", fail_receipt)
+    with pytest.raises(RuntimeError, match="Simulated receipt failure"):
+        posting.post_invoice(
+            SupplierInvoice.objects.get(pk=invoice["id"]), approver, "rollback-key-1"
+        )
+
+    stored = SupplierInvoice.objects.get(pk=invoice["id"])
+    assert stored.journal_entry_id is None
+    assert not JournalEntry.objects.exists()
+    assert not IdempotencyRecord.objects.filter(
+        scope=f"invoice.post:supplier:{invoice['id']}"
+    ).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_posting_requests_create_exactly_one_journal(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("posting.concurrent@example.com")
+    client = client_for(creator)
+    invoice = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="100")],
+        number="SUP-POST-CONCURRENT-1",
+        match_exempt_reason="Service.",
+    )
+    client.post(f"/api/v1/supplier-invoices/{invoice['id']}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-invoices/{invoice['id']}/approve/")
+
+    barrier = threading.Barrier(2)
+
+    def post_once():
+        close_old_connections()
+        thread_client = APIClient()
+        thread_client.force_authenticate(user=approver)
+        barrier.wait(timeout=10)
+        response = thread_client.post(
+            f"/api/v1/supplier-invoices/{invoice['id']}/post/",
+            format="json",
+        )
+        result = {
+            "status": response.status_code,
+            "body": response.json(),
+            "replayed": response.headers.get("Idempotency-Replayed") == "true",
+        }
+        close_old_connections()
+        return result
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: post_once(), range(2)))
+
+    assert [row["status"] for row in results] == [200, 200]
+    journal_ids = {row["body"]["journal_entry"] for row in results}
+    assert len(journal_ids) == 1
+    assert sum(1 for row in results if row["replayed"]) == 1
+    assert JournalEntry.objects.filter(pk__in=journal_ids).count() == 1
+    assert SupplierInvoice.objects.get(pk=invoice["id"]).journal_entry_id == next(
+        iter(journal_ids)
+    )
+
+
+def _bank_account_for_receipts(actor):
+    account = Account.objects.get(code="1010-POST")
+    return BankAccount.objects.create(
+        code="BANK-RCPT",
+        name="Receipt collection account",
+        bank_name="UAT Bank",
+        gl_account=account,
+        created_by=actor,
+        updated_by=actor,
+    )
+
+
+def _post_customer_invoice(client, invoice):
+    response = client.post(f"/api/v1/customer-invoices/{invoice['id']}/post/")
+    assert response.status_code == 200, response.content
+    return response.json()
+
+
+def test_customer_receipt_approval_separation_and_threshold(
+    client_for, customer, approver, second_approver
+):
+    seed()
+    creator = make_user("receipt.threshold@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    ApprovalPolicy.objects.create(
+        code="RCPT-UAT-2",
+        document_type="customer_receipt",
+        min_amount=0,
+        required_approvals=2,
+        effective_from=date(2026, 1, 1),
+    )
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "100",
+            "method": "bank_transfer",
+            "lines": [{"invoice": invoice["id"], "amount": "100"}],
+        },
+        format="json",
+    ).json()
+    assert client.post(f"/api/v1/customer-receipts/{receipt['id']}/submit/").status_code == 200
+    assert (
+        client.post(f"/api/v1/customer-receipts/{receipt['id']}/approve/").status_code == 409
+    )
+    first = client_for(approver).post(
+        f"/api/v1/customer-receipts/{receipt['id']}/approve/", format="json"
+    )
+    assert first.status_code == 200
+    assert first.json()["status"] == "submitted"
+    assert first.json()["approvals_required"] == 2
+    assert first.json()["approvals_recorded"] == 1
+    final = client_for(second_approver).post(
+        f"/api/v1/customer-receipts/{receipt['id']}/approve/", format="json"
+    )
+    assert final.status_code == 200
+    assert final.json()["status"] == "approved"
+    assert final.json()["approval_policy"] == "RCPT-UAT-2"
+
+
+def test_customer_receipt_posts_allocated_and_unapplied_funds_once(
+    client_for, customer, approver, second_approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    creator = make_user("receipt.post@example.com")
+    client = client_for(creator)
+    bank = _bank_account_for_receipts(approver)
+    first = _approved_customer_invoice(client, client_for, customer, approver, 100, "PO-1")
+    second = _approved_customer_invoice(client, client_for, customer, approver, 50, "PO-2")
+    _post_customer_invoice(client, first)
+    _post_customer_invoice(client, second)
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "120",
+            "method": "bank_transfer",
+            "company_bank_account": bank.pk,
+            "external_reference": "BANK-RCPT-1",
+        },
+        format="json",
+    )
+    assert receipt.status_code == 201, receipt.content
+    body = receipt.json()
+    assert body["allocated_amount"] == "0.00"
+    for invoice, amount in ((first, "70"), (second, "30")):
+        allocated_later = client.post(
+            f"/api/v1/customer-receipts/{body['id']}/allocate/",
+            {"invoice": invoice["id"], "amount": amount},
+            format="json",
+        )
+        assert allocated_later.status_code == 201, allocated_later.content
+    early = client_for(second_approver).post(
+        f"/api/v1/customer-receipts/{body['id']}/post/", format="json"
+    )
+    assert early.status_code == 409
+    client.post(f"/api/v1/customer-receipts/{body['id']}/submit/")
+    approved = client_for(approver).post(
+        f"/api/v1/customer-receipts/{body['id']}/approve/", format="json"
+    )
+    assert approved.status_code == 200, approved.content
+
+    posted = client_for(second_approver).post(
+        f"/api/v1/customer-receipts/{body['id']}/post/", format="json"
+    )
+    assert posted.status_code == 200, posted.content
+    result = posted.json()
+    assert result["receipt"]["status"] == "posted"
+    assert result["receipt"]["journal_number"]
+    journal = JournalEntry.objects.get(pk=result["journal_entry"])
+    lines = {line.account.code: line for line in journal.lines.select_related("account")}
+    assert lines["1010-POST"].debit == Decimal("120.00")
+    assert lines["1100-POST"].credit == Decimal("100.00")
+    assert lines["2150-POST"].credit == Decimal("20.00")
+    assert journal.total_debit == journal.total_credit == Decimal("120.00")
+
+    replay = client_for(second_approver).post(
+        f"/api/v1/customer-receipts/{body['id']}/post/", format="json"
+    )
+    assert replay.status_code == 200
+    assert replay.json()["replayed"] is True
+    assert replay.json()["journal_entry"] == result["journal_entry"]
+    assert (
+        JournalEntry.objects.filter(
+            event_reference=f"invoicing.customerreceipt:{body['id']}"
+        ).count()
+        == 1
+    )
+
+    transaction = BankTransaction.objects.get(
+        source_type=BankTransaction.Source.CUSTOMER_RECEIPT, source_id=body["id"]
+    )
+    assert transaction.amount == Decimal("120.00")
+    assert transaction.status == BankTransaction.Status.RECORDED
+    assert transaction.matches.count() == 0
+
+    cancelled = client.post(
+        f"/api/v1/customer-receipts/{body['id']}/cancel/",
+        {"reason": "UAT posting reversal"},
+        format="json",
+    )
+    assert cancelled.status_code == 200, cancelled.content
+    assert cancelled.json()["status"] == "cancelled"
+    assert cancelled.json()["reversal_journal_number"]
+    reversal = JournalEntry.objects.get(pk=journal.reversal.pk)
+    assert reversal.total_debit == reversal.total_credit == Decimal("120.00")
+    transaction.refresh_from_db()
+    assert transaction.status == BankTransaction.Status.VOID
+    for invoice in (first, second):
+        balance = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
+        assert balance["amount_paid"] == "0.00"
+
+
+def test_receipt_allocation_reversal_duplicate_and_invoice_cancellation(
+    client_for, customer, approver
+):
+    seed()
+    creator = make_user("receipt.allocation.reverse@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "100",
+            "method": "bank_transfer",
+            "lines": [{"invoice": invoice["id"], "amount": "60"}],
+        },
+        format="json",
+    ).json()
+    allocation_id = receipt["allocations"][0]["id"]
+    blocked = client.post(
+        f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
+        {"reason": "Customer cancellation"},
+        format="json",
+    )
+    assert blocked.status_code == 409
+    assert "receipt allocations" in blocked.json()["error"]["message"]
+
+    duplicate = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+        {"invoice": invoice["id"], "amount": "10"},
+        format="json",
+    )
+    assert duplicate.status_code == 409
+    over = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+        {"invoice": invoice["id"], "amount": "50"},
+        format="json",
+    )
+    assert over.status_code == 409
+
+    reversed_response = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
+        {"allocation": allocation_id, "reason": "Applied to wrong invoice"},
+        format="json",
+    )
+    assert reversed_response.status_code == 200, reversed_response.content
+    assert reversed_response.json()["allocations"][0]["is_reversed"] is True
+    refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
+    assert refreshed["amount_paid"] == "0.00"
+    assert refreshed["balance"] == "100.00"
+    assert client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
+        {"allocation": allocation_id, "reason": "Again"},
+        format="json",
+    ).status_code == 409
+
+    reallocated = client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+        {"invoice": invoice["id"], "amount": "40"},
+        format="json",
+    )
+    assert reallocated.status_code == 201, reallocated.content
+    assert client.post(
+        f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
+        {"reason": "Customer cancellation"},
+        format="json",
+    ).status_code == 409
+    current = CustomerReceiptAllocation.objects.filter(
+        receipt_id=receipt["id"], is_reversed=False
+    ).get()
+    assert client.post(
+        f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
+        {"allocation": current.pk, "reason": "Final reversal"},
+        format="json",
+    ).status_code == 200
+    cancelled = client.post(
+        f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
+        {"reason": "Customer cancellation"},
+        format="json",
+    )
+    assert cancelled.status_code == 200, cancelled.content
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_receipt_allocations_create_one_allocation(client_for, customer, approver):
+    seed()
+    creator = make_user("receipt.concurrent@example.com")
+    client = client_for(creator)
+    invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
+    receipt = client.post(
+        "/api/v1/customer-receipts/",
+        {
+            "customer": customer.pk,
+            "receipt_date": "2026-11-20",
+            "amount": "100",
+            "method": "bank_transfer",
+        },
+        format="json",
+    ).json()
+    barrier = threading.Barrier(2)
+
+    def allocate_once():
+        close_old_connections()
+        thread_client = APIClient()
+        thread_client.force_authenticate(user=creator)
+        barrier.wait(timeout=10)
+        response = thread_client.post(
+            f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
+            {"invoice": invoice["id"], "amount": "60"},
+            format="json",
+        )
+        close_old_connections()
+        return response.status_code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        statuses = list(pool.map(lambda _: allocate_once(), range(2)))
+
+    assert sorted(statuses) == [201, 409]
+    assert CustomerReceiptAllocation.objects.filter(
+        receipt_id=receipt["id"], is_reversed=False
+    ).count() == 1
+    refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
+    assert refreshed["amount_paid"] == "60.00"
+
+
+def test_supplier_payment_creates_an_unreconciled_bank_expectation(
+    client_for, supplier, approver
+):
+    seed()
+    activate_live_invoices(approver)
+    configure_invoice_posting(approver)
+    bank = _bank_account_for_receipts(approver)
+    creator = make_user("payment.bank.link@example.com")
+    client = client_for(creator)
+    payment = client.post(
+        "/api/v1/supplier-payments/",
+        {
+            "supplier": supplier.pk,
+            "payment_date": "2026-11-15",
+            "currency": "NGN",
+            "amount": "250",
+            "method": "bank_transfer",
+            "company_bank_account": bank.pk,
+            "external_reference": "PAY-BANK-LINK-1",
+        },
+        format="json",
+    )
+    assert payment.status_code == 201, payment.content
+    payment_id = payment.json()["id"]
+    client.post(f"/api/v1/supplier-payments/{payment_id}/submit/")
+    client_for(approver).post(f"/api/v1/supplier-payments/{payment_id}/approve/")
+    recorded = client.post(f"/api/v1/supplier-payments/{payment_id}/record/", {}, format="json")
+    assert recorded.status_code == 200, recorded.content
+
+    transaction = BankTransaction.objects.get(
+        source_type=BankTransaction.Source.SUPPLIER_PAYMENT, source_id=payment_id
+    )
+    assert transaction.bank_account_id == bank.pk
+    assert transaction.amount == Decimal("-250.00")
+    assert transaction.status == BankTransaction.Status.RECORDED
+    assert transaction.matches.count() == 0

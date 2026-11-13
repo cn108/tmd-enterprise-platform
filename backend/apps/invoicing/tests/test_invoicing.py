@@ -1012,9 +1012,7 @@ def test_activated_supplier_invoice_posts_a_balanced_ledger_journal(
     assert JournalEntry.objects.filter(pk=journal.pk).count() == 1
 
 
-def test_recorded_supplier_payment_posts_and_replays_idempotently(
-    client_for, supplier, approver
-):
+def test_recorded_supplier_payment_posts_and_replays_idempotently(client_for, supplier, approver):
     seed()
     activate_live_invoices(approver)
     configure_invoice_posting(approver)
@@ -1128,9 +1126,7 @@ def test_wht_invoice_posting_requires_an_approved_treatment(
     assert not JournalEntry.objects.exists()
 
 
-def test_foreign_currency_invoice_posting_remains_blocked(
-    client_for, supplier, approver
-):
+def test_foreign_currency_invoice_posting_remains_blocked(client_for, supplier, approver):
     seed()
     activate_live_invoices(approver)
     configure_invoice_posting(approver)
@@ -1153,9 +1149,7 @@ def test_foreign_currency_invoice_posting_remains_blocked(
     assert not JournalEntry.objects.exists()
 
 
-def test_posting_refuses_gross_invoice_when_an_approved_note_exists(
-    client_for, supplier, approver
-):
+def test_posting_refuses_gross_invoice_when_an_approved_note_exists(client_for, supplier, approver):
     seed()
     activate_live_invoices(approver)
     configure_invoice_posting(approver)
@@ -1829,9 +1823,7 @@ def test_failed_posting_transaction_rolls_back_journal_and_receipt(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_posting_requests_create_exactly_one_journal(
-    client_for, supplier, approver
-):
+def test_concurrent_posting_requests_create_exactly_one_journal(client_for, supplier, approver):
     seed()
     activate_live_invoices(approver)
     configure_invoice_posting(approver)
@@ -1874,9 +1866,7 @@ def test_concurrent_posting_requests_create_exactly_one_journal(
     assert len(journal_ids) == 1
     assert sum(1 for row in results if row["replayed"]) == 1
     assert JournalEntry.objects.filter(pk__in=journal_ids).count() == 1
-    assert SupplierInvoice.objects.get(pk=invoice["id"]).journal_entry_id == next(
-        iter(journal_ids)
-    )
+    assert SupplierInvoice.objects.get(pk=invoice["id"]).journal_entry_id == next(iter(journal_ids))
 
 
 def _bank_account_for_receipts(actor):
@@ -1923,9 +1913,7 @@ def test_customer_receipt_approval_separation_and_threshold(
         format="json",
     ).json()
     assert client.post(f"/api/v1/customer-receipts/{receipt['id']}/submit/").status_code == 200
-    assert (
-        client.post(f"/api/v1/customer-receipts/{receipt['id']}/approve/").status_code == 409
-    )
+    assert client.post(f"/api/v1/customer-receipts/{receipt['id']}/approve/").status_code == 409
     first = client_for(make_clerk("receipt.first@example.com")).post(
         f"/api/v1/customer-receipts/{receipt['id']}/approve/", format="json"
     )
@@ -2087,11 +2075,14 @@ def test_receipt_allocation_reversal_duplicate_and_invoice_cancellation(
     refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
     assert refreshed["amount_paid"] == "0.00"
     assert refreshed["balance"] == "100.00"
-    assert client.post(
-        f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
-        {"allocation": allocation_id, "reason": "Again"},
-        format="json",
-    ).status_code == 409
+    assert (
+        client.post(
+            f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
+            {"allocation": allocation_id, "reason": "Again"},
+            format="json",
+        ).status_code
+        == 409
+    )
 
     reallocated = client.post(
         f"/api/v1/customer-receipts/{receipt['id']}/allocate/",
@@ -2099,19 +2090,25 @@ def test_receipt_allocation_reversal_duplicate_and_invoice_cancellation(
         format="json",
     )
     assert reallocated.status_code == 201, reallocated.content
-    assert client.post(
-        f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
-        {"reason": "Customer cancellation"},
-        format="json",
-    ).status_code == 409
+    assert (
+        client.post(
+            f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
+            {"reason": "Customer cancellation"},
+            format="json",
+        ).status_code
+        == 409
+    )
     current = CustomerReceiptAllocation.objects.filter(
         receipt_id=receipt["id"], is_reversed=False
     ).get()
-    assert client.post(
-        f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
-        {"allocation": current.pk, "reason": "Final reversal"},
-        format="json",
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/customer-receipts/{receipt['id']}/reverse-allocation/",
+            {"allocation": current.pk, "reason": "Final reversal"},
+            format="json",
+        ).status_code
+        == 200
+    )
     cancelled = client.post(
         f"/api/v1/customer-invoices/{invoice['id']}/cancel/",
         {"reason": "Customer cancellation"},
@@ -2155,16 +2152,17 @@ def test_concurrent_receipt_allocations_create_one_allocation(client_for, custom
         statuses = list(pool.map(lambda _: allocate_once(), range(2)))
 
     assert sorted(statuses) == [201, 409]
-    assert CustomerReceiptAllocation.objects.filter(
-        receipt_id=receipt["id"], is_reversed=False
-    ).count() == 1
+    assert (
+        CustomerReceiptAllocation.objects.filter(
+            receipt_id=receipt["id"], is_reversed=False
+        ).count()
+        == 1
+    )
     refreshed = client.get(f"/api/v1/customer-invoices/{invoice['id']}/").json()
     assert refreshed["amount_paid"] == "60.00"
 
 
-def test_supplier_payment_creates_an_unreconciled_bank_expectation(
-    client_for, supplier, approver
-):
+def test_supplier_payment_creates_an_unreconciled_bank_expectation(client_for, supplier, approver):
     seed()
     activate_live_invoices(approver)
     configure_invoice_posting(approver)

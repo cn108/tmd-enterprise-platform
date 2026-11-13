@@ -284,7 +284,6 @@ class RentalAgreementViewSet(LeasingPermissionMixin, NoDeleteViewSet):
         )
         return Response(self.get_serializer(agreement).data)
 
-
     @action(
         detail=True,
         methods=["post"],

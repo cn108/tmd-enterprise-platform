@@ -109,9 +109,9 @@ class Command(BaseCommand):
             },
             "F_project_budget_to_expenditure": {
                 "passed": budget.status == ProjectBudget.Status.APPROVED
-                and report_payload("projects", date(2026, 1, 1), date(2026, 12, 31))[
-                    "projects"
-                ][0]["actual_total"]
+                and report_payload("projects", date(2026, 1, 1), date(2026, 12, 31))["projects"][0][
+                    "actual_total"
+                ]
                 == "540000.00",
                 "evidence": {
                     "budget": budget.version,

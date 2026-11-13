@@ -1203,9 +1203,7 @@ class CustomerReceiptSerializer(serializers.ModelSerializer):
         source="company_bank_account.name", read_only=True, default=None
     )
     test_document = serializers.BooleanField(source="is_test", read_only=True)
-    unallocated_amount = serializers.DecimalField(
-        max_digits=18, decimal_places=2, read_only=True
-    )
+    unallocated_amount = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
     allocations = CustomerReceiptAllocationSerializer(many=True, read_only=True)
     allocation_summary = serializers.SerializerMethodField()
     journal_number = serializers.CharField(
@@ -1217,9 +1215,7 @@ class CustomerReceiptSerializer(serializers.ModelSerializer):
     approvals_required = serializers.SerializerMethodField()
     approvals_recorded = serializers.SerializerMethodField()
     approval_policy = serializers.SerializerMethodField()
-    lines = serializers.ListField(
-        child=serializers.DictField(), write_only=True, required=False
-    )
+    lines = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
 
     class Meta:
         model = CustomerReceipt

@@ -7,38 +7,66 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('identity', '0001_initial'),
+        ("identity", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MfaChallenge',
+            name="MfaChallenge",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('token_id', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
-                ('purpose', models.CharField(choices=[('verify', 'Verify'), ('enrol', 'Enrol')], max_length=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('expires_at', models.DateTimeField()),
-                ('used_at', models.DateTimeField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mfa_challenges', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("token_id", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                (
+                    "purpose",
+                    models.CharField(
+                        choices=[("verify", "Verify"), ("enrol", "Enrol")], max_length=10
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("expires_at", models.DateTimeField()),
+                ("used_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="mfa_challenges",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='MfaDevice',
+            name="MfaDevice",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('secret_encrypted', models.TextField()),
-                ('confirmed_at', models.DateTimeField(blank=True, null=True)),
-                ('last_used_counter', models.BigIntegerField(default=0)),
-                ('recovery_codes', models.JSONField(blank=True, default=list)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='mfa_device', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("secret_encrypted", models.TextField()),
+                ("confirmed_at", models.DateTimeField(blank=True, null=True)),
+                ("last_used_counter", models.BigIntegerField(default=0)),
+                ("recovery_codes", models.JSONField(blank=True, default=list)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="mfa_device",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

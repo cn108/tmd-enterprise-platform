@@ -175,10 +175,7 @@ def recalculate_customer_invoice(invoice: CustomerInvoice) -> CustomerInvoice:
         )
     )
     invoice.balance = money(
-        invoice.total
-        - invoice.credited_total
-        + invoice.debited_total
-        - invoice.amount_paid
+        invoice.total - invoice.credited_total + invoice.debited_total - invoice.amount_paid
     )
     if invoice.balance < ZERO:
         raise InvoiceConflict("Approved notes exceed the customer invoice value.")
@@ -259,9 +256,7 @@ def record_customer_receipt(
     seen: set[int] = set()
     for payload in allocations:
         invoice = (
-            CustomerInvoice.objects.select_for_update()
-            .filter(pk=payload["invoice"].pk)
-            .first()
+            CustomerInvoice.objects.select_for_update().filter(pk=payload["invoice"].pk).first()
         )
         if invoice is None:
             raise InvoiceConflict("Unknown customer invoice.")
@@ -370,10 +365,7 @@ def reverse_customer_receipt_allocation(
     )
     receipt.allocated_amount = money(
         sum(
-            (
-                item.amount
-                for item in receipt.allocations.filter(is_reversed=False)
-            ),
+            (item.amount for item in receipt.allocations.filter(is_reversed=False)),
             ZERO,
         )
     )
@@ -458,9 +450,7 @@ def reject_customer_receipt(receipt: CustomerReceipt, approver, reason: str) -> 
     receipt.status = CustomerReceipt.Status.REJECTED
     receipt.rejection_reason = reason.strip()
     receipt.updated_by = approver
-    receipt.save(
-        update_fields=["status", "rejection_reason", "updated_by", "updated_at"]
-    )
+    receipt.save(update_fields=["status", "rejection_reason", "updated_by", "updated_at"])
     create_audit_event(
         actor=approver,
         action="customer_receipt.rejected",
@@ -481,9 +471,7 @@ def cancel_customer_receipt(receipt: CustomerReceipt, user, reason: str) -> Cust
         CustomerReceipt.Status.APPROVED,
         CustomerReceipt.Status.POSTED,
     }:
-        raise InvoiceConflict(
-            "Only a recorded, approved or posted receipt can be cancelled."
-        )
+        raise InvoiceConflict("Only a recorded, approved or posted receipt can be cancelled.")
     if not reason.strip():
         raise InvoiceConflict("A cancellation reason is required.")
     from apps.banking.models import BankTransaction
@@ -622,11 +610,7 @@ def customer_statement_data(customer, start: date, end: date) -> dict:
         running = money(running + entry["debit"] - entry["credit"])
         rows.append({**entry, "balance": money(opening + running)})
     outstanding = sum(
-        (
-            invoice.balance
-            for invoice in invoices
-            if invoice.balance > ZERO
-        ),
+        (invoice.balance for invoice in invoices if invoice.balance > ZERO),
         ZERO,
     )
     return {
@@ -1011,9 +995,11 @@ def cancel_customer_invoice(invoice: CustomerInvoice, actor, reason: str) -> Cus
         raise InvoiceConflict("This customer invoice is already cancelled.")
     if not reason.strip():
         raise InvoiceConflict("A cancellation reason is required.")
-    if invoice.receipt_allocations.filter(is_reversed=False).exclude(
-        receipt__status=CustomerReceipt.Status.CANCELLED
-    ).exists():
+    if (
+        invoice.receipt_allocations.filter(is_reversed=False)
+        .exclude(receipt__status=CustomerReceipt.Status.CANCELLED)
+        .exists()
+    ):
         raise InvoiceConflict(
             "This invoice has active receipt allocations. Reverse them before "
             "cancelling the invoice so receipt and invoice balances stay consistent."

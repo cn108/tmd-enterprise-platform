@@ -47,9 +47,7 @@ class MasterDataViewSet(NoDeleteViewSet):
         # Both spellings are accepted: `q` is the original portal parameter and
         # `search` is DRF's convention used by the new screens.
         term = (
-            self.request.query_params.get("q")
-            or self.request.query_params.get("search")
-            or ""
+            self.request.query_params.get("q") or self.request.query_params.get("search") or ""
         ).strip()
         if term:
             query = Q()

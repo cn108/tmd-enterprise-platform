@@ -4,15 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('documents', '0001_initial'),
+        ("documents", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='documentlink',
-            name='entity_type',
-            field=models.CharField(choices=[('supplier', 'Supplier'), ('customer', 'Customer'), ('project', 'Project'), ('contract', 'Customer contract'), ('catalogue_item', 'Catalogue item'), ('warehouse', 'Warehouse'), ('storage_location', 'Storage location'), ('certificate', 'Certificate'), ('compliance_document', 'Compliance document'), ('supplier_invoice', 'Supplier invoice')], max_length=32),
+            model_name="documentlink",
+            name="entity_type",
+            field=models.CharField(
+                choices=[
+                    ("supplier", "Supplier"),
+                    ("customer", "Customer"),
+                    ("project", "Project"),
+                    ("contract", "Customer contract"),
+                    ("catalogue_item", "Catalogue item"),
+                    ("warehouse", "Warehouse"),
+                    ("storage_location", "Storage location"),
+                    ("certificate", "Certificate"),
+                    ("compliance_document", "Compliance document"),
+                    ("supplier_invoice", "Supplier invoice"),
+                ],
+                max_length=32,
+            ),
         ),
     ]

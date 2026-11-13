@@ -5,16 +5,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoicing', '0003_supplierpayment_company_bank_account'),
-        ('projects', '0003_budgetline_category_project_actual_completion_date_and_more'),
+        ("invoicing", "0003_supplierpayment_company_bank_account"),
+        ("projects", "0003_budgetline_category_project_actual_completion_date_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='supplierinvoice',
-            name='project',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='supplier_invoices', to='projects.project'),
+            model_name="supplierinvoice",
+            name="project",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="supplier_invoices",
+                to="projects.project",
+            ),
         ),
     ]

@@ -130,12 +130,8 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
     if not _can(user, "reporting.view_financialreporting"):
         return None
 
-    approved_customers = CustomerInvoice.objects.filter(
-        status=CustomerInvoice.Status.APPROVED
-    )
-    approved_suppliers = SupplierInvoice.objects.filter(
-        status=SupplierInvoice.Status.APPROVED
-    )
+    approved_customers = CustomerInvoice.objects.filter(status=CustomerInvoice.Status.APPROVED)
+    approved_suppliers = SupplierInvoice.objects.filter(status=SupplierInvoice.Status.APPROVED)
     customers = approved_customers.filter(currency="NGN")
     suppliers = approved_suppliers.filter(currency="NGN")
     customer_outstanding = customers.filter(balance__gt=ZERO)
@@ -143,9 +139,9 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
     supplier_outstanding = suppliers.filter(payment_due__gt=F("amount_paid"))
     supplier_due = supplier_outstanding.filter(due_date__lte=TODAY())
 
-    supplier_outstanding_total = supplier_outstanding.aggregate(
-        total=Sum(SUPPLIER_BALANCE)
-    )["total"]
+    supplier_outstanding_total = supplier_outstanding.aggregate(total=Sum(SUPPLIER_BALANCE))[
+        "total"
+    ]
     supplier_due_total = supplier_due.aggregate(total=Sum(SUPPLIER_BALANCE))["total"]
 
     receipts_base = CustomerReceipt.objects.filter(
@@ -183,9 +179,7 @@ def _financial_overview(user, start: date, end: date) -> list[dict] | None:
         approved_customers.exclude(currency="NGN").filter(balance__gt=ZERO).count()
     )
     other_supplier_currency = (
-        approved_suppliers.exclude(currency="NGN")
-        .filter(payment_due__gt=F("amount_paid"))
-        .count()
+        approved_suppliers.exclude(currency="NGN").filter(payment_due__gt=F("amount_paid")).count()
     )
     notes = []
     if other_customer_currency or other_supplier_currency:
@@ -344,7 +338,9 @@ def _invoice_management(user, *, issued: bool) -> list[dict] | None:
                 _card(
                     "supplier_exceptions",
                     "Supplier matching discrepancies",
-                    count=suppliers.filter(match_status=SupplierInvoice.MatchStatus.EXCEPTION).count(),
+                    count=suppliers.filter(
+                        match_status=SupplierInvoice.MatchStatus.EXCEPTION
+                    ).count(),
                     available=True,
                     basis="Supplier invoices with matching exceptions",
                     state=_invoice_state(suppliers),
@@ -936,9 +932,11 @@ def _project_performance(user) -> dict | None:
 
     if not _can(user, "projects.view_project"):
         return None
-    project_queryset = _allowed_project_queryset(user).filter(
-        status__in=[Project.Status.ACTIVE, Project.Status.ON_HOLD]
-    ).order_by("code")
+    project_queryset = (
+        _allowed_project_queryset(user)
+        .filter(status__in=[Project.Status.ACTIVE, Project.Status.ON_HOLD])
+        .order_by("code")
+    )
     project_count = project_queryset.count()
     projects = project_queryset[:6]
     rows = []
@@ -970,9 +968,7 @@ def _project_performance(user) -> dict | None:
             }
         )
     used_total = totals["actual"] + totals["open_commitment"]
-    utilisation = (
-        (used_total / totals["budget"] * 100) if totals["budget"] > ZERO else None
-    )
+    utilisation = (used_total / totals["budget"] * 100) if totals["budget"] > ZERO else None
     return {
         "rows": rows,
         "summary": {
@@ -1127,16 +1123,10 @@ ACTIVITY_FOCUS = {
 
 
 def _recent_activity(user, focus_id: str, limit: int = 8) -> list[dict]:
-    allowed = {
-        entity: value
-        for entity, value in ACTIVITY_TYPES.items()
-        if _can(user, value[1])
-    }
+    allowed = {entity: value for entity, value in ACTIVITY_TYPES.items() if _can(user, value[1])}
     if focus_id in ACTIVITY_FOCUS and focus_id != "finance":
         allowed = {
-            entity: value
-            for entity, value in allowed.items()
-            if entity in ACTIVITY_FOCUS[focus_id]
+            entity: value for entity, value in allowed.items() if entity in ACTIVITY_FOCUS[focus_id]
         }
     if not allowed:
         return []
@@ -1461,9 +1451,7 @@ def dashboard_payload(user, start: date, end: date) -> dict:
             "invoicing.approve_customerinvoice",
         )
     )
-    invoice_rows = (
-        _invoice_management(user, issued=settings.can_issue) if show_invoices else None
-    )
+    invoice_rows = _invoice_management(user, issued=settings.can_issue) if show_invoices else None
     actions = [action for action in _pending_actions(user) if action["count"] > 0]
     notices = []
 

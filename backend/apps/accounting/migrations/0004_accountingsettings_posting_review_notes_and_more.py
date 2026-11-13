@@ -6,26 +6,31 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('accounting', '0003_accountrolemapping_financialevent_and_more'),
+        ("accounting", "0003_accountrolemapping_financialevent_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='accountingsettings',
-            name='posting_review_notes',
+            model_name="accountingsettings",
+            name="posting_review_notes",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='accountingsettings',
-            name='posting_reviewed_at',
+            model_name="accountingsettings",
+            name="posting_reviewed_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='accountingsettings',
-            name='posting_reviewed_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL),
+            model_name="accountingsettings",
+            name="posting_reviewed_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="+",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

@@ -256,9 +256,7 @@ class SupplierInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
                 request=request,
             )
         except InvoiceEmailDeliveryError as exc:
-            return error_response(
-                "email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY
-            )
+            return error_response("email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY)
         except InvoiceEmailError as exc:
             return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
         return Response(result)
@@ -440,9 +438,7 @@ class CustomerInvoiceViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
                 request=request,
             )
         except InvoiceEmailDeliveryError as exc:
-            return error_response(
-                "email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY
-            )
+            return error_response("email_delivery_failed", str(exc), status.HTTP_502_BAD_GATEWAY)
         except InvoiceEmailError as exc:
             return error_response("invalid_state", str(exc), status.HTTP_409_CONFLICT)
         return Response(result)
@@ -537,9 +533,7 @@ class CustomerReceiptViewSet(InvoiceViewPermissionMixin, viewsets.ModelViewSet):
     view_permission = "invoicing.view_customerreceipt"
     queryset = CustomerReceipt.objects.select_related(
         "customer", "company_bank_account", "journal_entry", "reversal_entry"
-    ).prefetch_related(
-        "allocations__invoice"
-    )
+    ).prefetch_related("allocations__invoice")
     serializer_class = CustomerReceiptSerializer
     search_fields = ("number", "customer__legal_name", "external_reference")
     ordering_fields = ("number", "receipt_date", "amount", "status", "created_at")
@@ -691,9 +685,9 @@ class CustomerReceiptAllocationViewSet(InvoiceViewPermissionMixin, viewsets.Read
     """Read-only allocation register used by the receipt reversal control."""
 
     view_permission = "invoicing.view_customerreceipt"
-    queryset = CustomerReceiptAllocation.objects.select_related(
-        "receipt", "invoice"
-    ).order_by("-id")
+    queryset = CustomerReceiptAllocation.objects.select_related("receipt", "invoice").order_by(
+        "-id"
+    )
     serializer_class = CustomerReceiptAllocationSerializer
     search_fields = ("receipt__number", "invoice__number")
 

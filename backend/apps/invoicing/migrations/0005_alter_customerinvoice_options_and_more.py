@@ -4,18 +4,31 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoicing', '0004_supplierinvoice_project'),
+        ("invoicing", "0004_supplierinvoice_project"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='customerinvoice',
-            options={'ordering': ['-invoice_date', '-id'], 'permissions': [('approve_customerinvoice', 'Can approve a customer invoice'), ('cancel_customerinvoice', 'Can cancel a customer invoice'), ('email_customerinvoice', 'Can email an approved customer invoice PDF')]},
+            name="customerinvoice",
+            options={
+                "ordering": ["-invoice_date", "-id"],
+                "permissions": [
+                    ("approve_customerinvoice", "Can approve a customer invoice"),
+                    ("cancel_customerinvoice", "Can cancel a customer invoice"),
+                    ("email_customerinvoice", "Can email an approved customer invoice PDF"),
+                ],
+            },
         ),
         migrations.AlterModelOptions(
-            name='supplierinvoice',
-            options={'ordering': ['-invoice_date', '-id'], 'permissions': [('approve_supplierinvoice', 'Can approve a supplier invoice'), ('cancel_supplierinvoice', 'Can cancel a supplier invoice'), ('email_supplierinvoice', 'Can email an approved supplier invoice PDF')]},
+            name="supplierinvoice",
+            options={
+                "ordering": ["-invoice_date", "-id"],
+                "permissions": [
+                    ("approve_supplierinvoice", "Can approve a supplier invoice"),
+                    ("cancel_supplierinvoice", "Can cancel a supplier invoice"),
+                    ("email_supplierinvoice", "Can email an approved supplier invoice PDF"),
+                ],
+            },
         ),
     ]

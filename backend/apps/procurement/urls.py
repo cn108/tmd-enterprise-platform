@@ -26,8 +26,6 @@ router.register(
 )
 router.register("delivery-schedules", views.DeliveryScheduleViewSet, basename="delivery-schedule")
 router.register("goods-receipts", views.GoodsReceiptNoteViewSet, basename="goods-receipt")
-router.register(
-    "goods-receipt-lines", views.GoodsReceiptLineViewSet, basename="goods-receipt-line"
-)
+router.register("goods-receipt-lines", views.GoodsReceiptLineViewSet, basename="goods-receipt-line")
 
 urlpatterns = router.urls

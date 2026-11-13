@@ -73,7 +73,15 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.prod
           DJANGO_SECRET_KEY: ci-placeholder-not-a-real-secret-0123456789
           DJANGO_ALLOWED_HOSTS: example.com
-        run: python manage.py check --deploy
+          EMAIL_HOST_USER: ci@example.com
+          EMAIL_HOST_PASSWORD: ci-placeholder
+          DEFAULT_FROM_EMAIL: CI <ci@example.com>
+        # Production settings are fail-closed, so the smoke check needs throwaway
+        # Fernet keys. They are generated here and never stored anywhere.
+        run: |
+          export BANK_ACCOUNT_ENCRYPTION_KEYS="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          export MFA_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          python manage.py check --deploy
 
       - name: Migrations are complete
         run: python manage.py makemigrations --check --dry-run

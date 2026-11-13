@@ -142,15 +142,12 @@ def resolve_challenge(token: str, purpose: str, *, lock: bool = False) -> MfaCha
         return None
     if payload.get("purpose") != purpose:
         return None
-    queryset = (
-        MfaChallenge.objects.select_related("user")
-        .filter(
-            token_id=payload.get("jti"),
-            user_id=payload.get("uid"),
-            purpose=purpose,
-            used_at__isnull=True,
-            expires_at__gt=timezone.now(),
-        )
+    queryset = MfaChallenge.objects.select_related("user").filter(
+        token_id=payload.get("jti"),
+        user_id=payload.get("uid"),
+        purpose=purpose,
+        used_at__isnull=True,
+        expires_at__gt=timezone.now(),
     )
     if lock:
         queryset = queryset.select_for_update(of=("self",))

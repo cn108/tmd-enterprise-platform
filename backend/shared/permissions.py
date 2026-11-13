@@ -45,6 +45,4 @@ class ModelPermission(BasePermission):
             return True
         else:
             return False
-        return request.user.has_perm(
-            f"{model._meta.app_label}.{action}_{model._meta.model_name}"
-        )
+        return request.user.has_perm(f"{model._meta.app_label}.{action}_{model._meta.model_name}")

@@ -38,9 +38,7 @@ def _address(value: str, field: str) -> str:
 
 def _cc_addresses(value: str) -> list[str]:
     addresses = [
-        part.strip()
-        for part in (value or "").replace(";", ",").split(",")
-        if part.strip()
+        part.strip() for part in (value or "").replace(";", ",").split(",") if part.strip()
     ]
     return [_address(address, "CC") for address in addresses]
 

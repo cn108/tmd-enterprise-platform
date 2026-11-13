@@ -56,13 +56,9 @@ class Command(BaseCommand):
             "trial_balance_balanced": trial["balanced"]
             and money(trial["total_debit"]) == money(trial["total_credit"]),
             "balance_sheet_balanced": statements["balance_sheet"]["balanced"],
-            "ap_ledger_matches_invoice": abs(
-                ap_ledger - money(supplier_invoice.balance)
-            )
+            "ap_ledger_matches_invoice": abs(ap_ledger - money(supplier_invoice.balance))
             < Decimal("0.01"),
-            "ar_ledger_matches_invoice": abs(
-                ar_ledger - money(customer_invoice.balance)
-            )
+            "ar_ledger_matches_invoice": abs(ar_ledger - money(customer_invoice.balance))
             < Decimal("0.01"),
             "inventory_ledger_matches_valuation": abs(
                 inventory_ledger - money(valuation["total_value"])
@@ -70,8 +66,7 @@ class Command(BaseCommand):
             < Decimal("0.01"),
             "bank_ledger_matches_statement": abs(bank_ledger - money(statement.closing_balance))
             < Decimal("0.01"),
-            "bank_reconciliation_approved": reconciliation.status
-            == Reconciliation.Status.APPROVED,
+            "bank_reconciliation_approved": reconciliation.status == Reconciliation.Status.APPROVED,
             "po_partially_received": po.status == PurchaseOrder.Status.PARTIALLY_RECEIVED,
             "payment_recorded_not_executed": payment.status == SupplierPayment.Status.RECORDED
             and payment.execution_status == SupplierPayment.ExecutionStatus.RECORDED,
@@ -79,9 +74,7 @@ class Command(BaseCommand):
                 JournalEntry.objects.values_list("status", flat=True)
             )
             == {JournalEntry.Status.POSTED},
-            "october_period_closed": AccountingPeriod.objects.get(
-                name="October 2026 (UAT)"
-            ).status
+            "october_period_closed": AccountingPeriod.objects.get(name="October 2026 (UAT)").status
             == AccountingPeriod.Status.CLOSED,
         }
         payload = {
@@ -149,10 +142,7 @@ class Command(BaseCommand):
             "",
             "| Control | Ledger | Document / stock / bank |",
             "| --- | ---: | ---: |",
-            (
-                f"| Accounts payable | {ap_ledger} | "
-                f"{money(supplier_invoice.balance)} |"
-            ),
+            (f"| Accounts payable | {ap_ledger} | {money(supplier_invoice.balance)} |"),
             f"| Accounts receivable | {ar_ledger} | {money(customer_invoice.balance)} |",
             f"| Inventory | {inventory_ledger} | {money(valuation['total_value'])} |",
             f"| Bank | {bank_ledger} | {money(statement.closing_balance)} |",

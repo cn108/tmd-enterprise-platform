@@ -74,9 +74,7 @@ class Command(BaseCommand):
             "services": "/api/v1/work-orders/",
             "leasing": "/api/v1/equipment/",
         }
-        financial = (
-            "/api/v1/reporting/financial-statements/?start=2026-11-01&end=2026-11-30"
-        )
+        financial = "/api/v1/reporting/financial-statements/?start=2026-11-01&end=2026-11-30"
         bank = "/api/v1/company-bank-accounts/"
         results = []
         failures = []
@@ -108,9 +106,7 @@ class Command(BaseCommand):
             )
             check(
                 "receive_goods",
-                client.post(
-                    f"/api/v1/purchase-orders/{po.pk}/receive/", {}, format="json"
-                ),
+                client.post(f"/api/v1/purchase-orders/{po.pk}/receive/", {}, format="json"),
                 role in RECEIVE,
             )
             check(
@@ -125,23 +121,18 @@ class Command(BaseCommand):
             )
             check(
                 "accept_work_order",
-                client.post(
-                    f"/api/v1/work-orders/{work_order.pk}/accept/", {}, format="json"
-                ),
+                client.post(f"/api/v1/work-orders/{work_order.pk}/accept/", {}, format="json"),
                 role in SERVICE_ACCEPT,
             )
             check(
                 "dispatch_rental",
-                client.post(
-                    f"/api/v1/rental-agreements/{rental.pk}/dispatch/", {}, format="json"
-                ),
+                client.post(f"/api/v1/rental-agreements/{rental.pk}/dispatch/", {}, format="json"),
                 role in RENTAL_DISPATCH,
             )
             check(
                 "export_financial_report",
                 client.get(
-                    "/api/v1/reporting/financial-statements/export/"
-                    "?start=2026-11-01&end=2026-11-30"
+                    "/api/v1/reporting/financial-statements/export/?start=2026-11-01&end=2026-11-30"
                 ),
                 role in READ_FINANCE or role == "System Administrator",
             )
@@ -177,9 +168,7 @@ class Command(BaseCommand):
             lines.append(f"| {row['role']} | {passed}/{len(row['checks'])} |")
         if failures:
             lines += ["", "## Failures", ""] + [f"- {item}" for item in failures]
-        (evidence / "role-access-matrix.md").write_text(
-            "\n".join(lines) + "\n", encoding="utf-8"
-        )
+        (evidence / "role-access-matrix.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
         self.stdout.write(
             json.dumps(
                 {"roles": len(results), "checks": payload["checks"], "failures": failures},

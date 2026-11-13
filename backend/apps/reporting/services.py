@@ -349,9 +349,7 @@ def receivable_report(as_of: date) -> dict:
     ).select_related("customer", "project")
     rows = []
     buckets: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    currency_buckets: dict[str, dict[str, Decimal]] = defaultdict(
-        lambda: defaultdict(lambda: ZERO)
-    )
+    currency_buckets: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: ZERO))
     total = ZERO
     for invoice in invoices:
         balance = money(getattr(invoice, "payment_due", invoice.balance))
@@ -388,9 +386,7 @@ def payable_report(as_of: date) -> dict:
     ).select_related("supplier", "project")
     rows = []
     buckets: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    currency_buckets: dict[str, dict[str, Decimal]] = defaultdict(
-        lambda: defaultdict(lambda: ZERO)
-    )
+    currency_buckets: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: ZERO))
     total = ZERO
     for invoice in invoices:
         balance = money(invoice.payment_due)
@@ -875,6 +871,7 @@ def tax_report(start: date, end: date) -> dict:
         }
         for row in TaxConfiguration.objects.all()
     ]
+
     def by_currency(queryset, amount_fields):
         grouped: dict[str, dict] = {}
         for document in queryset:

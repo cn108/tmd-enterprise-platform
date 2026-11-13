@@ -7,76 +7,175 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('invoicing', '0008_alter_supplierpayment_options'),
-        ('parties', '0002_bank_account_encryption'),
+        ("invoicing", "0008_alter_supplierpayment_options"),
+        ("parties", "0002_bank_account_encryption"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customerinvoice',
-            name='amount_paid',
-            field=models.DecimalField(decimal_places=2, default=Decimal('0'), max_digits=18),
+            model_name="customerinvoice",
+            name="amount_paid",
+            field=models.DecimalField(decimal_places=2, default=Decimal("0"), max_digits=18),
         ),
         migrations.CreateModel(
-            name='CustomerReceipt',
+            name="CustomerReceipt",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('number', models.CharField(max_length=24, unique=True)),
-                ('receipt_date', models.DateField()),
-                ('currency', models.CharField(default='NGN', max_length=3)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=18)),
-                ('allocated_amount', models.DecimalField(decimal_places=2, default=Decimal('0'), max_digits=18)),
-                ('method', models.CharField(choices=[('bank_transfer', 'Bank transfer'), ('cheque', 'Cheque'), ('cash', 'Cash'), ('other', 'Other')], max_length=16)),
-                ('external_reference', models.CharField(blank=True, max_length=120)),
-                ('status', models.CharField(choices=[('recorded', 'Recorded'), ('cancelled', 'Cancelled')], default='recorded', max_length=10)),
-                ('is_test', models.BooleanField(default=True)),
-                ('notes', models.TextField(blank=True)),
-                ('cancelled_at', models.DateTimeField(blank=True, null=True)),
-                ('cancel_reason', models.CharField(blank=True, max_length=255)),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='customer_receipts', to='parties.party')),
-                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("number", models.CharField(max_length=24, unique=True)),
+                ("receipt_date", models.DateField()),
+                ("currency", models.CharField(default="NGN", max_length=3)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=18)),
+                (
+                    "allocated_amount",
+                    models.DecimalField(decimal_places=2, default=Decimal("0"), max_digits=18),
+                ),
+                (
+                    "method",
+                    models.CharField(
+                        choices=[
+                            ("bank_transfer", "Bank transfer"),
+                            ("cheque", "Cheque"),
+                            ("cash", "Cash"),
+                            ("other", "Other"),
+                        ],
+                        max_length=16,
+                    ),
+                ),
+                ("external_reference", models.CharField(blank=True, max_length=120)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("recorded", "Recorded"), ("cancelled", "Cancelled")],
+                        default="recorded",
+                        max_length=10,
+                    ),
+                ),
+                ("is_test", models.BooleanField(default=True)),
+                ("notes", models.TextField(blank=True)),
+                ("cancelled_at", models.DateTimeField(blank=True, null=True)),
+                ("cancel_reason", models.CharField(blank=True, max_length=255)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "customer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="customer_receipts",
+                        to="parties.party",
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-receipt_date', '-id'],
-                'permissions': [('cancel_customerreceipt', 'Can cancel a customer receipt'), ('allocate_customerreceipt', 'Can allocate a customer receipt')],
+                "ordering": ["-receipt_date", "-id"],
+                "permissions": [
+                    ("cancel_customerreceipt", "Can cancel a customer receipt"),
+                    ("allocate_customerreceipt", "Can allocate a customer receipt"),
+                ],
             },
         ),
         migrations.CreateModel(
-            name='CustomerReceiptAllocation',
+            name="CustomerReceiptAllocation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=18)),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('invoice', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='receipt_allocations', to='invoicing.customerinvoice')),
-                ('receipt', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='allocations', to='invoicing.customerreceipt')),
-                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=18)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "invoice",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="receipt_allocations",
+                        to="invoicing.customerinvoice",
+                    ),
+                ),
+                (
+                    "receipt",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="allocations",
+                        to="invoicing.customerreceipt",
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['receipt', 'id'],
+                "ordering": ["receipt", "id"],
             },
         ),
         migrations.AddConstraint(
-            model_name='customerreceipt',
-            constraint=models.CheckConstraint(condition=models.Q(('amount__gt', 0)), name='customer_receipt_amount_positive'),
+            model_name="customerreceipt",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("amount__gt", 0)), name="customer_receipt_amount_positive"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='customerreceipt',
-            constraint=models.CheckConstraint(condition=models.Q(('allocated_amount__gte', 0)), name='customer_receipt_allocated_non_negative'),
+            model_name="customerreceipt",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("allocated_amount__gte", 0)),
+                name="customer_receipt_allocated_non_negative",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='customerreceiptallocation',
-            constraint=models.UniqueConstraint(fields=('receipt', 'invoice'), name='unique_receipt_invoice_allocation'),
+            model_name="customerreceiptallocation",
+            constraint=models.UniqueConstraint(
+                fields=("receipt", "invoice"), name="unique_receipt_invoice_allocation"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='customerreceiptallocation',
-            constraint=models.CheckConstraint(condition=models.Q(('amount__gt', 0)), name='receipt_allocation_amount_positive'),
+            model_name="customerreceiptallocation",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("amount__gt", 0)), name="receipt_allocation_amount_positive"
+            ),
         ),
     ]

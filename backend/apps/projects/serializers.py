@@ -20,9 +20,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         source="project_manager.email", read_only=True, default=""
     )
     department_code = serializers.CharField(source="department.code", read_only=True, default="")
-    cost_centre_code = serializers.CharField(
-        source="cost_centre.code", read_only=True, default=""
-    )
+    cost_centre_code = serializers.CharField(source="cost_centre.code", read_only=True, default="")
 
     class Meta:
         model = Project

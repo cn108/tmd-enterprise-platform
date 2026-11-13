@@ -268,7 +268,6 @@ class WorkOrderViewSet(ServicePermissionMixin, NoDeleteViewSet):
             return _conflict(exc)
         return Response(self.get_serializer(work_order).data)
 
-
     @action(
         detail=True,
         methods=["post"],

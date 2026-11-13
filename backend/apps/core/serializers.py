@@ -103,9 +103,7 @@ class TaxConfigurationSerializer(serializers.ModelSerializer):
         rate = attrs.get("rate", getattr(self.instance, "rate", None))
         if rate is not None and not Decimal("0") <= rate <= Decimal("100"):
             raise serializers.ValidationError({"rate": "The tax rate must be between 0 and 100."})
-        effective_from = attrs.get(
-            "effective_from", getattr(self.instance, "effective_from", None)
-        )
+        effective_from = attrs.get("effective_from", getattr(self.instance, "effective_from", None))
         effective_to = attrs.get("effective_to", getattr(self.instance, "effective_to", None))
         if effective_from and effective_to and effective_to < effective_from:
             raise serializers.ValidationError(

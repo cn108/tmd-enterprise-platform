@@ -201,9 +201,9 @@ class TestDashboard:
         client.force_authenticate(user=view_only)
         modules = {
             row["id"]: row
-            for row in client.get(
-                "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
-            ).json()["module_access"]
+            for row in client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()[
+                "module_access"
+            ]
         }
         assert modules["procurement"]["access"] == "view_only"
 
@@ -211,9 +211,9 @@ class TestDashboard:
         client.force_authenticate(user=limited)
         modules = {
             row["id"]: row
-            for row in client.get(
-                "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
-            ).json()["module_access"]
+            for row in client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()[
+                "module_access"
+            ]
         }
         assert modules["procurement"]["access"] == "limited"
 
@@ -328,15 +328,11 @@ class TestDashboard:
         client = APIClient()
         client.force_authenticate(user=user)
         body = client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
-        payment_rows = [
-            row for row in body["recent_activity"] if row["reference"] == "PAY-88"
-        ]
+        payment_rows = [row for row in body["recent_activity"] if row["reference"] == "PAY-88"]
         assert len(payment_rows) == 1
 
     def test_dashboard_does_not_invent_payment_receipts(self, auth_client):
-        body = auth_client.get(
-            "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
-        ).json()
+        body = auth_client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
         receipts = next(
             card for card in body["financial_overview"] if card["id"] == "payments_received"
         )
@@ -356,9 +352,7 @@ class TestDashboard:
             method=CustomerReceipt.Method.BANK_TRANSFER,
             status=CustomerReceipt.Status.APPROVED,
         )
-        body = auth_client.get(
-            "/api/v1/dashboard/?start=2026-11-01&end=2026-11-12"
-        ).json()
+        body = auth_client.get("/api/v1/dashboard/?start=2026-11-01&end=2026-11-12").json()
         history = body["financial_history"]
         assert len(history) == 6
         assert history[0]["month"] == "2026-06-01"
@@ -656,7 +650,7 @@ class TestExports:
             lambda *args, **kwargs: {
                 "start": "2026-01-01",
                 "end": "2026-01-31",
-                "note": "=HYPERLINK(\"https://example.invalid\")",
+                "note": '=HYPERLINK("https://example.invalid")',
                 "negative": "-10.00",
             },
         )

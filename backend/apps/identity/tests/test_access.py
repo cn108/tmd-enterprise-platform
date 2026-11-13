@@ -18,9 +18,7 @@ def actor(*codenames: str) -> APIClient:
     for codename in codenames:
         if "." in codename:
             app_label, name = codename.split(".", 1)
-            permission = Permission.objects.get(
-                content_type__app_label=app_label, codename=name
-            )
+            permission = Permission.objects.get(content_type__app_label=app_label, codename=name)
         else:
             permission = Permission.objects.get(codename=codename)
         user.user_permissions.add(permission)
@@ -145,9 +143,7 @@ def test_administrator_cannot_deactivate_themselves():
     admin = actor("identity.change_user")
     me = User.objects.get(email="access-admin@example.com")
 
-    response = admin.patch(
-        f"/api/v1/access/users/{me.pk}/", {"is_active": False}, format="json"
-    )
+    response = admin.patch(f"/api/v1/access/users/{me.pk}/", {"is_active": False}, format="json")
 
     assert response.status_code == 409
     me.refresh_from_db()

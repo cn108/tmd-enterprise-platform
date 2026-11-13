@@ -54,6 +54,7 @@ def _period_for_date(value, label: str = "document") -> AccountingPeriod:
 def _period_for(invoice) -> AccountingPeriod:
     return _period_for_date(invoice.invoice_date, "invoice")
 
+
 def _account_resolver(invoice_date):
     cache: dict[str, object] = {}
 
@@ -65,9 +66,7 @@ def _account_resolver(invoice_date):
             raise InvoiceConflict(f"Account role {role_code} is not configured.")
         account = resolve_role_account(role, invoice_date)
         if account is None:
-            raise InvoiceConflict(
-                f"Account role {role_code} has no approved, effective mapping."
-            )
+            raise InvoiceConflict(f"Account role {role_code} has no approved, effective mapping.")
         cache[role_code] = account
         return account
 
@@ -207,9 +206,7 @@ def _assert_postable(invoice) -> None:
 def _replay_journal(scope: str, key: str) -> JournalEntry | None:
     if not key:
         return None
-    record = (
-        IdempotencyRecord.objects.select_for_update().filter(scope=scope, key=key).first()
-    )
+    record = IdempotencyRecord.objects.select_for_update().filter(scope=scope, key=key).first()
     if record is None:
         return None
     journal_id = record.response.get("journal_entry")
@@ -325,9 +322,7 @@ def post_supplier_payment(payment: SupplierPayment, actor, idempotency_key: str 
 
     period = _period_for_date(locked.payment_date, "payment")
     resolve = _account_resolver(locked.payment_date)
-    allocations = list(
-        locked.allocations.select_related("supplier_invoice").order_by("id")
-    )
+    allocations = list(locked.allocations.select_related("supplier_invoice").order_by("id"))
     allocated = sum((allocation.amount for allocation in allocations), ZERO)
     if allocated > locked.amount:
         raise InvoiceConflict("Payment allocations exceed the recorded payment amount.")
@@ -335,13 +330,9 @@ def post_supplier_payment(payment: SupplierPayment, actor, idempotency_key: str 
     for allocation in allocations:
         invoice = allocation.supplier_invoice
         if invoice.status != SupplierInvoice.Status.APPROVED:
-            raise InvoiceConflict(
-                f"Allocated invoice {invoice.number} is no longer approved."
-            )
+            raise InvoiceConflict(f"Allocated invoice {invoice.number} is no longer approved.")
         if invoice.journal_entry_id is None:
-            raise InvoiceConflict(
-                f"Invoice {invoice.number} must be posted before its payment."
-            )
+            raise InvoiceConflict(f"Invoice {invoice.number} must be posted before its payment.")
         if invoice.wht_total != ZERO:
             raise InvoiceConflict(
                 "Payment posting against a WHT invoice is not configured. "
@@ -463,9 +454,7 @@ def post_customer_receipt(receipt: CustomerReceipt, actor, idempotency_key: str 
     period = _period_for_date(locked.receipt_date, "receipt")
     resolve = _account_resolver(locked.receipt_date)
     allocations = list(
-        locked.allocations.select_related("invoice")
-        .filter(is_reversed=False)
-        .order_by("id")
+        locked.allocations.select_related("invoice").filter(is_reversed=False).order_by("id")
     )
     allocated = sum((allocation.amount for allocation in allocations), ZERO)
     if allocated > locked.amount:
@@ -473,13 +462,9 @@ def post_customer_receipt(receipt: CustomerReceipt, actor, idempotency_key: str 
     for allocation in allocations:
         invoice = allocation.invoice
         if invoice.status != CustomerInvoice.Status.APPROVED:
-            raise InvoiceConflict(
-                f"Allocated invoice {invoice.number} is no longer approved."
-            )
+            raise InvoiceConflict(f"Allocated invoice {invoice.number} is no longer approved.")
         if invoice.journal_entry_id is None:
-            raise InvoiceConflict(
-                f"Invoice {invoice.number} must be posted before its receipt."
-            )
+            raise InvoiceConflict(f"Invoice {invoice.number} must be posted before its receipt.")
         if invoice.invoice_notes.filter(status=InvoiceNote.Status.APPROVED).exists():
             raise InvoiceConflict(
                 f"Invoice {invoice.number} has approved notes. Note posting is not "

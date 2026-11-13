@@ -207,9 +207,7 @@ describe('DashboardComponent', () => {
   });
 
   function flush(body: object = DASHBOARD): void {
-    http
-      .expectOne((request) => request.url === '/api/v1/dashboard/')
-      .flush(body);
+    http.expectOne((request) => request.url === '/api/v1/dashboard/').flush(body);
   }
 
   it('greets the signed-in user and names the role focus', () => {
@@ -258,6 +256,20 @@ describe('DashboardComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Create purchase request');
     expect(text).not.toContain('Upload bank statement');
+  });
+
+  it('preserves query parameters in dashboard navigation links', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const hrefs = Array.from(element.querySelectorAll('a')).map((link) =>
+      link.getAttribute('href'),
+    );
+    expect(hrefs).toContain('/invoicing?tab=customer-invoices&status=approved');
+    expect(hrefs).toContain('/procurement?tab=requests&new=1');
   });
 
   it('marks a module this role cannot open without hiding it', () => {

@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Params, RouterLink } from '@angular/router';
 
 import { apiErrorMessage } from '../../core/auth.models';
 import { AuthService } from '../../core/auth.service';
@@ -186,16 +186,13 @@ export class DashboardComponent {
   protected readonly end = signal(this.today());
   protected readonly customError = signal<string | null>(null);
 
-  protected readonly greetingName = computed(() =>
-    (this.auth.user()?.full_name ?? '').split(/\s+/).filter(Boolean)[0] ?? '',
+  protected readonly greetingName = computed(
+    () => (this.auth.user()?.full_name ?? '').split(/\s+/).filter(Boolean)[0] ?? '',
   );
   protected readonly financialCards = computed(() => this.data()?.financial_overview ?? []);
   protected readonly chartRows = computed(() => this.data()?.financial_history ?? []);
   protected readonly chartMax = computed(() => {
-    const values = this.chartRows().flatMap((row) => [
-      Number(row.receipts),
-      Number(row.payments),
-    ]);
+    const values = this.chartRows().flatMap((row) => [Number(row.receipts), Number(row.payments)]);
     return this.niceMaximum(Math.max(0, ...values));
   });
   protected readonly chartTicks = computed<ChartTick[]>(() =>
@@ -241,12 +238,23 @@ export class DashboardComponent {
     if (!summary) {
       return '0.00';
     }
-    return summary.used_total ?? String(Number(summary.actual_total) + Number(summary.open_commitment));
+    return (
+      summary.used_total ?? String(Number(summary.actual_total) + Number(summary.open_commitment))
+    );
   });
   protected readonly reportsPath = computed(() => {
     const reports = this.data()?.module_access.find((module) => module.id === 'reports');
     return reports?.readable ? reports.path : '/';
   });
+
+  protected linkPath(link: string): string {
+    return link.split('?', 1)[0] || '/';
+  }
+
+  protected linkQuery(link: string): Params {
+    const query = link.split('?')[1];
+    return query ? Object.fromEntries(new URLSearchParams(query)) : {};
+  }
 
   constructor() {
     this.load();
@@ -324,25 +332,29 @@ export class DashboardComponent {
   }
 
   protected cardTone(id: string): string {
-    return {
-      customer_outstanding: 'blue',
-      customer_overdue: 'red',
-      supplier_outstanding: 'green',
-      supplier_due: 'orange',
-      payments_received: 'emerald',
-      payments_made: 'violet',
-    }[id] ?? 'blue';
+    return (
+      {
+        customer_outstanding: 'blue',
+        customer_overdue: 'red',
+        supplier_outstanding: 'green',
+        supplier_due: 'orange',
+        payments_received: 'emerald',
+        payments_made: 'violet',
+      }[id] ?? 'blue'
+    );
   }
 
   protected cardIcon(id: string): string {
-    return {
-      customer_outstanding: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
-      customer_overdue: 'M12 3 2.5 20h19zM12 9v5M12 17h.01',
-      supplier_outstanding: 'M3 4h2l2.2 10h10.4L20 7H6M9 20h.01M17 20h.01',
-      supplier_due: 'M4 6h16v15H4zM8 3v5M16 3v5M4 10h16M8 14h3M8 17h6',
-      payments_received: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v9M8 12l4 4 4-4',
-      payments_made: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 17V8M8 12l4-4 4 4',
-    }[id] ?? 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18';
+    return (
+      {
+        customer_outstanding: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
+        customer_overdue: 'M12 3 2.5 20h19zM12 9v5M12 17h.01',
+        supplier_outstanding: 'M3 4h2l2.2 10h10.4L20 7H6M9 20h.01M17 20h.01',
+        supplier_due: 'M4 6h16v15H4zM8 3v5M16 3v5M4 10h16M8 14h3M8 17h6',
+        payments_received: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v9M8 12l4 4 4-4',
+        payments_made: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 17V8M8 12l4-4 4 4',
+      }[id] ?? 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18'
+    );
   }
 
   protected monthDate(value: string): Date {
@@ -451,14 +463,16 @@ export class DashboardComponent {
   }
 
   protected quickIcon(id: string): string {
-    return {
-      create_supplier_invoice: 'M12 5v14M5 12h14',
-      draft_customer_invoice: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
-      record_payment: 'M4 7h16v10H4zM4 10h16M8 15h4',
-      create_purchase_request: 'M3 4h2l2.2 10h10.4L20 7H6M9 20h.01M17 20h.01',
-      upload_statement: 'M12 16V4M7 9l5-5 5 5M5 20h14',
-      register_project: 'M3 6h7l2 2h9v11H3zM3 6v13',
-    }[id] ?? 'M12 5v14M5 12h14';
+    return (
+      {
+        create_supplier_invoice: 'M12 5v14M5 12h14',
+        draft_customer_invoice: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5',
+        record_payment: 'M4 7h16v10H4zM4 10h16M8 15h4',
+        create_purchase_request: 'M3 4h2l2.2 10h10.4L20 7H6M9 20h.01M17 20h.01',
+        upload_statement: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+        register_project: 'M3 6h7l2 2h9v11H3zM3 6v13',
+      }[id] ?? 'M12 5v14M5 12h14'
+    );
   }
 
   protected moduleAccessLabel(access: ModuleAccess['access']): string {

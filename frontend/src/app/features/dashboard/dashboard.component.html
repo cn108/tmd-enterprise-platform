@@ -1,9 +1,7 @@
 <section class="dashboard" aria-labelledby="dashboard-heading">
   <header class="dashboard__header">
     <div class="dashboard__heading">
-      <h1 id="dashboard-heading">
-        Welcome back{{ greetingName() ? ', ' + greetingName() : '' }}!
-      </h1>
+      <h1 id="dashboard-heading">Welcome back{{ greetingName() ? ', ' + greetingName() : '' }}!</h1>
       <p class="dashboard__intro">Here’s what’s happening with your business today.</p>
       @if (data()?.focus; as focus) {
         <span class="focus-chip">{{ focus.title }}</span>
@@ -106,11 +104,7 @@
     @if (financialCards().length) {
       <section class="kpi-grid" aria-label="Key financial indicators">
         @for (card of financialCards(); track card.id) {
-          <article
-            class="kpi"
-            [class]="'kpi kpi--' + cardTone(card.id)"
-            [attr.title]="card.basis"
-          >
+          <article class="kpi" [class]="'kpi kpi--' + cardTone(card.id)" [attr.title]="card.basis">
             <div class="kpi__body">
               <span class="kpi__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
@@ -140,7 +134,11 @@
                   {{ card.count }} {{ card.count === 1 ? 'record' : 'records' }}
                 </span>
               }
-              <a class="kpi__link" [routerLink]="card.link">
+              <a
+                class="kpi__link"
+                [routerLink]="linkPath(card.link)"
+                [queryParams]="linkQuery(card.link)"
+              >
                 View details
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 12h15M13 6l6 6-6 6" />
@@ -204,7 +202,9 @@
               </div>
             </div>
             <table class="visually-hidden">
-              <caption>Receipts and payments, last six months</caption>
+              <caption>
+                Receipts and payments, last six months
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Month</th>
@@ -246,7 +246,12 @@
             <h2 id="actions-heading">Pending Actions</h2>
           </div>
           @if (dashboard.pending_actions.length) {
-            <a class="panel__link" [routerLink]="dashboard.pending_actions[0].link">View all</a>
+            <a
+              class="panel__link"
+              [routerLink]="linkPath(dashboard.pending_actions[0].link)"
+              [queryParams]="linkQuery(dashboard.pending_actions[0].link)"
+              >View all</a
+            >
           }
         </div>
 
@@ -254,7 +259,11 @@
           <ul class="pending-list">
             @for (action of dashboard.pending_actions; track action.id) {
               <li>
-                <a [routerLink]="action.link" [attr.title]="action.description">
+                <a
+                  [routerLink]="linkPath(action.link)"
+                  [queryParams]="linkQuery(action.link)"
+                  [attr.title]="action.description"
+                >
                   <span class="pending-list__count">{{ action.count }}</span>
                   <span class="pending-list__label">{{ action.label }}</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
@@ -288,7 +297,8 @@
               <a
                 class="quick-action"
                 [class.quick-action--primary]="$first"
-                [routerLink]="action.link"
+                [routerLink]="linkPath(action.link)"
+                [queryParams]="linkQuery(action.link)"
                 [attr.title]="action.description"
               >
                 <span class="quick-action__icon" aria-hidden="true">
@@ -301,7 +311,9 @@
             }
           </nav>
         } @else {
-          <p class="panel-empty panel-empty--compact">No quick actions are available for your role.</p>
+          <p class="panel-empty panel-empty--compact">
+            No quick actions are available for your role.
+          </p>
         }
       </aside>
     </div>
@@ -355,23 +367,35 @@
                   class="project-donut"
                   [style.background]="projectDonut()"
                   role="img"
-                  [attr.aria-label]="'Budget utilisation ' + projectUtilisation().toFixed(0) + ' percent'"
+                  [attr.aria-label]="
+                    'Budget utilisation ' + projectUtilisation().toFixed(0) + ' percent'
+                  "
                 >
                   <span>{{ projectUtilisation().toFixed(0) }}%</span>
                 </div>
                 <div class="project-summary__copy">
                   <strong>Budget Utilisation</strong>
                   @if (projectBudgetAvailable()) {
-                    <span>{{ naira(projectUsed()) }} / {{ naira(projects.summary.budget_total) }}</span>
+                    <span
+                      >{{ naira(projectUsed()) }} / {{ naira(projects.summary.budget_total) }}</span
+                    >
                   } @else {
                     <span>No approved budget</span>
                   }
-                  <small>{{ projects.summary.project_count }} active project{{ projects.summary.project_count === 1 ? '' : 's' }}</small>
+                  <small
+                    >{{ projects.summary.project_count }} active project{{
+                      projects.summary.project_count === 1 ? '' : 's'
+                    }}</small
+                  >
                 </div>
               </div>
 
               @if (firstProject(); as project) {
-                <a class="project-line" [routerLink]="project.link">
+                <a
+                  class="project-line"
+                  [routerLink]="linkPath(project.link)"
+                  [queryParams]="linkQuery(project.link)"
+                >
                   <span>
                     <strong>{{ project.code }}</strong>
                     <span>{{ project.name }}</span>
@@ -404,10 +428,12 @@
           <ul class="activity-list">
             @for (item of dashboard.recent_activity.slice(0, 5); track item.id) {
               <li>
-                <a [routerLink]="item.link">
+                <a [routerLink]="linkPath(item.link)" [queryParams]="linkQuery(item.link)">
                   <span
                     class="activity-list__icon"
-                    [class]="'activity-list__icon activity-list__icon--' + activityTone(item.entity)"
+                    [class]="
+                      'activity-list__icon activity-list__icon--' + activityTone(item.entity)
+                    "
                     aria-hidden="true"
                   >
                     <svg viewBox="0 0 24 24">
@@ -418,7 +444,9 @@
                     <strong>{{ item.action }}</strong>
                     <span>{{ item.reference || item.entity }}</span>
                   </span>
-                  <time [attr.datetime]="item.occurred_at">{{ relativeTime(item.occurred_at) }}</time>
+                  <time [attr.datetime]="item.occurred_at">{{
+                    relativeTime(item.occurred_at)
+                  }}</time>
                 </a>
               </li>
             }
@@ -459,7 +487,9 @@
             </span>
             <div>
               <h2 id="invoices-heading">Invoice management</h2>
-              <p class="panel__subtitle">Approval queues, drafts and documents requiring follow-up.</p>
+              <p class="panel__subtitle">
+                Approval queues, drafts and documents requiring follow-up.
+              </p>
             </div>
           </div>
           @if (!dashboard.issuance_authorised) {
@@ -468,7 +498,12 @@
         </div>
         <div class="queue-grid">
           @for (row of dashboard.invoice_management; track row.id) {
-            <a class="queue-card" [routerLink]="row.link" [class.queue-card--warning]="row.tone === 'warning'">
+            <a
+              class="queue-card"
+              [routerLink]="linkPath(row.link)"
+              [queryParams]="linkQuery(row.link)"
+              [class.queue-card--warning]="row.tone === 'warning'"
+            >
               <span class="queue-card__count">{{ row.count }}</span>
               <span class="queue-card__label">{{ row.label }}</span>
               <span class="queue-card__basis">{{ row.basis }}</span>

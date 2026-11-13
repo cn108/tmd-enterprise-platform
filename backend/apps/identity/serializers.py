@@ -19,6 +19,14 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(trim_whitespace=False, write_only=True)
 
 
+class MfaTokenSerializer(serializers.Serializer):
+    challenge_token = serializers.CharField(trim_whitespace=False, write_only=True)
+
+
+class MfaCodeSerializer(MfaTokenSerializer):
+    code = serializers.CharField(max_length=32, trim_whitespace=True)
+
+
 class PasswordChangeSerializer(serializers.Serializer):
     current_password = serializers.CharField(trim_whitespace=False, write_only=True)
     new_password = serializers.CharField(trim_whitespace=False, write_only=True)
@@ -103,10 +111,26 @@ class RoleSerializer(serializers.ModelSerializer):
     )
     permission_codenames = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    acknowledge_privileged = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = Group
-        fields = ["id", "name", "permissions", "permission_codenames", "member_count"]
+        fields = [
+            "id",
+            "name",
+            "permissions",
+            "permission_codenames",
+            "member_count",
+            "acknowledge_privileged",
+        ]
+
+    @staticmethod
+    def _is_privileged(code: str) -> bool:
+        codename = code.rsplit(".", 1)[-1]
+        return (
+            codename.startswith(("post_", "approve_", "record_", "allocate_", "cancel_"))
+            or code == "invoicing.manage_invoicesettings"
+        )
 
     def get_permission_codenames(self, obj: Group) -> list[str]:
         return sorted(permission_codename(permission) for permission in obj.permissions.all())
@@ -134,24 +158,50 @@ class RoleSerializer(serializers.ModelSerializer):
         }
         unknown = sorted(set(value) - set(available))
         if unknown:
-            raise serializers.ValidationError(
-                f"Unknown permissions: {', '.join(unknown)}."
-            )
+            raise serializers.ValidationError(f"Unknown permissions: {', '.join(unknown)}.")
         return [available[code] for code in sorted(set(value))]
 
     def create(self, validated_data):
+        validated_data.pop("acknowledge_privileged", None)
         permissions = validated_data.pop("permissions", [])
         role = Group.objects.create(**validated_data)
         role.permissions.set(permissions)
         return role
 
     def update(self, instance, validated_data):
+        validated_data.pop("acknowledge_privileged", None)
         permissions = validated_data.pop("permissions", None)
         instance.name = validated_data.get("name", instance.name)
         instance.save()
         if permissions is not None:
             instance.permissions.set(permissions)
         return instance
+
+    def validate(self, attrs):
+        requested = attrs.get("permissions")
+        if requested is not None:
+            existing = (
+                set(self.instance.permissions.values_list("codename", flat=True))
+                if self.instance
+                else set()
+            )
+            added = {
+                permission_codename(permission)
+                for permission in requested
+                if permission.codename not in existing
+            }
+            privileged = sorted(code for code in added if self._is_privileged(code))
+            if privileged and not attrs.get("acknowledge_privileged"):
+                raise serializers.ValidationError(
+                    {
+                        "acknowledge_privileged": (
+                            "This change grants financial or approval powers: "
+                            + ", ".join(privileged)
+                            + ". Confirm the privileged grant explicitly."
+                        )
+                    }
+                )
+        return attrs
 
 
 class AccessUserSerializer(serializers.ModelSerializer):
@@ -176,6 +226,7 @@ class AccessUserSerializer(serializers.ModelSerializer):
             "department_code",
             "is_active",
             "must_change_password",
+            "mfa_required",
             "roles",
             "role_names",
             "permissions",

@@ -36,6 +36,36 @@ for _key in BANK_ACCOUNT_ENCRYPTION_KEYS:
     except ValueError as exc:
         raise RuntimeError("BANK_ACCOUNT_ENCRYPTION_KEYS contains an invalid Fernet key.") from exc
 
+# --- Multi-factor authentication -------------------------------------------
+MFA_REQUIRED_FOR_ALL_USERS = env_bool("MFA_REQUIRED_FOR_ALL_USERS", True)
+MFA_ENCRYPTION_KEY = env_str("MFA_ENCRYPTION_KEY", required=MFA_REQUIRED_FOR_ALL_USERS)
+if MFA_ENCRYPTION_KEY:
+    try:
+        Fernet(MFA_ENCRYPTION_KEY.encode("utf-8"))
+    except ValueError as exc:
+        raise RuntimeError("MFA_ENCRYPTION_KEY must be a valid Fernet key.") from exc
+
+# Production email must use a company-controlled identity. A personal mailbox
+# default is never accepted silently.
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", required=True)
+EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", required=True)
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", required=True)
+if "gmail.com" in (EMAIL_HOST_USER or "").lower():
+    raise RuntimeError(
+        "Production EMAIL_HOST_USER must be a company-controlled mailbox, "
+        "not a personal Gmail address."
+    )
+
+# Tighter production defaults; operators may override them from the secret store.
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(  # noqa: F405
+    {
+        "user": env_str("API_USER_RATE", "5000/hour"),
+        "anon": env_str("API_ANON_RATE", "120/hour"),
+        "login": env_str("LOGIN_RATE", "10/min"),
+        "mfa": env_str("MFA_RATE", "10/min"),
+    }
+)
+
 # --- Transport and cookie security -----------------------------------------
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

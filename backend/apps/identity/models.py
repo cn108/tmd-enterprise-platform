@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -89,6 +90,42 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def display_name(self) -> str:
         return self.full_name or self.email
+
+
+class MfaDevice(models.Model):
+    """An encrypted TOTP secret and one-way recovery codes for one user."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="mfa_device")
+    secret_encrypted = models.TextField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_counter = models.BigIntegerField(default=0)
+    recovery_codes = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"MFA device for {self.user_id} ({'confirmed' if self.confirmed_at else 'pending'})"
+
+
+class MfaChallenge(models.Model):
+    """A short-lived, single-use challenge issued after a valid password."""
+
+    class Purpose(models.TextChoices):
+        VERIFY = "verify", "Verify"
+        ENROL = "enrol", "Enrol"
+
+    token_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mfa_challenges")
+    purpose = models.CharField(max_length=10, choices=Purpose.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"MFA {self.purpose} challenge for {self.user_id}"
 
 
 class PasswordResetToken(models.Model):

@@ -50,6 +50,7 @@ def test_role_assigns_permissions_and_me_reports_them():
                 "procurement.approve_purchaserequest",
                 "procurement.approve_purchaseorder",
             ],
+            "acknowledge_privileged": True,
         },
         format="json",
     )
@@ -82,6 +83,40 @@ def test_unknown_permission_is_refused():
 
     assert response.status_code == 400
     assert Group.objects.count() == 0
+
+
+def test_privileged_financial_permissions_need_explicit_acknowledgement():
+    admin = actor("add_group", "change_group")
+
+    refused = admin.post(
+        "/api/v1/access/roles/",
+        {
+            "name": "Receipts and posting",
+            "permissions": [
+                "invoicing.add_customerreceipt",
+                "invoicing.post_customerinvoice",
+            ],
+        },
+        format="json",
+    )
+    assert refused.status_code == 400
+    assert "acknowledge_privileged" in refused.content.decode()
+    assert not Group.objects.filter(name="Receipts and posting").exists()
+
+    allowed = admin.post(
+        "/api/v1/access/roles/",
+        {
+            "name": "Receipts and posting",
+            "permissions": [
+                "invoicing.add_customerreceipt",
+                "invoicing.post_customerinvoice",
+            ],
+            "acknowledge_privileged": True,
+        },
+        format="json",
+    )
+    assert allowed.status_code == 201, allowed.content
+    assert "invoicing.post_customerinvoice" in allowed.json()["permission_codenames"]
 
 
 def test_user_administration_creates_an_account_with_a_role():

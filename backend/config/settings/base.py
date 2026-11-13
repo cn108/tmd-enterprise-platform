@@ -120,19 +120,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REDIS_URL = env_str("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 # --- Outbound email ---------------------------------------------------------
-# Invoice delivery uses the company's Gmail mailbox. The app password is read
-# from the environment and is never stored in this repository. Set
+# Invoice delivery uses a company-controlled mailbox. Credentials are read from
+# the environment and are never stored in this repository. Set
 # EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend only for local
 # dry runs where no message should leave the machine.
 EMAIL_BACKEND = env_str("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = env_str("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_HOST = env_str("EMAIL_HOST", "smtp.company.example")
 EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
-EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "ccmtico1234@gmail.com")
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = env_str(
-    "DEFAULT_FROM_EMAIL", "Tico McDon Limited <ccmtico1234@gmail.com>"
-)
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "Tico McDon Limited <no-reply@example.invalid>")
 EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT_SECONDS", 15)
 
 # --- Authentication ---------------------------------------------------------
@@ -167,6 +165,15 @@ AXES_LOCKOUT_PARAMETERS = [["ip_address"], ["username"]]
 AXES_RESET_ON_SUCCESS = True
 
 PASSWORD_RESET_TOKEN_TTL_MINUTES = env_int("PASSWORD_RESET_TOKEN_TTL_MINUTES", 60)
+
+# --- Multi-factor authentication -------------------------------------------
+# TOTP is implemented locally; no third-party identity service is required.
+# Development leaves it off so synthetic UAT accounts keep working. Production
+# requires it for all accounts unless explicitly changed by the operator.
+MFA_REQUIRED_FOR_ALL_USERS = env_bool("MFA_REQUIRED_FOR_ALL_USERS", False)
+MFA_ISSUER = env_str("MFA_ISSUER", "Tico McDon Limited")
+MFA_ENCRYPTION_KEY = env_str("MFA_ENCRYPTION_KEY", "")
+MFA_CHALLENGE_TTL_SECONDS = env_int("MFA_CHALLENGE_TTL_SECONDS", 300)
 
 # Django admin is a break-glass surface (B-16); off unless explicitly enabled.
 ENABLE_DJANGO_ADMIN = env_bool("ENABLE_DJANGO_ADMIN", False)
@@ -227,7 +234,17 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
-    "DEFAULT_THROTTLE_RATES": {"password_reset": env_str("PASSWORD_RESET_RATE", "20/hour")},
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": env_str("API_USER_RATE", "20000/hour"),
+        "anon": env_str("API_ANON_RATE", "5000/hour"),
+        "login": env_str("LOGIN_RATE", "120/min"),
+        "mfa": env_str("MFA_RATE", "60/min"),
+        "password_reset": env_str("PASSWORD_RESET_RATE", "20/hour"),
+    },
 }
 
 SPECTACULAR_SETTINGS = {

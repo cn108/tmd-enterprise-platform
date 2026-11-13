@@ -68,6 +68,18 @@ export const BANKING_MODULE: ModuleConfig = {
   title: 'Banking and reconciliation',
   intro:
     'Upload bank statements, review the bank’s own lines, match them to company records and submit reconciliations for independent approval. No bank transfer is executed and no reconciliation is posted to the ledger.',
+  viewPermissions: [
+    'banking.view_bankaccount',
+    'banking.view_bankstatement',
+    'banking.view_banktransaction',
+    'banking.view_banktransfer',
+    'banking.view_cashaccount',
+    'banking.view_cashvoucher',
+    'banking.view_pettycashreplenishment',
+    'banking.view_reconciliation',
+    'banking.view_statementline',
+    'banking.view_bankingsettings',
+  ],
   tabs: [
     {
       id: 'dashboard',
@@ -76,6 +88,7 @@ export const BANKING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/banking-summary/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'code', label: 'Account' },
         { key: 'name', label: 'Name' },
@@ -313,6 +326,7 @@ export const BANKING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/banking-match-suggestions/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'account', label: 'Account' },
         { key: 'value_date', label: 'Date', kind: 'date' },
@@ -344,6 +358,7 @@ export const BANKING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/banking-unmatched-transactions/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'bank_account', label: 'Account' },
         { key: 'statement', label: 'Statement' },
@@ -493,6 +508,7 @@ export const BANKING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/banking-reconciliation-report/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'number', label: 'Reconciliation' },
         { key: 'bank_account', label: 'Account' },

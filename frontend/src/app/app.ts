@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
@@ -12,10 +13,16 @@ interface NavItem {
   children?: { label: string; path: string }[];
 }
 
+interface SearchResult {
+  label: string;
+  path: string;
+  hint: string;
+}
+
 @Component({
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [DatePipe, RouterLink, RouterLinkActive, RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.scss',
+  styleUrls: ['./app.scss', './app-topbar.scss'],
   templateUrl: './app.html',
 })
 export class App {
@@ -28,6 +35,26 @@ export class App {
   protected readonly menuOpen = signal(false);
   protected readonly sectionTitle = signal('Dashboard');
   protected readonly activePath = signal('/');
+  protected readonly today = new Date();
+  protected readonly searchQuery = signal('');
+  protected readonly searchOpen = signal(false);
+  protected readonly searchResults = computed<SearchResult[]>(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+    const items = this.navItems.flatMap((item): SearchResult[] => [
+      { label: item.label, path: item.path, hint: 'Module' },
+      ...(item.children ?? []).map((child) => ({
+        label: child.label,
+        path: child.path,
+        hint: item.label,
+      })),
+    ]);
+    return items
+      .filter((item) => `${item.label} ${item.hint}`.toLowerCase().includes(query))
+      .slice(0, 6);
+  });
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', path: '/', icon: 'M3 11.5 12 4l9 7.5M5 9.8V20h5v-6h4v6h5V9.8' },
     {
@@ -71,6 +98,51 @@ export class App {
 
   protected closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected handleShortcut(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.openSearch();
+      document.querySelector<HTMLInputElement>('.global-search input')?.focus();
+    }
+  }
+
+  protected updateSearch(value: string): void {
+    this.searchQuery.set(value);
+    this.searchOpen.set(true);
+  }
+
+  protected openSearch(): void {
+    this.searchOpen.set(true);
+  }
+
+  protected closeSearch(): void {
+    this.searchOpen.set(false);
+  }
+
+  protected closeSearchSoon(): void {
+    window.setTimeout(() => this.searchOpen.set(false), 140);
+  }
+
+  protected chooseSearchResult(): void {
+    this.searchOpen.set(false);
+    this.searchQuery.set('');
+  }
+
+  protected searchKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.closeSearch();
+    }
+    if (event.key === 'Enter') {
+      const first = this.searchResults()[0];
+      if (first) {
+        event.preventDefault();
+        this.chooseSearchResult();
+        void this.router.navigateByUrl(first.path);
+      }
+    }
   }
 
   protected isActive(path: string): boolean {

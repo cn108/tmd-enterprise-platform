@@ -93,6 +93,8 @@ export interface ResourceConfig {
   serverSort?: boolean;
   columns: ColumnConfig[];
   detail: ColumnConfig[];
+  /** Computed report rows have no retrieve endpoint; detail opens from the row. */
+  detailFromRow?: boolean;
   fields?: FieldConfig[];
   lines?: LineConfig;
   /**
@@ -122,6 +124,8 @@ export interface ResourceConfig {
 export interface ModuleConfig {
   title: string;
   intro: string;
+  /** At least one of these permissions is required before the module calls its list APIs. */
+  viewPermissions?: string[];
   tabs: ResourceConfig[];
 }
 
@@ -152,7 +156,7 @@ const SUPPLIER_FIELDS: FieldConfig[] = [
     help: 'Categories are maintained under Master data.',
   },
   { key: 'payment_terms_days', label: 'Payment terms (days)', type: 'number', min: 0 },
-  { key: 'default_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+  { key: 'default_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
   { key: 'due_diligence_status', label: 'Due diligence status', type: 'text' },
   { key: 'email', label: 'Email', type: 'text' },
   { key: 'phone', label: 'Phone', type: 'text' },
@@ -166,7 +170,7 @@ const CUSTOMER_FIELDS: FieldConfig[] = [
   { key: 'legal_name', label: 'Legal name', type: 'text', required: true },
   { key: 'trading_name', label: 'Trading name', type: 'text' },
   { key: 'payment_terms_days', label: 'Payment terms (days)', type: 'number', min: 0 },
-  { key: 'default_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+  { key: 'default_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
   {
     key: 'credit_limit',
     label: 'Credit limit',
@@ -730,7 +734,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'proposed_account_name', label: 'Account name', type: 'text', required: true },
           { key: 'proposed_account_number', label: 'Account number', type: 'text', required: true },
           { key: 'proposed_sort_code', label: 'Sort code', type: 'text' },
-          { key: 'proposed_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'proposed_currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
           { key: 'reason', label: 'Reason for change', type: 'text', required: true },
         ],
         actions: [
@@ -971,7 +975,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         ],
         fields: [
           { key: 'item', label: 'Item', type: 'select', required: true, optionsEndpoint: '/api/v1/catalogue-items/' },
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
           { key: 'amount', label: 'Amount', type: 'number', required: true, min: 0, step: '0.000001' },
           { key: 'effective_from', label: 'Effective from', type: 'date', required: true },
           { key: 'effective_to', label: 'Effective to', type: 'date' },
@@ -1291,7 +1295,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'customer', label: 'Customer', type: 'select', required: true, optionsEndpoint: '/api/v1/customers/' },
           { key: 'reference', label: 'Reference', type: 'text', required: true },
           { key: 'value', label: 'Contract value', type: 'number', required: true, min: 0, step: '0.01' },
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
           { key: 'start_date', label: 'Start date', type: 'date', required: true },
           { key: 'end_date', label: 'End date', type: 'date' },
           { key: 'terms', label: 'Terms', type: 'textarea' },
@@ -1324,7 +1328,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         fields: [
           { key: 'contract', label: 'Contract', type: 'select', required: true, optionsEndpoint: '/api/v1/customer-contracts/' },
           { key: 'value', label: 'Revised value', type: 'number', required: true, min: 0, step: '0.01' },
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
           { key: 'start_date', label: 'Start date', type: 'date', required: true },
           { key: 'end_date', label: 'End date', type: 'date' },
           { key: 'terms', label: 'Terms', type: 'textarea' },
@@ -1366,7 +1370,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         ],
         fields: [
           PROJECT_FIELD,
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
           { key: 'notes', label: 'Notes', type: 'textarea' },
         ],
         lines: {
@@ -1545,7 +1549,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'rfq', label: 'RFQ', type: 'select', optionsEndpoint: '/api/v1/rfqs/' },
           { key: 'selection', label: 'Selected quotation', type: 'select', optionsEndpoint: '/api/v1/supplier-selections/', help: 'Choosing a selection copies its priced lines.' },
           { key: 'destination', label: 'Destination', type: 'select', required: true, optionsEndpoint: '/api/v1/destinations/' },
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
         ],
         lines: {
           label: 'Order lines',
@@ -1702,7 +1706,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'supplier', label: 'Invited supplier', type: 'select', required: true, optionsEndpoint: '/api/v1/suppliers/' },
           { key: 'reference', label: 'Supplier reference', type: 'text' },
           { key: 'received_at', label: 'Received on', type: 'date' },
-          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS },
+          { key: 'currency', label: 'Currency', type: 'select', options: CURRENCY_OPTIONS, defaultValue: 'NGN' },
         ],
         lines: {
           label: 'Quoted lines',
@@ -1813,6 +1817,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         endpoint: '/api/v1/stock-balances/',
         serverSearch: false,
         serverSort: false,
+        detailFromRow: true,
         columns: [
           { key: 'item_code', label: 'Item' },
           { key: 'warehouse_code', label: 'Warehouse' },
@@ -1915,6 +1920,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         endpoint: '/api/v1/reorder-alerts/',
         serverSearch: false,
         serverSort: false,
+        detailFromRow: true,
         columns: [
           { key: 'item_code', label: 'Item' },
           { key: 'warehouse_code', label: 'Warehouse' },

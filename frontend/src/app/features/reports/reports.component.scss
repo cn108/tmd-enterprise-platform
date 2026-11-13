@@ -1,8 +1,7 @@
 .module {
   width: 100%;
-  max-width: 84rem;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 3rem;
+  margin: 0;
+  padding: 0 0 3rem;
 }
 
 .module__header {
@@ -386,7 +385,7 @@ tbody tr:hover {
 
 @media (max-width: 720px) {
   .module {
-    padding: 1.25rem 1rem 2rem;
+    padding: 0 0 2rem;
   }
 
   .bar {
@@ -401,6 +400,13 @@ tbody tr:hover {
   .parameters mat-form-field,
   .parameters .wide {
     width: 100%;
+  }
+}
+
+@media (max-width: 960px) {
+  .tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 }
 

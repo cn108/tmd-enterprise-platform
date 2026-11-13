@@ -19,7 +19,10 @@
         } @else if (field.type === 'select') {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ field.label }}</mat-label>
-            <mat-select [formControlName]="field.key">
+            <mat-select
+              [formControlName]="field.key"
+              [attr.aria-invalid]="form.get(field.key)?.invalid && form.get(field.key)?.touched ? 'true' : null"
+            >
               <mat-option [value]="null">—</mat-option>
               @for (option of optionList(field); track option.value) {
                 <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -35,27 +38,34 @@
             }
           </mat-form-field>
         } @else if (field.type === 'file') {
-          <mat-form-field appearance="outline" class="fields__wide" subscriptSizing="dynamic">
-            <mat-label>{{ field.label }}</mat-label>
-            <input
-              type="file"
-              class="fields__file"
-              [attr.aria-label]="field.label"
-              (change)="onFile(field.key, $event)"
-            />
-            @if (field.help) {
-              <mat-hint>{{ field.help }}</mat-hint>
-            }
+          <div class="fields__wide fields__upload">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ field.label }}</mat-label>
+              <input
+                type="file"
+                class="fields__file"
+                [attr.aria-label]="field.label"
+                (change)="onFile(field.key, $event)"
+              />
+              @if (field.help) {
+                <mat-hint>{{ field.help }}</mat-hint>
+              }
+            </mat-form-field>
             @if (fieldError(field.key); as error) {
-              <mat-error>{{ error }}</mat-error>
+              <p class="fields__error" role="alert">{{ error }}</p>
             } @else if (form.get(field.key)?.hasError('required')) {
-              <mat-error>{{ field.label }} is required.</mat-error>
+              <p class="fields__error" role="alert">{{ field.label }} is required.</p>
             }
-          </mat-form-field>
+          </div>
         } @else if (field.type === 'textarea') {
           <mat-form-field appearance="outline" class="fields__wide" subscriptSizing="dynamic">
             <mat-label>{{ field.label }}</mat-label>
-            <textarea matInput rows="3" [formControlName]="field.key"></textarea>
+            <textarea
+              matInput
+              rows="3"
+              [formControlName]="field.key"
+              [attr.aria-invalid]="form.get(field.key)?.invalid && form.get(field.key)?.touched ? 'true' : null"
+            ></textarea>
             @if (field.help) {
               <mat-hint>{{ field.help }}</mat-hint>
             }
@@ -73,6 +83,7 @@
               [attr.min]="field.min ?? null"
               [attr.step]="field.step ?? null"
               [readonly]="editing && field.readOnlyOnEdit === true"
+              [attr.aria-invalid]="form.get(field.key)?.invalid && form.get(field.key)?.touched ? 'true' : null"
             />
             @if (field.help) {
               <mat-hint>{{ field.help }}</mat-hint>
@@ -108,7 +119,10 @@
                   >
                     <mat-label>{{ field.label }}</mat-label>
                     @if (field.type === 'select') {
-                    <mat-select [formControlName]="field.key">
+                    <mat-select
+                      [formControlName]="field.key"
+                      [attr.aria-invalid]="line.get(field.key)?.invalid && line.get(field.key)?.touched ? 'true' : null"
+                    >
                       <mat-option [value]="null">—</mat-option>
                       @for (option of optionList(field); track option.value) {
                         <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -121,6 +135,7 @@
                         [formControlName]="field.key"
                         [attr.min]="field.min ?? null"
                         [attr.step]="field.step ?? null"
+                        [attr.aria-invalid]="line.get(field.key)?.invalid && line.get(field.key)?.touched ? 'true' : null"
                       />
                     }
                     @if (lineError($index, field.key); as error) {

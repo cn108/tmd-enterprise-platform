@@ -1,7 +1,7 @@
 .module {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 3rem;
 }
 
 .module__header {
@@ -29,9 +29,10 @@ h1 {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid var(--tmd-border);
+  border-bottom: 1px solid var(--tmd-line);
 
   button {
     border: 0;
@@ -43,8 +44,8 @@ h1 {
     cursor: pointer;
 
     &.is-active {
-      color: var(--tmd-text);
-      border-bottom-color: var(--tmd-accent);
+      color: var(--tmd-ink);
+      border-bottom-color: var(--tmd-gold);
       font-weight: 600;
     }
   }
@@ -52,9 +53,9 @@ h1 {
 
 .panel {
   padding: 1.25rem;
-  border: 1px solid var(--tmd-border);
+  border: 1px solid var(--tmd-line);
   border-radius: 0.6rem;
-  background: var(--tmd-surface);
+  background: #fff;
 }
 
 .panel__head {
@@ -77,6 +78,7 @@ h1 {
 
 table {
   width: 100%;
+  min-width: 46rem;
   border-collapse: collapse;
   font-size: 0.88rem;
 
@@ -84,7 +86,7 @@ table {
   td {
     padding: 0.55rem 0.6rem;
     text-align: left;
-    border-bottom: 1px solid var(--tmd-border);
+    border-bottom: 1px solid var(--tmd-line);
   }
 
   th {
@@ -93,12 +95,20 @@ table {
     letter-spacing: 0.06em;
     color: var(--tmd-muted);
   }
+
+  th:last-child,
+  td:last-child {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    box-shadow: -1px 0 0 var(--tmd-line);
+  }
 }
 
 .editor {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid var(--tmd-border);
+  border-top: 1px solid var(--tmd-line);
 
   h3 {
     margin: 0 0 0.85rem;
@@ -133,7 +143,7 @@ table {
   fieldset {
     margin: 0;
     padding: 0.75rem 1rem 1rem;
-    border: 1px solid var(--tmd-border);
+    border: 1px solid var(--tmd-line);
     border-radius: 0.4rem;
   }
 
@@ -155,8 +165,33 @@ table {
   color: var(--tmd-muted);
 }
 
+.privileged {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #fdf1d6;
+  color: #7a4b00;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.privileged-warning {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e0b45c;
+  border-left: 4px solid var(--tmd-gold);
+  border-radius: 0.4rem;
+  background: #fffaf0;
+  line-height: 1.5;
+}
+
 .notice {
-  color: var(--tmd-accent-dark, #1b5e20);
+  color: #2f7a4d;
 }
 
 .error {

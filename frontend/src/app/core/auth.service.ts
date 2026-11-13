@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, firstValueFrom, of, tap, throwError } from 'rxjs';
 
-import { AuthenticatedUser } from './auth.models';
+import { AuthenticatedUser, MfaSetup } from './auth.models';
 import { SessionStore } from './session.store';
 
 const AUTH_BASE = '/api/v1/auth';
@@ -36,6 +36,30 @@ export class AuthService {
       .pipe(tap((user) => this.session.setUser(user)));
   }
 
+  startMfaEnrolment(challengeToken: string): Observable<MfaSetup> {
+    return this.http.post<MfaSetup>(`${AUTH_BASE}/mfa/setup/`, {
+      challenge_token: challengeToken,
+    });
+  }
+
+  confirmMfa(challengeToken: string, code: string): Observable<AuthenticatedUser> {
+    return this.http
+      .post<AuthenticatedUser>(`${AUTH_BASE}/mfa/confirm/`, {
+        challenge_token: challengeToken,
+        code,
+      })
+      .pipe(tap((user) => this.session.setUser(user)));
+  }
+
+  verifyMfa(challengeToken: string, code: string): Observable<AuthenticatedUser> {
+    return this.http
+      .post<AuthenticatedUser>(`${AUTH_BASE}/mfa/verify/`, {
+        challenge_token: challengeToken,
+        code,
+      })
+      .pipe(tap((user) => this.session.setUser(user)));
+  }
+
   /**
    * Ends the server session, then clears local state.
    *
@@ -61,15 +85,13 @@ export class AuthService {
     // Issuing a token first means the SPA can send X-CSRFToken on its first
     // mutation after signing in.
     await firstValueFrom(
-      this.http.get<{ csrfToken: string }>(`${AUTH_BASE}/csrf/`).pipe(
-        catchError(() => of({ csrfToken: '' })),
-      ),
+      this.http
+        .get<{ csrfToken: string }>(`${AUTH_BASE}/csrf/`)
+        .pipe(catchError(() => of({ csrfToken: '' }))),
     );
 
     const user = await firstValueFrom(
-      this.http
-        .get<AuthenticatedUser>(`${AUTH_BASE}/me/`)
-        .pipe(catchError(() => of(null))),
+      this.http.get<AuthenticatedUser>(`${AUTH_BASE}/me/`).pipe(catchError(() => of(null))),
     );
 
     if (user) {

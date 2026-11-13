@@ -126,6 +126,9 @@
               <mat-checkbox name="mustChange" [(ngModel)]="draft.must_change_password">
                 Must change password at next sign-in
               </mat-checkbox>
+              <mat-checkbox name="mfaRequired" [(ngModel)]="draft.mfa_required">
+                Require MFA at next sign-in
+              </mat-checkbox>
             </div>
             <div class="editor__actions">
               <button mat-flat-button type="submit" [disabled]="saving()">Save user</button>
@@ -197,13 +200,36 @@
                       (change)="togglePermission(permission.codename, $event.checked)"
                     >
                       {{ permission.codename }} — {{ permission.name }}
+                      @if (isPrivileged(permission.codename)) {
+                        <span class="privileged">Financial control</span>
+                      }
                     </mat-checkbox>
                   }
                 </fieldset>
               }
             </div>
+            @if (hasPrivilegedSelection()) {
+              <div class="privileged-warning" role="note">
+                <strong>This role includes financial or approval powers.</strong>
+                Posting, payment recording, allocation, cancellation and approval permissions can
+                move money or change financial records. Verify separation of duties before saving.
+                <mat-checkbox
+                  name="acknowledgePrivileged"
+                  [ngModel]="acknowledgePrivileged()"
+                  (ngModelChange)="acknowledgePrivileged.set($event)"
+                >
+                  I have reviewed these privileged permissions with management.
+                </mat-checkbox>
+              </div>
+            }
             <div class="editor__actions">
-              <button mat-flat-button type="submit" [disabled]="saving()">Save role</button>
+              <button
+                mat-flat-button
+                type="submit"
+                [disabled]="saving() || (hasPrivilegedSelection() && !acknowledgePrivileged())"
+              >
+                Save role
+              </button>
               <button mat-button type="button" (click)="cancel()">Cancel</button>
             </div>
           </form>

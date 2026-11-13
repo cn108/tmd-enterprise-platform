@@ -37,6 +37,7 @@ interface AdminUser {
   department_code: string | null;
   is_active: boolean;
   must_change_password: boolean;
+  mfa_required: boolean;
   role_names: string[];
   permissions: string[];
 }
@@ -50,6 +51,7 @@ interface UserDraft {
   roles: string[];
   is_active: boolean;
   must_change_password: boolean;
+  mfa_required: boolean;
   password: string;
 }
 
@@ -89,6 +91,7 @@ export class AdministrationComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);
+  protected readonly acknowledgePrivileged = signal(false);
 
   protected userDraft = signal<UserDraft | null>(null);
   protected roleDraft = signal<RoleDraft | null>(null);
@@ -154,6 +157,7 @@ export class AdministrationComponent implements OnInit {
       roles: [],
       is_active: true,
       must_change_password: true,
+      mfa_required: false,
       password: '',
     });
   }
@@ -169,6 +173,7 @@ export class AdministrationComponent implements OnInit {
       roles: [...user.role_names],
       is_active: user.is_active,
       must_change_password: user.must_change_password,
+      mfa_required: user.mfa_required,
       password: '',
     });
   }
@@ -194,6 +199,7 @@ export class AdministrationComponent implements OnInit {
       roles: draft.roles,
       is_active: draft.is_active,
       must_change_password: draft.must_change_password,
+      mfa_required: draft.mfa_required,
     };
     if (draft.password) {
       body['password'] = draft.password;
@@ -209,11 +215,13 @@ export class AdministrationComponent implements OnInit {
 
   protected newRole(): void {
     this.userDraft.set(null);
+    this.acknowledgePrivileged.set(false);
     this.roleDraft.set({ id: null, name: '', permissions: [] });
   }
 
   protected editRole(role: Role): void {
     this.userDraft.set(null);
+    this.acknowledgePrivileged.set(false);
     this.roleDraft.set({
       id: role.id,
       name: role.name,
@@ -222,6 +230,7 @@ export class AdministrationComponent implements OnInit {
   }
 
   protected togglePermission(codename: string, checked: boolean): void {
+    this.acknowledgePrivileged.set(false);
     this.roleDraft.update((draft) => {
       if (!draft) {
         return draft;
@@ -237,6 +246,19 @@ export class AdministrationComponent implements OnInit {
     return this.roleDraft()?.permissions.includes(codename) ?? false;
   }
 
+  protected isPrivileged(codename: string): boolean {
+    const name = codename.split('.').pop() ?? '';
+    return (
+      ['post_', 'approve_', 'record_', 'allocate_', 'cancel_'].some((prefix) =>
+        name.startsWith(prefix),
+      ) || codename === 'invoicing.manage_invoicesettings'
+    );
+  }
+
+  protected hasPrivilegedSelection(): boolean {
+    return (this.roleDraft()?.permissions ?? []).some((item) => this.isPrivileged(item));
+  }
+
   protected saveRole(): void {
     const draft = this.roleDraft();
     if (!draft) {
@@ -249,7 +271,11 @@ export class AdministrationComponent implements OnInit {
     this.save(
       draft.id ? `/api/v1/access/roles/${draft.id}/` : '/api/v1/access/roles/',
       draft.id ? 'patch' : 'post',
-      { name: draft.name.trim(), permissions: draft.permissions },
+      {
+        name: draft.name.trim(),
+        permissions: draft.permissions,
+        acknowledge_privileged: this.acknowledgePrivileged(),
+      },
       draft.id ? 'Role updated.' : 'Role created.',
       () => this.loadRoles(),
     );

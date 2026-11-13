@@ -31,19 +31,20 @@ describe('App shell', () => {
   });
 
   it('renders the platform brand', () => {
+    userSignal.set(TEST_USER);
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    const heading = fixture.nativeElement.querySelector('h1') as HTMLElement;
-    expect(heading.textContent).toContain('TMD Platform');
+    const heading = fixture.nativeElement.querySelector('.brand__text strong') as HTMLElement;
+    expect(heading.textContent).toContain('Tico McDon Limited');
   });
 
   it('hides the session controls when nobody is signed in', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.session')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('Secure area');
+    expect(fixture.nativeElement.querySelector('.sidebar')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.topbar')).toBeNull();
   });
 
   it('shows the signed-in user and signs out on request', () => {
@@ -55,7 +56,7 @@ describe('App shell', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.session__name').textContent).toContain(
+    expect(fixture.nativeElement.querySelector('.sidebar__identity strong').textContent).toContain(
       'Ama Okafor',
     );
 
@@ -93,7 +94,7 @@ describe('App shell', () => {
     fixture.detectChanges();
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('.session__name').textContent).toContain(
+    expect(fixture.nativeElement.querySelector('.sidebar__identity strong').textContent).toContain(
       'Ama Okafor',
     );
     const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;

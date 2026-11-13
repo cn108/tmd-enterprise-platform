@@ -1,45 +1,60 @@
 <section class="dashboard" aria-labelledby="dashboard-heading">
   <header class="dashboard__header">
-    <div>
-      <p class="eyebrow">Tico McDon Limited</p>
+    <div class="dashboard__heading">
       <h1 id="dashboard-heading">
-        Welcome{{ auth.user()?.full_name ? ', ' + auth.user()?.full_name : '' }}
+        Welcome back{{ greetingName() ? ', ' + greetingName() : '' }}!
       </h1>
+      <p class="dashboard__intro">Here’s what’s happening with your business today.</p>
       @if (data()?.focus; as focus) {
-        <p class="focus-title">{{ focus.title }}</p>
+        <span class="focus-chip">{{ focus.title }}</span>
       }
-      <p class="dashboard__intro">
-        {{ data()?.focus?.description ?? 'Your operational summary is loading from the live system.' }}
-      </p>
     </div>
-    <div class="dashboard__badges">
+
+    <div class="dashboard__tools">
       @if (data()?.test_mode) {
         <span class="badge badge--test" title="Production invoice issuance is not authorised">
           Test environment
         </span>
       }
-      @if (auth.user()?.roles?.length) {
-        <span class="badge">{{ auth.user()?.roles?.join(', ') }}</span>
-      }
+      <div class="period-switch" role="group" aria-label="Dashboard period">
+        <button
+          type="button"
+          [class.is-active]="period() === 'this_month'"
+          [attr.aria-pressed]="period() === 'this_month'"
+          (click)="setPeriod('this_month')"
+        >
+          This Month
+        </button>
+        <button
+          type="button"
+          [class.is-active]="period() === 'last_month'"
+          [attr.aria-pressed]="period() === 'last_month'"
+          (click)="setPeriod('last_month')"
+        >
+          Last Month
+        </button>
+        <button
+          type="button"
+          [class.is-active]="period() === 'custom'"
+          [attr.aria-pressed]="period() === 'custom'"
+          (click)="setPeriod('custom')"
+        >
+          Custom Range
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16v15H4zM8 3v5M16 3v5M4 10h16" />
+          </svg>
+        </button>
+      </div>
+      <button type="button" class="icon-button" aria-label="Refresh dashboard" (click)="reload()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+        </svg>
+      </button>
     </div>
   </header>
 
-  @if (auth.user()?.must_change_password) {
-    <p class="notice" role="status">
-      Your password was set by an administrator. Ask them for a reset link before you start work.
-    </p>
-  }
-
-  <form class="period" (ngSubmit)="applyCustom()" aria-label="Dashboard period">
-    <label>
-      <span>Period</span>
-      <select [value]="period()" (change)="setPeriod($any($event.target).value)">
-        <option value="this_month">This month</option>
-        <option value="last_month">Last month</option>
-        <option value="custom">Custom range</option>
-      </select>
-    </label>
-    @if (period() === 'custom') {
+  @if (period() === 'custom') {
+    <form class="custom-range" (ngSubmit)="applyCustom()" aria-label="Custom dashboard period">
       <label>
         <span>From</span>
         <input type="date" [value]="start()" (change)="setStart($any($event.target).value)" />
@@ -48,22 +63,23 @@
         <span>To</span>
         <input type="date" [value]="end()" (change)="setEnd($any($event.target).value)" />
       </label>
-      <button type="submit" class="button button--primary">Apply</button>
-    }
-    <button type="button" class="button button--quiet" (click)="reload()">Refresh</button>
-    @if (data(); as dashboard) {
-      <span class="period__label">
-        {{ dashboard.period.start | date: 'd MMM y' }} – {{ dashboard.period.end | date: 'd MMM y' }}
-      </span>
-    }
-  </form>
+      <button type="submit" class="button button--primary">Apply range</button>
+      @if (customError(); as message) {
+        <span class="custom-range__error" role="alert">{{ message }}</span>
+      }
+    </form>
+  }
 
-  @if (customError(); as message) {
-    <p class="error" role="alert">{{ message }}</p>
+  @if (auth.user()?.must_change_password) {
+    <p class="notice" role="status">
+      Your password was set by an administrator. Ask them for a reset link before you start work.
+    </p>
   }
 
   @if (loading()) {
-    <div class="loading" role="status">Loading your dashboard…</div>
+    <div class="dashboard-loading" role="status" aria-label="Loading dashboard">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
   } @else if (error(); as message) {
     <div class="empty-state" role="alert">
       <h2>We could not load your dashboard</h2>
@@ -71,202 +87,429 @@
       <button type="button" class="button button--primary" (click)="reload()">Try again</button>
     </div>
   } @else if (data(); as dashboard) {
-    @for (notice of dashboard.notices; track notice) {
-      <p class="notice" role="status">{{ notice }}</p>
-    }
-
-    @if (dashboard.financial_overview?.length) {
-      <section class="section" aria-labelledby="financial-heading">
-        <div class="section__head">
-          <div>
-            <h2 id="financial-heading">Financial overview</h2>
-            <p>Document and payment values for the selected period. NGN unless stated.</p>
-          </div>
-        </div>
-        <div class="metrics">
-          @for (card of dashboard.financial_overview; track card.id) {
-            <article class="metric" [class.metric--warning]="card.tone === 'warning'">
-              <div class="metric__head">
-                <span class="metric__label">{{ card.label }}</span>
-                <span class="state" [class.state--test]="card.state === 'test'">
-                  {{ stateLabel(card.state) }}
-                </span>
-              </div>
-              @if (card.available) {
-                <p class="metric__value">
-                  {{ card.amount === null ? naira('0') : naira(card.amount) }}
-                </p>
-                <p class="metric__basis">{{ card.basis }}</p>
-                <p class="metric__note">
-                  {{ card.count }} {{ card.count === 1 ? 'record' : 'records' }}
-                  @if (card.note) {
-                    · {{ card.note }}
-                  }
-                </p>
-                <a class="metric__link" [routerLink]="card.link">Open records</a>
-              } @else {
-                <p class="metric__empty">No records in this period</p>
-                <p class="metric__basis">{{ card.basis }}</p>
-              }
-            </article>
-          }
-        </div>
-      </section>
-    }
-
-    <section class="section" aria-labelledby="actions-heading">
-      <div class="section__head">
+    @if (dashboard.notices.length) {
+      <div class="dashboard__notice">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 8v5M12 16h.01" />
+        </svg>
         <div>
-          <h2 id="actions-heading">Pending actions</h2>
-          <p>Items that need your review or decision.</p>
+          @for (notice of dashboard.notices; track notice) {
+            <p>{{ notice }}</p>
+          }
         </div>
+        <span class="dashboard__updated">
+          Updated {{ dashboard.generated_at | date: 'd MMM, h:mm a' }}
+        </span>
       </div>
-      @if (dashboard.pending_actions.length) {
-        <ul class="action-list">
-          @for (action of dashboard.pending_actions; track action.id) {
-            <li>
-              <a class="action" [routerLink]="action.link">
-                <span class="action__count">{{ action.count }}</span>
-                <span class="action__body">
-                  <strong>{{ action.label }}</strong>
-                  <span>{{ action.description }}</span>
+    }
+
+    @if (financialCards().length) {
+      <section class="kpi-grid" aria-label="Key financial indicators">
+        @for (card of financialCards(); track card.id) {
+          <article
+            class="kpi"
+            [class]="'kpi kpi--' + cardTone(card.id)"
+            [attr.title]="card.basis"
+          >
+            <div class="kpi__body">
+              <span class="kpi__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path [attr.d]="cardIcon(card.id)" />
+                </svg>
+              </span>
+              <div class="kpi__copy">
+                <h2 class="kpi__label">{{ cardTitle(card) }}</h2>
+                <p class="kpi__value">{{ cardAmount(card) }}</p>
+              </div>
+            </div>
+            <div class="kpi__foot">
+              @if (hasTrend(card)) {
+                <span
+                  class="kpi__trend"
+                  [class.kpi__trend--down]="!trendPositive(card)"
+                  [attr.aria-label]="cardFootnote(card)"
+                >
+                  <span aria-hidden="true">{{ trendPositive(card) ? '↑' : '↓' }}</span>
+                  {{ card.change_percent }}%
+                  <span class="kpi__trend-caption">vs previous period</span>
                 </span>
-                <span class="action__open" aria-hidden="true">Review →</span>
+              } @else if (!card.available) {
+                <span class="kpi__empty">No records in this period</span>
+              } @else {
+                <span class="kpi__count">
+                  {{ card.count }} {{ card.count === 1 ? 'record' : 'records' }}
+                </span>
+              }
+              <a class="kpi__link" [routerLink]="card.link">
+                View details
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 12h15M13 6l6 6-6 6" />
+                </svg>
               </a>
-            </li>
-          }
-        </ul>
-      } @else {
-        <div class="empty-state empty-state--compact">
-          <h3>No items need your attention</h3>
-          <p>New approvals and reconciliation items will appear here.</p>
-        </div>
-      }
-    </section>
-
-    @if (dashboard.invoice_management?.length) {
-      <section class="section" aria-labelledby="invoices-heading">
-        <div class="section__head">
-          <div>
-            <h2 id="invoices-heading">Invoice management</h2>
-            <p>Approval queues, drafts and documents requiring follow-up.</p>
-          </div>
-          @if (!dashboard.issuance_authorised) {
-            <span class="state state--test">Issuance disabled</span>
-          }
-        </div>
-        <div class="status-grid">
-          @for (row of dashboard.invoice_management; track row.id) {
-            <a class="status-card" [routerLink]="row.link" [class.status-card--warning]="row.tone === 'warning'">
-              <span class="status-card__count">{{ row.count }}</span>
-              <span class="status-card__label">{{ row.label }}</span>
-              <span class="status-card__basis">{{ row.basis }}</span>
-            </a>
-          }
-        </div>
+            </div>
+          </article>
+        }
       </section>
     }
 
-    @if (dashboard.operations; as operations) {
-      <section class="section" aria-labelledby="operations-heading">
-        <div class="section__head">
-          <div>
-            <h2 id="operations-heading">{{ operations.title }}</h2>
-            <p>{{ operations.description }}</p>
+    <div class="dashboard-grid">
+      <section class="panel chart-panel" aria-labelledby="financial-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+              </svg>
+            </span>
+            <h2 id="financial-heading">Financial Overview</h2>
           </div>
+          <span class="panel__range">
+            Last 6 Months
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+          </span>
         </div>
-        <div class="operations">
-          @for (card of operations.cards; track card.id) {
-            <a class="operation" [routerLink]="card.link">
-              <span class="operation__label">{{ card.label }}</span>
-              <strong class="operation__value">{{ operationValue(card) }}</strong>
-              <span class="operation__detail">{{ card.detail }}</span>
-            </a>
+
+        @if (chartRows().length) {
+          <figure class="chart">
+            <figcaption class="visually-hidden">{{ chartSummary() }}</figcaption>
+            <div class="chart__axis" aria-hidden="true">
+              @for (tick of chartTicks(); track tick.ratio) {
+                <span>{{ tick.label }}</span>
+              }
+            </div>
+            <div class="chart__canvas" aria-hidden="true">
+              <div class="chart__grid">
+                @for (tick of chartTicks(); track tick.ratio) {
+                  <span></span>
+                }
+              </div>
+              <div class="chart__groups">
+                @for (row of chartRows(); track row.month) {
+                  <div class="chart__group">
+                    <div class="chart__bars">
+                      <span
+                        class="chart__bar chart__bar--receipts"
+                        [style.height.%]="chartHeight(row.receipts)"
+                        [attr.title]="'Receipts: ' + chartTotal(row.receipts)"
+                      ></span>
+                      <span
+                        class="chart__bar chart__bar--payments"
+                        [style.height.%]="chartHeight(row.payments)"
+                        [attr.title]="'Payments: ' + chartTotal(row.payments)"
+                      ></span>
+                    </div>
+                    <span class="chart__month">{{ monthDate(row.month) | date: 'MMM y' }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+            <table class="visually-hidden">
+              <caption>Receipts and payments, last six months</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Month</th>
+                  <th scope="col">Receipts</th>
+                  <th scope="col">Payments</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of chartRows(); track row.month) {
+                  <tr>
+                    <th scope="row">{{ monthDate(row.month) | date: 'MMMM y' }}</th>
+                    <td>{{ naira(row.receipts) }}</td>
+                    <td>{{ naira(row.payments) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <div class="chart__legend" aria-hidden="true">
+              <span><i class="dot dot--receipts"></i>Receipts</span>
+              <span><i class="dot dot--payments"></i>Payments</span>
+            </div>
+          </figure>
+        } @else {
+          <div class="panel-empty">
+            <h3>Financial overview unavailable</h3>
+            <p>Your role does not include access to financial reporting.</p>
+          </div>
+        }
+      </section>
+
+      <section class="panel actions-panel" aria-labelledby="actions-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--amber" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2" />
+              </svg>
+            </span>
+            <h2 id="actions-heading">Pending Actions</h2>
+          </div>
+          @if (dashboard.pending_actions.length) {
+            <a class="panel__link" [routerLink]="dashboard.pending_actions[0].link">View all</a>
           }
         </div>
-      </section>
-    }
 
-    <div class="split">
-      <section class="section" aria-labelledby="activity-heading">
-        <div class="section__head">
-          <div>
-            <h2 id="activity-heading">Recent activity</h2>
-            <p>Recorded document and approval events.</p>
-          </div>
-        </div>
-        @if (dashboard.recent_activity.length) {
-          <ul class="activity">
-            @for (item of dashboard.recent_activity; track item.id) {
+        @if (dashboard.pending_actions.length) {
+          <ul class="pending-list">
+            @for (action of dashboard.pending_actions; track action.id) {
               <li>
-                <a [routerLink]="item.link">
-                  <span class="activity__dot" aria-hidden="true"></span>
-                  <span class="activity__body">
-                    <strong>{{ item.action }}</strong>
-                    <span>
-                      {{ item.reference || item.entity }}
-                      @if (item.reference) {
-                        · {{ item.entity }}
-                      }
-                    </span>
-                    <span class="activity__meta">{{ item.user }} · {{ activityTime(item.occurred_at) }}</span>
-                  </span>
+                <a [routerLink]="action.link" [attr.title]="action.description">
+                  <span class="pending-list__count">{{ action.count }}</span>
+                  <span class="pending-list__label">{{ action.label }}</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
                 </a>
               </li>
             }
           </ul>
         } @else {
-          <div class="empty-state empty-state--compact">
+          <div class="panel-empty panel-empty--compact">
+            <h3>No items need your attention</h3>
+            <p>New approvals and reconciliation items will appear here.</p>
+          </div>
+        }
+      </section>
+
+      <aside class="panel quick-panel" aria-labelledby="quick-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--violet" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m13 2-8 12h6l-1 8 9-13h-6z" />
+              </svg>
+            </span>
+            <h2 id="quick-heading">Quick Actions</h2>
+          </div>
+        </div>
+
+        @if (dashboard.quick_actions.length) {
+          <nav class="quick-actions" aria-label="Quick actions">
+            @for (action of dashboard.quick_actions; track action.id) {
+              <a
+                class="quick-action"
+                [class.quick-action--primary]="$first"
+                [routerLink]="action.link"
+                [attr.title]="action.description"
+              >
+                <span class="quick-action__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path [attr.d]="quickIcon(action.id)" />
+                  </svg>
+                </span>
+                <span>{{ action.label }}</span>
+              </a>
+            }
+          </nav>
+        } @else {
+          <p class="panel-empty panel-empty--compact">No quick actions are available for your role.</p>
+        }
+      </aside>
+    </div>
+
+    <div class="dashboard-grid dashboard-grid--lower">
+      <section class="panel delivery-panel" aria-labelledby="delivery-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M3 4h2l2.2 10h10.4L20 7H6M9 20h.01M17 20h.01" />
+              </svg>
+            </span>
+            <h2 id="delivery-heading">Procurement &amp; Projects</h2>
+          </div>
+        </div>
+
+        <div class="delivery-panel__grid">
+          <div class="delivery-panel__section">
+            <div class="subhead">
+              <h3>Procurement Activity</h3>
+              <a routerLink="/procurement">View <span aria-hidden="true">→</span></a>
+            </div>
+            @if (procurementCards().length) {
+              <dl class="delivery-list">
+                @for (card of procurementCards(); track card.id) {
+                  <div>
+                    <dt>{{ card.label }}</dt>
+                    <dd [class.delivery-list__alert]="card.id === 'deliveries_due' && card.value">
+                      {{ operationValue(card) }}
+                    </dd>
+                  </div>
+                }
+              </dl>
+            } @else {
+              <p class="panel-empty panel-empty--compact">
+                Procurement activity is not available for your role.
+              </p>
+            }
+          </div>
+
+          <div class="delivery-panel__section">
+            <div class="subhead">
+              <h3>Project Performance</h3>
+              <a routerLink="/projects">View <span aria-hidden="true">→</span></a>
+            </div>
+
+            @if (dashboard.project_performance; as projects) {
+              <div class="project-summary">
+                <div
+                  class="project-donut"
+                  [style.background]="projectDonut()"
+                  role="img"
+                  [attr.aria-label]="'Budget utilisation ' + projectUtilisation().toFixed(0) + ' percent'"
+                >
+                  <span>{{ projectUtilisation().toFixed(0) }}%</span>
+                </div>
+                <div class="project-summary__copy">
+                  <strong>Budget Utilisation</strong>
+                  @if (projectBudgetAvailable()) {
+                    <span>{{ naira(projectUsed()) }} / {{ naira(projects.summary.budget_total) }}</span>
+                  } @else {
+                    <span>No approved budget</span>
+                  }
+                  <small>{{ projects.summary.project_count }} active project{{ projects.summary.project_count === 1 ? '' : 's' }}</small>
+                </div>
+              </div>
+
+              @if (firstProject(); as project) {
+                <a class="project-line" [routerLink]="project.link">
+                  <span>
+                    <strong>{{ project.code }}</strong>
+                    <span>{{ project.name }}</span>
+                  </span>
+                  <span class="project-line__percent">{{ projectPercentLabel(project) }}</span>
+                </a>
+              }
+            } @else {
+              <p class="panel-empty panel-empty--compact">
+                Project performance is not available for your role.
+              </p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="panel activity-panel" aria-labelledby="activity-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--amber" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m13 2-8 12h6l-1 8 9-13h-6z" />
+              </svg>
+            </span>
+            <h2 id="activity-heading">Recent Activity</h2>
+          </div>
+        </div>
+
+        @if (dashboard.recent_activity.length) {
+          <ul class="activity-list">
+            @for (item of dashboard.recent_activity.slice(0, 5); track item.id) {
+              <li>
+                <a [routerLink]="item.link">
+                  <span
+                    class="activity-list__icon"
+                    [class]="'activity-list__icon activity-list__icon--' + activityTone(item.entity)"
+                    aria-hidden="true"
+                  >
+                    <svg viewBox="0 0 24 24">
+                      <path [attr.d]="activityIcon(item.entity)" />
+                    </svg>
+                  </span>
+                  <span class="activity-list__body">
+                    <strong>{{ item.action }}</strong>
+                    <span>{{ item.reference || item.entity }}</span>
+                  </span>
+                  <time [attr.datetime]="item.occurred_at">{{ relativeTime(item.occurred_at) }}</time>
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="panel-empty panel-empty--compact">
             <h3>No recent activity</h3>
             <p>Recorded document events will appear here.</p>
           </div>
         }
       </section>
 
-      @if (dashboard.quick_actions.length) {
-        <section class="section" aria-labelledby="quick-heading">
-          <div class="section__head">
-            <div>
-              <h2 id="quick-heading">Quick actions</h2>
-              <p>Shortcuts available to your role.</p>
-            </div>
-          </div>
-          <div class="quick-list">
-            @for (action of dashboard.quick_actions; track action.id) {
-              <a class="quick" [routerLink]="action.link">
-                <span class="quick__plus" aria-hidden="true">+</span>
-                <span>
-                  <strong>{{ action.label }}</strong>
-                  <span>{{ action.description }}</span>
-                </span>
-              </a>
-            }
-          </div>
-        </section>
-      }
+      <aside class="business-cta" aria-labelledby="business-cta-heading">
+        <span class="business-cta__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5" />
+            <circle cx="17" cy="17" r="4" />
+            <path d="m15.5 17 1.2 1.2 2-2.2" />
+          </svg>
+        </span>
+        <h2 id="business-cta-heading">Keep Your Business On Track</h2>
+        <p>A complete view of procurement, projects and financial performance.</p>
+        <a [routerLink]="reportsPath()">
+          View Reports
+          <span aria-hidden="true">→</span>
+        </a>
+      </aside>
     </div>
 
+    @if (dashboard.invoice_management?.length) {
+      <section class="panel queue-panel" aria-labelledby="invoices-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="panel__icon panel__icon--blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5" />
+              </svg>
+            </span>
+            <div>
+              <h2 id="invoices-heading">Invoice management</h2>
+              <p class="panel__subtitle">Approval queues, drafts and documents requiring follow-up.</p>
+            </div>
+          </div>
+          @if (!dashboard.issuance_authorised) {
+            <span class="badge badge--test">Issuance disabled</span>
+          }
+        </div>
+        <div class="queue-grid">
+          @for (row of dashboard.invoice_management; track row.id) {
+            <a class="queue-card" [routerLink]="row.link" [class.queue-card--warning]="row.tone === 'warning'">
+              <span class="queue-card__count">{{ row.count }}</span>
+              <span class="queue-card__label">{{ row.label }}</span>
+              <span class="queue-card__basis">{{ row.basis }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
     <section class="modules" aria-labelledby="modules-heading">
-      <div class="section__head">
+      <div class="modules__head">
         <div>
-          <h2 id="modules-heading">Business modules</h2>
+          <h2 id="modules-heading">Workspace</h2>
           <p>Open a module to continue working.</p>
         </div>
       </div>
       <div class="modules__grid">
         @for (module of dashboard.module_access; track module.path) {
           <a class="module-card" [routerLink]="module.path">
-            <span class="module-card__head">
-              <span class="module-card__index">{{ $index + 1 }}</span>
-              @if (!module.readable) {
-                <span class="state">Restricted</span>
-              }
+            <span class="module-card__mark" aria-hidden="true">{{ $index + 1 }}</span>
+            <span class="module-card__copy">
+              <strong>{{ module.label }}</strong>
+              <span>{{ module.description }}</span>
             </span>
-            <h3>{{ module.label }}</h3>
-            <p>{{ module.description }}</p>
-            <span class="module-card__link">
-              {{ module.readable ? 'Open module →' : 'View access status →' }}
-            </span>
+            @if (module.access !== 'full' && module.access !== 'standard') {
+              <span
+                class="state"
+                [class.state--restricted]="module.access === 'restricted'"
+                [class.state--view-only]="module.access === 'view_only'"
+                [class.state--limited]="module.access === 'limited'"
+              >
+                {{ moduleAccessLabel(module.access) }}
+              </span>
+            } @else {
+              <svg class="module-card__arrow" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            }
+            @if (!module.readable) {
+              <span class="visually-hidden">Restricted — View access status</span>
+            }
           </a>
         }
       </div>

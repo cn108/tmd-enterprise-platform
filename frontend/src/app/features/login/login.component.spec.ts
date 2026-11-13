@@ -11,16 +11,28 @@ import { LoginComponent } from './login.component';
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
   let login: ReturnType<typeof vi.fn>;
+  let startMfaEnrolment: ReturnType<typeof vi.fn>;
+  let confirmMfa: ReturnType<typeof vi.fn>;
+  let verifyMfa: ReturnType<typeof vi.fn>;
   let navigateByUrl: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     login = vi.fn(() => of(TEST_USER));
+    startMfaEnrolment = vi.fn(() =>
+      of({
+        secret: 'JBSWY3DPEHPK3PXP',
+        otpauth_uri: 'otpauth://totp/test',
+        recovery_codes: ['AAAA-BBBB'],
+      }),
+    );
+    confirmMfa = vi.fn(() => of(TEST_USER));
+    verifyMfa = vi.fn(() => of(TEST_USER));
     navigateByUrl = vi.fn().mockResolvedValue(true);
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
-        { provide: AuthService, useValue: { login } },
+        { provide: AuthService, useValue: { login, startMfaEnrolment, confirmMfa, verifyMfa } },
         { provide: Router, useValue: { navigateByUrl } },
         {
           provide: ActivatedRoute,
@@ -94,14 +106,77 @@ describe('LoginComponent', () => {
   });
 
   it('re-enables the form after a failure so the user can retry', () => {
-    login.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 503, error: null })),
-    );
+    login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503, error: null })));
 
     fill('ama@example.com', 'secret');
     submit();
 
     const button = fixture.nativeElement.querySelector('button[type=submit]') as HTMLButtonElement;
     expect(button.disabled).toBe(false);
+  });
+
+  it('moves to the verification step when the backend requires MFA', () => {
+    login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+            error: {
+              error: {
+                code: 'mfa_required',
+                message: 'Enter the six-digit code from your authenticator app.',
+                details: { challenge_token: 'challenge-token', purpose: 'verify' },
+                request_id: 'req-mfa',
+              },
+            },
+          }),
+      ),
+    );
+
+    fill('ama@example.com', 'secret');
+    submit();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain("Verify it's you");
+    expect(fixture.nativeElement.querySelector('input[type=password]')).toBeNull();
+  });
+
+  it('shows the setup key and confirms enrolment', async () => {
+    login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+            error: {
+              error: {
+                code: 'mfa_enrollment_required',
+                message: 'Set up an authenticator app before continuing.',
+                details: { challenge_token: 'enrol-token', purpose: 'enrol' },
+                request_id: 'req-enrol',
+              },
+            },
+          }),
+      ),
+    );
+
+    fill('ama@example.com', 'secret');
+    submit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(startMfaEnrolment).toHaveBeenCalledWith('enrol-token');
+    expect(fixture.nativeElement.textContent).toContain('JBSWY3DPEHPK3PXP');
+    expect(fixture.nativeElement.textContent).toContain('AAAA-BBBB');
+
+    const codeInput = fixture.nativeElement.querySelector(
+      'input[autocomplete=one-time-code]',
+    ) as HTMLInputElement;
+    codeInput.value = '123456';
+    codeInput.dispatchEvent(new Event('input'));
+    submit();
+    await fixture.whenStable();
+
+    expect(confirmMfa).toHaveBeenCalledWith('enrol-token', '123456');
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 });

@@ -30,6 +30,21 @@
   font: inherit;
 }
 
+.fields__upload {
+  display: flex;
+  flex-direction: column;
+}
+
+.fields__upload mat-form-field {
+  width: 100%;
+}
+
+.fields__error {
+  margin: -0.6rem 0 0.8rem;
+  color: var(--tmd-danger);
+  font-size: 0.78rem;
+}
+
 .fields__check {
   margin: 0.4rem 0 0.9rem;
 }

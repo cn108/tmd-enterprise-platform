@@ -17,6 +17,7 @@ interface WorkspaceInternals {
   onPage(event: PageEvent): void;
   create(): void;
   sortBy(column: { key: string; label: string }): void;
+  view(row: Record<string, unknown>): void;
 }
 
 function internals(fixture: ComponentFixture<WorkspaceComponent>): WorkspaceInternals {
@@ -63,6 +64,28 @@ describe('WorkspaceComponent', () => {
   afterEach(() => {
     http?.verify();
     vi.restoreAllMocks();
+  });
+
+  it('opens computed report rows from the row without calling a detail endpoint', async () => {
+    const fixture = await configure('banking', ['banking.view_bankaccount']);
+    fixture.detectChanges();
+    http.expectOne(`/api/v1/banking-summary/${PAGE}`).flush({
+      count: 1,
+      results: [{ id: 7, code: 'BANK-1', name: 'Operating account' }],
+    });
+
+    internals(fixture).view({ id: 7, code: 'BANK-1', name: 'Operating account' });
+
+    http.expectNone('/api/v1/banking-summary/7/');
+    expect(open).toHaveBeenCalled();
+  });
+
+  it('does not call a restricted module API when the user lacks its view permission', async () => {
+    const fixture = await configure('banking', []);
+    fixture.detectChanges();
+
+    http.expectNone((request) => request.url.startsWith('/api/v1/'));
+    expect(text(fixture)).toContain('Access restricted');
   });
 
   it('loads a server-paginated page and renders the supplier table', async () => {
@@ -249,12 +272,12 @@ describe('WorkspaceComponent', () => {
   });
 
   it.each([
-    ['banking', '/api/v1/banking-summary/'],
-    ['projects', '/api/v1/project-dashboard/'],
-    ['services', '/api/v1/work-orders/'],
-    ['leasing', '/api/v1/equipment/'],
-  ])('loads the %s module from its own API endpoint', async (module, endpoint) => {
-    const fixture = await configure(module);
+    ['banking', '/api/v1/banking-summary/', ['banking.view_bankaccount']],
+    ['projects', '/api/v1/project-dashboard/', []],
+    ['services', '/api/v1/work-orders/', []],
+    ['leasing', '/api/v1/equipment/', []],
+  ])('loads the %s module from its own API endpoint', async (module, endpoint, permissions) => {
+    const fixture = await configure(module as string, permissions as string[]);
     fixture.detectChanges();
 
     http.expectOne(`${endpoint}${PAGE}`).flush({ count: 0, results: [] });

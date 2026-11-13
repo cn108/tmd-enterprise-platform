@@ -10,7 +10,7 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: /Welcome,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible();
 }
 
 async function shot(page: Page, name: string) {
@@ -24,7 +24,7 @@ test.beforeAll(async () => {
 
 test('employee signs in and reaches every business module', async ({ page }) => {
   await signIn(page, 'management@staging.tmd.local');
-  await expect(page.getByText('API reachable — ok')).toBeVisible();
+  await expect(page.getByText('Test environment')).toBeVisible();
   await shot(page, '01-dashboard-management');
 
   const modules = [
@@ -41,7 +41,7 @@ test('employee signs in and reaches every business module', async ({ page }) => 
   ] as const;
   for (const [label, path] of modules) {
     await page.getByRole('link', { name: label, exact: true }).click();
-    await page.waitForURL(`**${path}`);
+    await page.waitForURL((url) => url.pathname.startsWith(path));
     await expect(page.locator('main h1').first()).toBeVisible();
   }
 });
@@ -106,6 +106,6 @@ test('auditor can inspect records but cannot create a purchase request', async (
   await signIn(page, 'auditor@staging.tmd.local');
   await page.goto('/procurement');
   await expect(page.getByText('PR-2026-0001')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'New purchase request' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /permission to create/ })).toBeDisabled();
   await shot(page, '09-procurement-auditor-read-only');
 });

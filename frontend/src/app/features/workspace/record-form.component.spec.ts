@@ -63,6 +63,12 @@ describe('RecordFormComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it('defaults the supplier currency to the configured reporting currency', () => {
+    const { internals } = createForm();
+
+    expect((internals.form.get('default_currency') as FormControl).value).toBe('NGN');
+  });
+
   it('creates the record through the API and closes with the saved row', () => {
     const { internals } = createForm();
     fill(internals, {

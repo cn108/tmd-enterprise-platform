@@ -499,6 +499,7 @@ export const LEASING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/equipment-utilisation/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'code', label: 'Equipment' },
         { key: 'name', label: 'Name' },
@@ -528,6 +529,7 @@ export const LEASING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/equipment-warnings/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'severity', label: 'Severity', kind: 'status' },
         { key: 'kind', label: 'Warning', kind: 'status' },
@@ -553,6 +555,7 @@ export const LEASING_MODULE: ModuleConfig = {
       endpoint: '/api/v1/equipment-availability/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'code', label: 'Equipment' },
         { key: 'name', label: 'Name' },

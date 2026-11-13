@@ -126,3 +126,80 @@
   color: var(--tmd-muted);
   text-align: center;
 }
+
+.mfa h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  color: var(--tmd-navy);
+}
+
+.mfa p {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--tmd-muted);
+}
+
+.mfa__details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.45rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--tmd-line);
+  border-radius: 0.45rem;
+  background: #f7f9fc;
+  font-size: 0.8rem;
+}
+
+.mfa__details dt {
+  font-weight: 600;
+  color: var(--tmd-ink);
+}
+
+.mfa__details dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.mfa__details code {
+  overflow-wrap: anywhere;
+}
+
+.mfa__uri {
+  font-size: 0.72rem;
+}
+
+.mfa__recovery {
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  border-left: 3px solid var(--tmd-gold);
+  background: #fffaf0;
+}
+
+.mfa__recovery h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  color: var(--tmd-navy);
+}
+
+.mfa__recovery ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+}
+
+.mfa__back {
+  width: 100%;
+  margin-top: 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--tmd-navy-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+}

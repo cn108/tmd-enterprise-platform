@@ -90,6 +90,14 @@ export class WorkspaceComponent {
 
   protected readonly permissions = computed(() => this.auth.user()?.permissions ?? []);
 
+  /** Admits the module only when the user holds at least one of its view permissions. */
+  protected readonly moduleViewDenied = computed(() => {
+    const required = this.config.viewPermissions;
+    return Boolean(
+      required?.length && !required.some((permission) => this.permissions().includes(permission)),
+    );
+  });
+
   /** Server ordering is only sent where the endpoint supports `ordering`. */
   private readonly ordering = computed<string | undefined>(() => {
     if (this.resource().serverSort === false) {
@@ -168,6 +176,11 @@ export class WorkspaceComponent {
           this.load();
         }
       });
+    if (this.moduleViewDenied()) {
+      this.loading.set(false);
+      this.accessDenied.set(true);
+      return;
+    }
     this.load();
   }
 
@@ -179,6 +192,9 @@ export class WorkspaceComponent {
   }
 
   protected selectTab(id: string): void {
+    if (this.moduleViewDenied()) {
+      return;
+    }
     if (id === this.activeTab()) {
       return;
     }
@@ -274,6 +290,10 @@ export class WorkspaceComponent {
   }
 
   protected view(row: Row): void {
+    if (this.resource().detailFromRow) {
+      this.openDetail(row);
+      return;
+    }
     const id = row['id'];
     if (typeof id !== 'number') {
       this.openDetail(row);

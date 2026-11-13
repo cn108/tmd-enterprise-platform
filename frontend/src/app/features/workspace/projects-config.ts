@@ -37,6 +37,7 @@ export const PROJECTS_MODULE: ModuleConfig = {
       endpoint: '/api/v1/project-dashboard/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'code', label: 'Project' },
         { key: 'name', label: 'Name' },
@@ -71,6 +72,7 @@ export const PROJECTS_MODULE: ModuleConfig = {
       endpoint: '/api/v1/project-profitability/',
       serverSearch: false,
       serverSort: false,
+      detailFromRow: true,
       columns: [
         { key: 'code', label: 'Project' },
         { key: 'contract_value', label: 'Contract value', kind: 'number' },

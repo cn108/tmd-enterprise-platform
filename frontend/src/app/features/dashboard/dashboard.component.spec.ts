@@ -33,6 +33,7 @@ const DASHBOARD = {
       link: '/invoicing?tab=customer-invoices&status=approved',
       note: 'Document balances, not a posted ledger total.',
       tone: 'positive',
+      change_percent: null,
     },
     {
       id: 'payments_received',
@@ -45,7 +46,16 @@ const DASHBOARD = {
       link: '/banking?tab=bank-transactions',
       note: '',
       tone: 'positive',
+      change_percent: null,
     },
+  ],
+  financial_history: [
+    { month: '2026-06-01', receipts: '2000000.00', payments: '1500000.00' },
+    { month: '2026-07-01', receipts: '2200000.00', payments: '2400000.00' },
+    { month: '2026-08-01', receipts: '2100000.00', payments: '2550000.00' },
+    { month: '2026-09-01', receipts: '2350000.00', payments: '2050000.00' },
+    { month: '2026-10-01', receipts: '2450000.00', payments: '2250000.00' },
+    { month: '2026-11-01', receipts: '3100000.00', payments: '2750000.00' },
   ],
   invoice_management: [
     {
@@ -78,6 +88,7 @@ const DASHBOARD = {
       path: '/master-data',
       description: 'Suppliers, customers, catalogue, warehouses and projects.',
       readable: true,
+      access: 'full',
     },
     {
       id: 'administration',
@@ -85,8 +96,60 @@ const DASHBOARD = {
       path: '/administration',
       description: 'Users, roles, permissions, settings and audit access.',
       readable: false,
+      access: 'restricted',
     },
   ],
+  procurement_activity: {
+    title: 'Procurement activity',
+    description: 'Open orders, approvals and deliveries from the procurement register.',
+    cards: [
+      {
+        id: 'open_orders',
+        label: 'Open purchase orders',
+        value: 2,
+        format: 'number',
+        detail: 'Approved, issued or partly received',
+        link: '/procurement?tab=orders',
+      },
+    ],
+    recent_orders: [
+      {
+        id: 1,
+        number: 'PO-2026-0001',
+        supplier: 'Lagos Industrial Supply Ltd',
+        status: 'issued',
+        created_at: '2026-11-10T09:00:00Z',
+        total_value: '125000.00',
+        link: '/procurement?tab=orders&record=1',
+      },
+    ],
+  },
+  project_performance: {
+    rows: [
+      {
+        id: 1,
+        code: 'PRJ-001',
+        name: 'Riverside works',
+        status: 'active',
+        budget_total: '1000000.00',
+        actual_total: '250000.00',
+        open_commitment: '150000.00',
+        available_budget: '600000.00',
+        utilisation_percent: '40.00',
+        link: '/projects?tab=projects&record=1',
+      },
+    ],
+    summary: {
+      project_count: 1,
+      budget_total: '1000000.00',
+      actual_total: '250000.00',
+      open_commitment: '150000.00',
+      available_budget: '600000.00',
+      used_total: '400000.00',
+      utilisation_percent: '40.00',
+    },
+    note: 'Purchase orders remain commitments.',
+  },
   quick_actions: [
     {
       id: 'create_purchase_request',
@@ -156,7 +219,7 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Ama Okafor');
+    expect(text).toContain('Welcome back, Ama!');
     expect(text).toContain('Management overview');
   });
 
@@ -209,6 +272,34 @@ describe('DashboardComponent', () => {
     const cards = Array.from(element.querySelectorAll('.module-card'));
     const restricted = cards.find((card) => card.textContent?.includes('Administration'));
     expect(restricted?.textContent).toContain('Restricted');
+  });
+
+  it('renders authorised procurement and project performance summaries', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const text = element.textContent ?? '';
+    expect(text).toContain('Procurement Activity');
+    expect(text).toContain('Project Performance');
+    expect(text).toContain('PRJ-001');
+    expect(text).toContain('40.0% used');
+  });
+
+  it('renders the six-month receipts and payments chart', () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('.chart__group').length).toBe(6);
+    expect(element.querySelectorAll('.chart__bar').length).toBe(12);
+    expect(element.textContent).toContain('Financial Overview');
+    expect(element.textContent).toContain('Receipts');
+    expect(element.textContent).toContain('Payments');
   });
 
   it('shows an empty pending-actions state instead of a false zero', () => {

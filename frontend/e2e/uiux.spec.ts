@@ -11,7 +11,7 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL('**/');
-  await expect(page.getByRole('heading', { name: /Welcome,/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Welcome back/ })).toBeVisible();
 }
 
 async function shot(page: Page, name: string) {
@@ -43,13 +43,14 @@ test('management dashboard shows company position and approvals without technica
 
 test('role dashboards expose only their operational workspace', async ({ page }) => {
   await signIn(page, 'finance@staging.tmd.local');
-  await expect(page.locator('.focus-title')).toHaveText('Finance workspace');
-  await expect(page.getByText('Treasury workspace')).toBeVisible();
+  await expect(page.locator('.focus-chip')).toHaveText('Finance workspace');
   await shot(page, 'dashboard-finance');
 
   await switchUser(page, 'procurement@staging.tmd.local');
-  await expect(page.locator('.focus-title')).toHaveText('Procurement workspace');
-  await expect(page.getByText('Financial overview')).toHaveCount(0);
+  await expect(page.locator('.focus-chip')).toHaveText('Procurement workspace');
+  await expect(
+    page.getByText('Your role does not include access to financial reporting.'),
+  ).toBeVisible();
   await expect(page.getByText('Outstanding customer invoices')).toHaveCount(0);
   await expect(page.getByText('Create purchase request')).toBeVisible();
   await expect(page.getByText('Upload bank statement')).toHaveCount(0);
@@ -57,16 +58,19 @@ test('role dashboards expose only their operational workspace', async ({ page })
   await shot(page, 'dashboard-procurement');
 
   await switchUser(page, 'store@staging.tmd.local');
-  await expect(page.locator('.focus-title')).toHaveText('Warehouse workspace');
-  await expect(page.getByText('Stock value')).toBeVisible();
-  await expect(page.getByText('Financial overview')).toHaveCount(0);
+  await expect(page.locator('.focus-chip')).toHaveText('Warehouse workspace');
+  await expect(
+    page.getByText('Your role does not include access to financial reporting.'),
+  ).toBeVisible();
   await expect(page.getByText('Customer invoice approved')).toHaveCount(0);
   await shot(page, 'dashboard-warehouse');
 
   await switchUser(page, 'project@staging.tmd.local');
-  await expect(page.locator('.focus-title')).toHaveText('Project workspace');
-  await expect(page.getByRole('link', { name: /Your projects/ })).toBeVisible();
-  await expect(page.getByText('Financial overview')).toHaveCount(0);
+  await expect(page.locator('.focus-chip')).toHaveText('Project workspace');
+  await expect(page.getByRole('link', { name: /PRJ-STG-001/ })).toBeVisible();
+  await expect(
+    page.getByText('Your role does not include access to financial reporting.'),
+  ).toBeVisible();
   await shot(page, 'dashboard-project');
 });
 

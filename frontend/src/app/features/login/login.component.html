@@ -10,44 +10,105 @@
       <p class="login__error" role="alert">{{ message }}</p>
     }
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <label class="field">
-        <span class="field__label">Email address</span>
-        <input
-          type="email"
-          formControlName="email"
-          autocomplete="username"
-          inputmode="email"
-          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
-          [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
-        />
-        @if (form.controls.email.touched && form.controls.email.invalid) {
-          <span class="field__error" id="email-error">Enter a valid email address.</span>
+    @if (mfaStep(); as step) {
+      <section class="mfa" aria-labelledby="mfa-heading">
+        <h2 id="mfa-heading">
+          {{ step === 'enroll' ? 'Set up your authenticator' : "Verify it's you" }}
+        </h2>
+
+        @if (step === 'enroll') {
+          <p>
+            Open an authenticator app, add an account, and enter this setup key manually. Keep the
+            recovery codes in a safe place; they are shown only once.
+          </p>
+          @if (mfaSetup(); as setup) {
+            <dl class="mfa__details">
+              <dt>Setup key</dt>
+              <dd><code>{{ setup.secret }}</code></dd>
+              <dt>Authenticator URI</dt>
+              <dd><code class="mfa__uri">{{ setup.otpauth_uri }}</code></dd>
+            </dl>
+            <div class="mfa__recovery">
+              <h3>Recovery codes</h3>
+              <ul>
+                @for (recovery of setup.recovery_codes; track recovery) {
+                  <li><code>{{ recovery }}</code></li>
+                }
+              </ul>
+            </div>
+          } @else {
+            <p role="status">Preparing your authenticator setup…</p>
+          }
+        } @else {
+          <p>Enter the six-digit code from your authenticator app, or use one recovery code.</p>
         }
-      </label>
 
-      <label class="field">
-        <span class="field__label">Password</span>
-        <input
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
-          [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null"
-        />
-        @if (form.controls.password.touched && form.controls.password.invalid) {
-          <span class="field__error" id="password-error">Enter your password.</span>
-        }
-      </label>
+        <form [formGroup]="mfaForm" (ngSubmit)="submitMfa()" novalidate>
+          <label class="field">
+            <span class="field__label">Authenticator or recovery code</span>
+            <input
+              type="text"
+              formControlName="code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              maxlength="32"
+              [attr.aria-invalid]="mfaForm.controls.code.touched && mfaForm.controls.code.invalid"
+            />
+            @if (mfaForm.controls.code.touched && mfaForm.controls.code.invalid) {
+              <span class="field__error">Enter the code from your authenticator or recovery list.</span>
+            }
+          </label>
+          <button
+            type="submit"
+            class="login__submit"
+            [disabled]="submitting() || (step === 'enroll' && !mfaSetup())"
+            [attr.aria-busy]="submitting()"
+          >
+            {{ submitting() ? 'Checking…' : step === 'enroll' ? 'Confirm and sign in' : 'Verify and sign in' }}
+          </button>
+        </form>
+        <button type="button" class="mfa__back" (click)="cancelMfa()">Back to sign in</button>
+      </section>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="field">
+          <span class="field__label">Email address</span>
+          <input
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            inputmode="email"
+            [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
+          />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <span class="field__error" id="email-error">Enter a valid email address.</span>
+          }
+        </label>
 
-      <button type="submit" class="login__submit" [disabled]="submitting()" [attr.aria-busy]="submitting()">
-        {{ submitting() ? 'Signing in…' : 'Sign in' }}
-      </button>
-    </form>
+        <label class="field">
+          <span class="field__label">Password</span>
+          <input
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+            [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null"
+          />
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <span class="field__error" id="password-error">Enter your password.</span>
+          }
+        </label>
 
-    <p class="login__help">
-      Forgotten your password? Ask an administrator to issue a reset link. Accounts are never
-      created from this screen.
-    </p>
+        <button type="submit" class="login__submit" [disabled]="submitting()" [attr.aria-busy]="submitting()">
+          {{ submitting() ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+
+      <p class="login__help">
+        Forgotten your password? Ask an administrator to issue a reset link. Accounts are never
+        created from this screen.
+      </p>
+    }
   </div>
 </section>

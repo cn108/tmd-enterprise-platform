@@ -13,6 +13,17 @@ export interface AuthenticatedUser {
   permissions: string[];
 }
 
+export interface MfaChallenge {
+  token: string;
+  purpose: 'verify' | 'enroll';
+}
+
+export interface MfaSetup {
+  secret: string;
+  otpauth_uri: string;
+  recovery_codes: string[];
+}
+
 /** The backend's single error envelope (see `backend/shared/exceptions.py`). */
 export interface ApiErrorBody {
   error: {
@@ -39,4 +50,24 @@ export function apiErrorMessage(error: unknown): string {
     }
   }
   return 'Something went wrong. Try again, or contact your administrator.';
+}
+
+/** Read the backend's MFA challenge without trusting any other error detail. */
+export function mfaChallenge(error: unknown): MfaChallenge | null {
+  if (!(error instanceof HttpErrorResponse)) {
+    return null;
+  }
+  const body = error.error as ApiErrorBody | null;
+  const code = body?.error?.code;
+  const details = body?.error?.details as { challenge_token?: unknown } | null;
+  if (
+    (code !== 'mfa_required' && code !== 'mfa_enrollment_required') ||
+    typeof details?.challenge_token !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    token: details.challenge_token,
+    purpose: code === 'mfa_enrollment_required' ? 'enroll' : 'verify',
+  };
 }

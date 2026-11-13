@@ -1,8 +1,7 @@
-"""PDF previews for Stage 7A test documents.
+"""Invoice, note and customer-statement PDFs.
 
-The PDF is generated on demand; no file is persisted. A test document carries a
-prominent banner and is never presented as a valid tax invoice. Company legal
-details come from settings or are shown as not configured.
+The PDF is generated on demand; no file is persisted. Company legal details come
+from settings or are shown as not configured.
 """
 
 from __future__ import annotations
@@ -85,8 +84,7 @@ def customer_statement_pdf(receipt: CustomerReceipt, download: bool = False) -> 
     story.append(
         Paragraph(
             "This statement is generated from approved customer invoices, approved notes and "
-            "recorded receipts. Unapplied receipts are credits on account. It is a test "
-            "document while invoice production is disabled.",
+            "recorded receipts. Unapplied receipts are credits on account.",
             styles["Italic"],
         )
     )
@@ -136,33 +134,13 @@ def _company(settings: InvoiceSettings) -> list[str]:
 
 
 def _banner(settings: InvoiceSettings, is_test: bool) -> list:
-    styles = getSampleStyleSheet()
-    story = []
-    if is_test:
-        story.append(
-            Paragraph(
-                "<b>TEST DOCUMENT — NOT A TAX INVOICE</b>",
-                styles["Heading2"],
-            )
-        )
-        story.append(
-            Paragraph(
-                "Created in Stage 7A. It is not issued, does not create a receivable or "
-                "payable, and must not be sent to a customer or tax authority.",
-                styles["Italic"],
-            )
-        )
-    else:
-        story.append(Paragraph("<b>TAX INVOICE</b>", styles["Heading2"]))
-    if settings.test_mode:
-        story.append(
-            Paragraph(
-                "Invoice production is disabled. This preview is for development and UAT only.",
-                styles["Italic"],
-            )
-        )
-    story.append(Spacer(1, 6 * mm))
-    return story
+    """The area above the company header is intentionally blank.
+
+    The document is identified by the company block and the document title, with
+    no test, preview or activation wording printed on the page.
+    """
+
+    return [Spacer(1, 6 * mm)]
 
 
 def _header(settings: InvoiceSettings, title: str, meta: list[tuple[str, str]]) -> list:

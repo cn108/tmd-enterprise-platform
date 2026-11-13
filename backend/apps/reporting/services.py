@@ -108,11 +108,6 @@ def accounting_configuration() -> dict:
         )
     if mappings.filter(approved_at__isnull=True).exists():
         warnings.append("Some account-role mappings are awaiting approval.")
-    if not reviewed:
-        warnings.append(
-            "Automatic posting has not been reviewed by the Finance Controller; pending financial "
-            "events are excluded from every posted figure."
-        )
     if not method:
         warnings.append(
             "No inventory valuation method is configured; inventory values are unavailable."

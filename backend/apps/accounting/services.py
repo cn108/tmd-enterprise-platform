@@ -33,6 +33,7 @@ from apps.accounting.models import (
     OpeningBalance,
     PostingRule,
 )
+from apps.core.approvals import creator_cannot_decide
 from apps.core.models import create_audit_event
 from apps.procurement.numbering import next_number
 
@@ -61,7 +62,7 @@ def _assert_period_open(period: AccountingPeriod, journal_date: date) -> None:
 def approve_account(account: Account, actor) -> Account:
     if account.approved_at is not None:
         raise Conflict("This account is already approved.")
-    if account.created_by_id is not None and account.created_by_id == actor.pk:
+    if creator_cannot_decide(actor, account.created_by_id):
         raise Conflict("The person who created the account cannot approve it.")
     account.approved_by = actor
     account.approved_at = timezone.now()
@@ -97,7 +98,7 @@ def create_monthly_periods(year, actor) -> list[AccountingPeriod]:
 def approve_posting_rule(rule: PostingRule, actor) -> PostingRule:
     if rule.approved_at is not None:
         raise Conflict("This posting rule is already approved.")
-    if rule.created_by_id is not None and rule.created_by_id == actor.pk:
+    if creator_cannot_decide(actor, rule.created_by_id):
         raise Conflict("The person who created the rule cannot approve it.")
     if not rule.lines.exists():
         raise Conflict("A posting rule needs at least one line before approval.")
@@ -280,7 +281,7 @@ def submit_journal(journal: JournalEntry, actor) -> JournalEntry:
 def approve_journal(journal: JournalEntry, actor) -> JournalEntry:
     if journal.status != JournalEntry.Status.SUBMITTED:
         raise Conflict("Only a submitted journal can be approved.")
-    if journal.created_by_id is not None and journal.created_by_id == actor.pk:
+    if creator_cannot_decide(actor, journal.created_by_id):
         raise Conflict("The person who created the journal cannot approve it.")
     journal.status = JournalEntry.Status.APPROVED
     journal.approved_at = timezone.now()

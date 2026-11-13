@@ -28,7 +28,7 @@ const COST_STATUS: SelectOption[] = [
 export const PROJECTS_MODULE: ModuleConfig = {
   title: 'Projects, costing and profitability',
   intro:
-    'Register projects and contracts, version and approve budgets, and compare budget, commitments and actual cost without double counting procurement, receipts or stock transfers.',
+    'Register projects and contracts, version and approve budgets, and compare budget, commitments and actual cost.',
   tabs: [
     {
       id: 'dashboard',
@@ -133,7 +133,7 @@ export const PROJECTS_MODULE: ModuleConfig = {
         { key: 'project_manager', label: 'Project manager', type: 'select', optionsEndpoint: '/api/v1/access/users/' },
         { key: 'department', label: 'Department', type: 'select', optionsEndpoint: '/api/v1/departments/' },
         { key: 'cost_centre', label: 'Cost centre', type: 'select', optionsEndpoint: '/api/v1/cost-centres/' },
-        { key: 'status', label: 'Status', type: 'select', options: PROJECT_STATUS, defaultValue: 'draft', help: 'New projects start as draft; the backend validates transitions.' },
+        { key: 'status', label: 'Status', type: 'select', options: PROJECT_STATUS, defaultValue: 'draft', help: 'A new project starts as draft; it can then be activated, put on hold and closed.' },
         { key: 'start_date', label: 'Start date', type: 'date' },
         { key: 'end_date', label: 'End date', type: 'date' },
         { key: 'actual_completion_date', label: 'Actual completion date', type: 'date' },
@@ -422,7 +422,7 @@ export const PROJECTS_MODULE: ModuleConfig = {
         { key: 'download_path', label: 'Private download path' },
         { key: 'created_at', label: 'Uploaded' },
       ],
-      note: 'Documents are private and downloaded through authenticated document endpoints. Upload a document in Master data, then link it to a project with the document-links API.',
+      note: 'Documents are private and only visible to signed-in users. Upload a file in Master data, then link it to this project.',
     },
   ],
 };

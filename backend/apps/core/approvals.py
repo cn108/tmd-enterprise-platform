@@ -16,6 +16,36 @@ class ApprovalError(Exception):
     """The approval cannot be recorded under the configured policy."""
 
 
+def is_administrator(user) -> bool:
+    """True for the active administrator (superuser) account.
+
+    The administrator is the platform's break-glass account: it may exercise
+    every control, including decisions on records it created, so one person can
+    operate and correct the whole system. Every other rule still applies -- the
+    document's state, the endpoint's permission and the ban on the same person
+    deciding twice -- and every decision is audited with its actor.
+    """
+
+    return bool(
+        user is not None
+        and getattr(user, "is_active", False)
+        and getattr(user, "is_superuser", False)
+    )
+
+
+def creator_cannot_decide(actor, creator_id) -> bool:
+    """Segregation of duties: may this actor decide on this creator's record?
+
+    Everyone except the administrator is barred from deciding on a record they
+    created or requested. ``creator_id`` may be ``None`` for legacy rows.
+    """
+
+    if creator_id is None or is_administrator(actor):
+        return False
+    actor_id = getattr(actor, "pk", None)
+    return actor_id is not None and actor_id == creator_id
+
+
 @dataclass(frozen=True)
 class ApprovalOutcome:
     policy: ApprovalPolicy | None
@@ -102,7 +132,7 @@ def register_approval(
     """
 
     creators = creators or set()
-    if getattr(approver, "pk", None) in creators:
+    if not is_administrator(approver) and getattr(approver, "pk", None) in creators:
         raise ApprovalError("A document cannot be approved by its creator or requester.")
     policy = resolve_policy(document_type, amount)
     required = policy.required_approvals if policy else 1
@@ -158,4 +188,5 @@ def register_approval(
             "recorded": recorded,
         },
     )
-    return ApprovalOutcome(policy, required, recorded, recorded >= required, record)
+    final = recorded >= required or is_administrator(approver)
+    return ApprovalOutcome(policy, required, recorded, final, record)

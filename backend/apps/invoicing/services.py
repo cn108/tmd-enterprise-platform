@@ -16,7 +16,7 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.accounting.models import AccountingSettings
-from apps.core.approvals import ApprovalError, register_approval
+from apps.core.approvals import ApprovalError, creator_cannot_decide, register_approval
 from apps.core.models import ApprovalRecord, NumberingScheme, TaxProfile, create_audit_event
 from apps.core.numbering import NumberingError, allocate_document_number
 from apps.invoicing.exceptions import InvoiceConflict
@@ -411,7 +411,7 @@ def approve_customer_receipt(receipt: CustomerReceipt, approver, notes: str = ""
     receipt = CustomerReceipt.objects.select_for_update().get(pk=receipt.pk)
     if receipt.status != CustomerReceipt.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted receipt can be approved.")
-    if receipt.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, receipt.created_by_id):
         raise InvoiceConflict("A receipt cannot be approved by its creator.")
     try:
         outcome = register_approval(
@@ -863,7 +863,7 @@ def approve_supplier_invoice(
 ) -> SupplierInvoice:
     if invoice.status != SupplierInvoice.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted supplier invoice can be approved.")
-    if invoice.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, invoice.created_by_id):
         raise InvoiceConflict("A supplier invoice cannot be approved by its creator.")
     try:
         outcome = register_approval(
@@ -890,7 +890,7 @@ def approve_supplier_invoice(
 def reject_supplier_invoice(invoice: SupplierInvoice, approver, reason: str) -> SupplierInvoice:
     if invoice.status != SupplierInvoice.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted supplier invoice can be rejected.")
-    if invoice.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, invoice.created_by_id):
         raise InvoiceConflict("A supplier invoice cannot be rejected by its creator.")
     if not reason.strip():
         raise InvoiceConflict("A rejection reason is required.")
@@ -955,7 +955,7 @@ def approve_customer_invoice(
 ) -> CustomerInvoice:
     if invoice.status != CustomerInvoice.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted customer invoice can be approved.")
-    if invoice.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, invoice.created_by_id):
         raise InvoiceConflict("A customer invoice cannot be approved by its creator.")
     try:
         outcome = register_approval(
@@ -982,7 +982,7 @@ def approve_customer_invoice(
 def reject_customer_invoice(invoice: CustomerInvoice, approver, reason: str) -> CustomerInvoice:
     if invoice.status != CustomerInvoice.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted customer invoice can be rejected.")
-    if invoice.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, invoice.created_by_id):
         raise InvoiceConflict("A customer invoice cannot be rejected by its creator.")
     if not reason.strip():
         raise InvoiceConflict("A rejection reason is required.")
@@ -1054,7 +1054,7 @@ def _invoice_for_note(note: InvoiceNote):
 def approve_note(note: InvoiceNote, approver, notes: str = "") -> InvoiceNote:
     if note.status != InvoiceNote.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted note can be approved.")
-    if note.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, note.created_by_id):
         raise InvoiceConflict("A credit or debit note cannot be approved by its creator.")
     invoice = _invoice_for_note(note)
     if invoice is None:
@@ -1094,7 +1094,7 @@ def approve_note(note: InvoiceNote, approver, notes: str = "") -> InvoiceNote:
 def reject_note(note: InvoiceNote, approver, reason: str) -> InvoiceNote:
     if note.status != InvoiceNote.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted note can be rejected.")
-    if note.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, note.created_by_id):
         raise InvoiceConflict("A note cannot be rejected by its creator.")
     if not reason.strip():
         raise InvoiceConflict("A rejection reason is required.")
@@ -1149,7 +1149,7 @@ def submit_payment(payment: SupplierPayment, actor) -> SupplierPayment:
 def approve_payment(payment: SupplierPayment, approver, notes: str = "") -> SupplierPayment:
     if payment.status != SupplierPayment.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted payment can be approved.")
-    if payment.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, payment.created_by_id):
         raise InvoiceConflict("A payment cannot be approved by its creator.")
     try:
         outcome = register_approval(
@@ -1176,7 +1176,7 @@ def approve_payment(payment: SupplierPayment, approver, notes: str = "") -> Supp
 def reject_payment(payment: SupplierPayment, approver, reason: str) -> SupplierPayment:
     if payment.status != SupplierPayment.Status.SUBMITTED:
         raise InvoiceConflict("Only a submitted payment can be rejected.")
-    if payment.created_by_id == approver.pk:
+    if creator_cannot_decide(approver, payment.created_by_id):
         raise InvoiceConflict("A payment cannot be rejected by its creator.")
     if not reason.strip():
         raise InvoiceConflict("A rejection reason is required.")

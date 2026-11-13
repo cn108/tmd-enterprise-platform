@@ -62,6 +62,7 @@ from apps.accounting.services import (
     submit_journal,
     trial_balance,
 )
+from apps.core.approvals import creator_cannot_decide
 from shared.exceptions import error_response
 from shared.viewsets import NoDeleteViewSet
 
@@ -184,7 +185,7 @@ class AccountRoleMappingViewSet(AccountingReadMixin, viewsets.ModelViewSet):
             return error_response(
                 "invalid_state", "This mapping is already approved.", status.HTTP_409_CONFLICT
             )
-        if mapping.created_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, mapping.created_by_id):
             return error_response(
                 "segregation_of_duties",
                 "The person who created the mapping cannot approve it.",

@@ -11,7 +11,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from apps.core.approvals import ApprovalError, register_approval
+from apps.core.approvals import ApprovalError, creator_cannot_decide, register_approval
 from apps.procurement.models import (
     ZERO,
     DeliverySchedule,
@@ -44,7 +44,7 @@ def submit_request(request: PurchaseRequest) -> PurchaseRequest:
 def approve_request(request: PurchaseRequest, approver) -> PurchaseRequest:
     if request.status != PurchaseRequest.Status.SUBMITTED:
         raise StateConflict("Only a submitted request can be approved.")
-    if request.requester_id == approver.pk:
+    if creator_cannot_decide(approver, request.requester_id):
         raise StateConflict("A request cannot be approved by its own requester.")
     try:
         outcome = register_approval(
@@ -68,7 +68,7 @@ def approve_request(request: PurchaseRequest, approver) -> PurchaseRequest:
 def reject_request(request: PurchaseRequest, approver, reason: str) -> PurchaseRequest:
     if request.status != PurchaseRequest.Status.SUBMITTED:
         raise StateConflict("Only a submitted request can be rejected.")
-    if request.requester_id == approver.pk:
+    if creator_cannot_decide(approver, request.requester_id):
         raise StateConflict("A request cannot be rejected by its own requester.")
     if not reason.strip():
         raise StateConflict("A rejection reason is required.")
@@ -141,7 +141,7 @@ def submit_order(order: PurchaseOrder) -> PurchaseOrder:
 def approve_order(order: PurchaseOrder, approver) -> PurchaseOrder:
     if order.status != PurchaseOrder.Status.SUBMITTED:
         raise StateConflict("Only a submitted order can be approved.")
-    if order.request.requester_id == approver.pk:
+    if creator_cannot_decide(approver, order.request.requester_id):
         raise StateConflict("The requester cannot approve the resulting order.")
     try:
         outcome = register_approval(

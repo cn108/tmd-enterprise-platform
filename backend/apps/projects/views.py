@@ -8,7 +8,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.approvals import ApprovalError, register_approval
+from apps.core.approvals import ApprovalError, creator_cannot_decide, register_approval
 from apps.core.models import create_audit_event
 from apps.documents.models import DocumentLink
 from apps.documents.services import attach_upload
@@ -166,7 +166,7 @@ class ProjectBudgetViewSet(NoDeleteViewSet):
             return error_response(
                 "invalid_state", "This budget is already approved.", status.HTTP_409_CONFLICT
             )
-        if budget.created_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, budget.created_by_id):
             return error_response(
                 "segregation_of_duties",
                 "A budget cannot be approved by the person who raised it.",
@@ -250,7 +250,7 @@ class ProjectCostViewSet(NoDeleteViewSet):
             return error_response(
                 "invalid_state", "This cost is already approved.", status.HTTP_409_CONFLICT
             )
-        if cost.created_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, cost.created_by_id):
             return error_response(
                 "segregation_of_duties",
                 "A direct cost cannot be approved by the person who recorded it.",

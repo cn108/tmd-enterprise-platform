@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.approvals import creator_cannot_decide
 from apps.core.models import create_audit_event
 from apps.leasing.models import (
     Equipment,
@@ -91,7 +92,7 @@ def approve_agreement(agreement: RentalAgreement, actor) -> RentalAgreement:
     agreement = RentalAgreement.objects.select_for_update().get(pk=agreement.pk)
     if agreement.status not in {RentalAgreement.Status.DRAFT, RentalAgreement.Status.SUBMITTED}:
         raise LeasingConflict("Only a draft or submitted agreement can be approved.")
-    if agreement.requested_by_id == actor.pk:
+    if creator_cannot_decide(actor, agreement.requested_by_id):
         raise LeasingConflict("A rental agreement cannot be approved by its requester.")
     if not agreement.lines.exists():
         raise LeasingConflict("A rental agreement needs at least one equipment line.")

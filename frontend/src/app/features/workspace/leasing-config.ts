@@ -56,7 +56,7 @@ const RATE_BASIS: SelectOption[] = [
 export const LEASING_MODULE: ModuleConfig = {
   title: 'Equipment leasing and utilisation',
   intro:
-    'Maintain the equipment register, agree rental terms, reserve and dispatch assets, record returns and inspections, and review utilisation. Asset classification and accounting treatment remain blank until finance approves a policy.',
+    'Maintain the equipment register, agree rental terms, reserve and dispatch assets, record returns and inspections, and review utilisation.',
   tabs: [
     {
       id: 'equipment',
@@ -442,7 +442,7 @@ export const LEASING_MODULE: ModuleConfig = {
         { key: 'charge_amount', label: 'Damage charge', type: 'number', min: 0, step: '0.01' },
         { key: 'notes', label: 'Notes', type: 'textarea' },
       ],
-      note: 'Recording damage places the equipment under maintenance. No charge is posted to the ledger.',
+      note: 'Recording damage places the equipment under maintenance.',
     },
     {
       id: 'maintenance',

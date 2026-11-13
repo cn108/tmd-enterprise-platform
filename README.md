@@ -12,7 +12,7 @@ This repository contains the **Phase 0 discovery pack**, the **Phase 1 engineeri
 | --- | --- |
 | Phase | Phases 3–6 functional scope plus **Stage 7A** implemented and interactive. No module is COMPLETE: the role matrix is provisional, the chart and opening balances are absent, and production posting is disabled. Current position and the module matrix: [`docs/frontend-backend-gap-analysis.md`](docs/frontend-backend-gap-analysis.md) |
 | Code | Django 5.2 + DRF, Angular 22 + Angular Material, Docker Compose, CI; custom user model, session auth, roles/permission bundles and user administration, suppliers/customers and relationships, catalogue and traceability, warehouses and locations, projects/contracts/budgets/milestones, documents, purchase requests → RFQ → quotation → selection → PO → delivery schedule → GRN, an immutable stock ledger, a double-entry accounting engine, and Stage 7A supplier/customer invoices, duplicate and matching controls, VAT/WHT configuration, notes, PDF test previews, payment recording/allocation and NRS adapter state |
-| Tests | 343 backend tests, 70 frontend tests, 18 Playwright tests, lint and formatting clean, production build clean with no component-style budget warning, secret scan clean, plus live portal-to-PostgreSQL verification scripts for master data and Stage 7A invoicing |
+| Tests | 350 backend tests, 74 frontend tests, Playwright UAT, adversarial, MFA and screenshot suites, lint clean, production build clean, secret scan clean, plus live portal-to-PostgreSQL verification scripts for master data and Stage 7A invoicing |
 | Gate | G0 partially signed: D-01 approved; D-13 still needs a management signature. **Provisional policy applied 12 Nov 2026:** nine operational roles plus an unassigned Finance Controller, ₦5m approval bands, role-based chart, monthly periods, weighted-average/specific-identification valuation, GRNI and the five accounting events. Stage 7A invoices are test-only. Report: [`docs/reports/phase-7a-completion-report.md`](docs/reports/phase-7a-completion-report.md) |
 | Next phase | Stage 7B activation review: confirm roles, chart/mappings, opening balances, tax, numbering and legal details; record the Finance Controller posting review; then obtain management authorisation. Use the prioritized [`activation checklist`](docs/reports/phase-7b-activation-checklist.md), the [`blocker register`](docs/reports/phase-7b-activation-blockers.md) and the [`review gap register`](docs/reports/development-gap-register-2026-11-12.md) |
 
@@ -33,6 +33,63 @@ npm ci && npm start
 ```
 
 The API answers on `http://127.0.0.1:8000` and the portal on `http://localhost:4200`, which proxies `/api` to the backend.
+
+## How the portal works
+
+Sign in with an account issued by an administrator. The rail on the left is the whole system; every
+module shares the same pattern — tabs across the top, a filter bar, the register, and row actions for
+viewing, editing and moving a record through its workflow. Actions you lack permission for are shown
+as blocked rather than silently hidden.
+
+### Dashboard
+
+Financial position for the selected period, pending approvals, procurement and project activity, and
+shortcuts into the modules you can use.
+
+![Dashboard](docs/images/dashboard.png)
+
+### Master data
+
+Thirty-one registers — suppliers, customers, catalogue, warehouses, projects, documents and the rest
+— with search, filters, a detail drawer and CSV export. Records are deactivated, never deleted.
+
+![Master data](docs/images/master-data.png)
+
+### Procurement
+
+Purchase requests move through approval to RFQ, supplier selection and purchase order, then goods
+receipt against the agreed delivery schedule.
+
+![Procurement](docs/images/procurement.png)
+
+### Invoices and payments
+
+Supplier and customer invoices with matching and duplicate checks, credit and debit notes, payments,
+receipts, invoice settings and NRS submissions. Each document is submitted, approved and then posted
+as a separate, permissioned step.
+
+![Invoices](docs/images/invoices.png)
+
+### Banking
+
+Bank statements, statement lines, matching suggestions, reconciliations and petty cash, ending in an
+independent approval.
+
+![Banking](docs/images/banking.png)
+
+### Reports
+
+Executive summary, financial statements, ledger, receivables and payables, procurement, inventory,
+projects, services, banking and tax — with CSV, PDF and print output.
+
+![Reports](docs/images/reports.png)
+
+### Administration
+
+User accounts, role assignments and permissions, including password reset issue and account
+activation.
+
+![Administration](docs/images/administration.png)
 
 ## Review programme (the approved next steps)
 

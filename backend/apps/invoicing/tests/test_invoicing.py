@@ -88,6 +88,21 @@ def make_user(email: str) -> User:
     )
 
 
+def make_clerk(email: str) -> User:
+    """A non-administrator holding every business permission.
+
+    Administrative accounts (superusers) are exempt from the creator/approver
+    separation, so the separation tests need an ordinary account: they prove the
+    control that still applies to everyone else.
+    """
+
+    user = User.objects.create_user(
+        email=email, full_name=email.split("@")[0], password="Tmd-Test-Pass-2026!"
+    )
+    user.user_permissions.add(*Permission.objects.all())
+    return user
+
+
 @pytest.fixture
 def creator():
     return make_user("invoice.creator@example.com")
@@ -320,7 +335,7 @@ def test_near_duplicate_is_flagged_and_requires_override(client_for, supplier):
 
 def test_creator_cannot_approve_and_independent_approval_works(client_for, supplier, approver, vat):
     seed()
-    creator = make_user("creator.approval@example.com")
+    creator = make_clerk("creator.approval@example.com")
     creator_client = client_for(creator)
     body = create_supplier_invoice(
         creator_client,
@@ -338,11 +353,30 @@ def test_creator_cannot_approve_and_independent_approval_works(client_for, suppl
     assert approved.json()["status"] == "approved"
 
 
+def test_administrator_approves_their_own_invoice_in_one_decision(client_for, supplier, vat):
+    seed()
+    administrator = make_user("administrator@example.com")
+    client = client_for(administrator)
+    body = create_supplier_invoice(
+        client,
+        supplier,
+        [line_payload(quantity="1", unit_price="5000000")],
+        match_exempt_reason="Direct service contract.",
+    )
+    assert client.post(f"/api/v1/supplier-invoices/{body['id']}/submit/").status_code == 200
+
+    approved = client.post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+
+    assert approved.status_code == 200, approved.content
+    assert approved.json()["status"] == "approved"
+    assert approved.json()["approvals_recorded"] == 1
+
+
 def test_five_million_invoice_needs_two_distinct_approvers(
     client_for, supplier, approver, second_approver
 ):
     seed()
-    creator = make_user("high.value.creator@example.com")
+    creator = make_clerk("high.value.creator@example.com")
     creator_client = client_for(creator)
     body = create_supplier_invoice(
         creator_client,
@@ -352,12 +386,16 @@ def test_five_million_invoice_needs_two_distinct_approvers(
     )
     assert creator_client.post(f"/api/v1/supplier-invoices/{body['id']}/submit/").status_code == 200
 
-    first = client_for(approver).post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+    first = client_for(make_clerk("high.value.first@example.com")).post(
+        f"/api/v1/supplier-invoices/{body['id']}/approve/"
+    )
     assert first.status_code == 200, first.content
     assert first.json()["status"] == "submitted"
     assert first.json()["approvals_recorded"] == 1
 
-    second = client_for(second_approver).post(f"/api/v1/supplier-invoices/{body['id']}/approve/")
+    second = client_for(make_clerk("high.value.second@example.com")).post(
+        f"/api/v1/supplier-invoices/{body['id']}/approve/"
+    )
     assert second.status_code == 200, second.content
     assert second.json()["status"] == "approved"
     assert second.json()["approvals_recorded"] == 2
@@ -469,7 +507,7 @@ def test_customer_invoice_draft_approval_and_test_pdf(client_for, customer, appr
     assert pdf["Content-Type"] == "application/pdf"
     content = pdf_bytes(pdf)
     assert content.startswith(b"%PDF")
-    assert b"TEST DOCUMENT" in content
+    assert b"TEST DOCUMENT" not in content
 
 
 def test_approved_customer_invoice_can_be_emailed_to_the_test_mailbox(
@@ -1278,7 +1316,7 @@ def test_invoice_policy_bands_were_seeded_without_assigning_controller():
     assert not User.objects.filter(groups__name="Finance Controller").exists()
 
 
-def test_supplier_invoice_pdf_has_test_banner(client_for, supplier):
+def test_supplier_invoice_pdf_carries_no_test_banner(client_for, supplier):
     seed()
     client = client_for(make_user("pdf.creator@example.com"))
     body = create_supplier_invoice(client, supplier, [line_payload()])
@@ -1286,7 +1324,7 @@ def test_supplier_invoice_pdf_has_test_banner(client_for, supplier):
     assert pdf.status_code == 200
     content = pdf_bytes(pdf)
     assert content.startswith(b"%PDF")
-    assert b"TEST DOCUMENT" in content
+    assert b"TEST DOCUMENT" not in content
 
 
 def test_customer_invoice_number_uses_configured_scheme(client_for, customer):
@@ -1863,7 +1901,7 @@ def test_customer_receipt_approval_separation_and_threshold(
     client_for, customer, approver, second_approver
 ):
     seed()
-    creator = make_user("receipt.threshold@example.com")
+    creator = make_clerk("receipt.threshold@example.com")
     client = client_for(creator)
     invoice = _approved_customer_invoice(client, client_for, customer, approver, 100)
     ApprovalPolicy.objects.create(
@@ -1888,14 +1926,14 @@ def test_customer_receipt_approval_separation_and_threshold(
     assert (
         client.post(f"/api/v1/customer-receipts/{receipt['id']}/approve/").status_code == 409
     )
-    first = client_for(approver).post(
+    first = client_for(make_clerk("receipt.first@example.com")).post(
         f"/api/v1/customer-receipts/{receipt['id']}/approve/", format="json"
     )
     assert first.status_code == 200
     assert first.json()["status"] == "submitted"
     assert first.json()["approvals_required"] == 2
     assert first.json()["approvals_recorded"] == 1
-    final = client_for(second_approver).post(
+    final = client_for(make_clerk("receipt.second@example.com")).post(
         f"/api/v1/customer-receipts/{receipt['id']}/approve/", format="json"
     )
     assert final.status_code == 200

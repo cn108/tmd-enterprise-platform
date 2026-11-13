@@ -56,8 +56,7 @@ const TAX_TREATMENT: SelectOption[] = [
 
 export const INVOICING_MODULE: ModuleConfig = {
   title: 'Invoices and payments',
-  intro:
-    'Stage 7A invoice capture, matching, notes and payment allocation. Every document is a test document until the Finance Controller and management approve Stage 7B activation.',
+  intro: '',
   viewPermissions: [
     'invoicing.view_supplierinvoice',
     'invoicing.view_customerinvoice',
@@ -251,7 +250,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           label: 'Approve',
           path: 'approve',
           permission: 'invoicing.approve_supplierinvoice',
-          confirm: 'Approve this supplier invoice? This does not post it to the ledger.',
+          confirm: 'Approve this supplier invoice?',
           success: 'Supplier invoice approved.',
           statuses: ['submitted'],
         },
@@ -331,7 +330,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           ],
         },
       ],
-      note: 'Posting to the ledger is available only after Stage 7B activation and an approved account mapping.',
+      note: 'Posting to the ledger requires an approved account mapping.',
     },
     {
       id: 'customer-invoices',
@@ -527,7 +526,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           statuses: ['approved'],
         },
       ],
-      note: 'Posting to the ledger is available only after Stage 7B activation and an approved account mapping.',
+      note: 'Posting to the ledger requires an approved account mapping.',
     },
     {
       id: 'notes',
@@ -832,7 +831,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           reason: { label: 'Cancellation reason', required: true },
         },
       ],
-      note: 'Recording is not execution. Payment posting is available only after Stage 7B activation, for a recorded non-test payment, and when every allocated invoice is already posted.',
+      note: 'Recording is not execution. Payment posting requires an approved account mapping, a recorded payment and every allocated invoice already posted.',
     },
     {
       id: 'customer-receipts',
@@ -1039,7 +1038,7 @@ export const INVOICING_MODULE: ModuleConfig = {
           reason: { label: 'Cancellation reason', required: true },
         },
       ],
-      note: 'Recording, approval and posting are separate permissions. A receipt must be submitted and independently approved before posting. Posting debits the approved bank or cash account and credits AR for allocations and customer advances for unapplied funds; it stays disabled until Stage 7B activation and every account role are approved.',
+      note: 'Recording, approval and posting are separate permissions. A receipt must be submitted and independently approved before posting. Posting debits the approved bank or cash account and credits AR for allocations and customer advances for unapplied funds; it requires an approved account mapping for every account role.',
     },
     {
       id: 'settings',
@@ -1105,7 +1104,7 @@ export const INVOICING_MODULE: ModuleConfig = {
         { key: 'nrs_enabled', label: 'NRS enabled', type: 'checkbox' },
         { key: 'nrs_environment', label: 'NRS environment', type: 'text' },
       ],
-      note: 'Test mode cannot be changed here. Activation requires the Stage 7B checklist, Finance Controller review and management authorisation.',
+      note: 'Test mode cannot be changed here; it is set when the company details are activated.',
     },
     {
       id: 'nrs',

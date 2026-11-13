@@ -24,7 +24,6 @@ test.beforeAll(async () => {
 
 test('employee signs in and reaches every business module', async ({ page }) => {
   await signIn(page, 'management@staging.tmd.local');
-  await expect(page.getByText('Test environment')).toBeVisible();
   await shot(page, '01-dashboard-management');
 
   const modules = [

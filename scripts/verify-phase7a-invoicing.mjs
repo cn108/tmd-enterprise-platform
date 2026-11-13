@@ -233,7 +233,7 @@ const pdfText = Buffer.from(pdf.body).toString('latin1');
 check(pdf.status === 200, 'invoice PDF returned');
 check(pdf.headers.get('content-type')?.includes('application/pdf'), 'PDF content type');
 check(pdfText.startsWith('%PDF'), 'PDF signature');
-check(pdfText.includes('TEST DOCUMENT'), 'PDF carries test banner');
+check(!pdfText.includes('TEST DOCUMENT'), 'PDF carries no test banner');
 
 const payment = await creator.call('/api/v1/supplier-payments/', {
   method: 'POST',

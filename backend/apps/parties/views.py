@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
+from apps.core.approvals import creator_cannot_decide
 from apps.parties.models import (
     Address,
     BankAccount,
@@ -166,7 +167,7 @@ class BankAccountChangeRequestViewSet(
                 return error_response(
                     "not_found", "No such change request.", status.HTTP_404_NOT_FOUND
                 )
-            if change.created_by_id == request.user.pk:
+            if creator_cannot_decide(request.user, change.created_by_id):
                 return error_response(
                     "self_approval",
                     "You cannot review your own bank account change.",

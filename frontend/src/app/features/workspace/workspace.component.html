@@ -8,7 +8,9 @@
           <span class="access-badge" [attr.title]="accessTooltip()">{{ label }}</span>
         }
       </div>
-      <p class="module__intro">{{ config.intro }}</p>
+      @if (config.intro) {
+        <p class="module__intro">{{ config.intro }}</p>
+      }
     </div>
   </header>
 

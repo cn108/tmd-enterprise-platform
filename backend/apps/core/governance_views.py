@@ -18,6 +18,7 @@ from apps.accounting.models import (
     FinancialEvent,
     PostingRule,
 )
+from apps.core.approvals import creator_cannot_decide
 from apps.core.models import (
     ApprovalPolicy,
     ApprovalRecord,
@@ -135,7 +136,7 @@ class TaxConfigurationViewSet(viewsets.ModelViewSet):
                 "This tax configuration is already reviewed.",
                 status.HTTP_409_CONFLICT,
             )
-        if record.created_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, record.created_by_id):
             return error_response(
                 "segregation_of_duties",
                 "The person who created the tax configuration cannot review it.",

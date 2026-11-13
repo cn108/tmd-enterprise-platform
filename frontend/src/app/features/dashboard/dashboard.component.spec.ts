@@ -20,7 +20,7 @@ const DASHBOARD = {
   },
   issuance_authorised: false,
   test_mode: true,
-  notices: ['Invoice issuance is in test mode.'],
+  notices: [],
   financial_overview: [
     {
       id: 'customer_outstanding',
@@ -221,7 +221,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Management overview');
   });
 
-  it('renders real API amounts, test state and an honest empty card', () => {
+  it('renders real API amounts and an honest empty card', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     flush();
@@ -229,7 +229,6 @@ describe('DashboardComponent', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('₦2,500,000.00');
-    expect(text).toContain('Test');
     expect(text).toContain('No records in this period');
     expect(text).toContain('Draft supplier invoices');
   });

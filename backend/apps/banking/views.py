@@ -53,6 +53,7 @@ from apps.banking.services import (
     suggestions_for_line,
     unmatch,
 )
+from apps.core.approvals import creator_cannot_decide
 from apps.core.models import create_audit_event
 from apps.procurement.numbering import next_number
 from shared.exceptions import error_response
@@ -450,7 +451,7 @@ class BankTransferViewSet(BankingViewPermissionMixin, NoDeleteViewSet):
                 "Only a submitted transfer can be approved.",
                 status.HTTP_409_CONFLICT,
             )
-        if transfer.requested_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, transfer.requested_by_id):
             return error_response(
                 "segregation_of_duties",
                 "A transfer cannot be approved by its requester.",
@@ -552,7 +553,7 @@ class CashVoucherViewSet(BankingViewPermissionMixin, NoDeleteViewSet):
                 "Only a submitted voucher can be approved.",
                 status.HTTP_409_CONFLICT,
             )
-        if voucher.requested_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, voucher.requested_by_id):
             return error_response(
                 "segregation_of_duties",
                 "A voucher cannot be approved by its requester.",
@@ -636,7 +637,7 @@ class PettyCashReplenishmentViewSet(BankingViewPermissionMixin, NoDeleteViewSet)
                 "Only a submitted replenishment can be approved.",
                 status.HTTP_409_CONFLICT,
             )
-        if replenishment.requested_by_id == request.user.pk:
+        if creator_cannot_decide(request.user, replenishment.requested_by_id):
             return error_response(
                 "segregation_of_duties",
                 "A replenishment cannot be approved by its requester.",

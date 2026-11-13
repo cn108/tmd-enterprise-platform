@@ -1466,22 +1466,6 @@ def dashboard_payload(user, start: date, end: date) -> dict:
     )
     actions = [action for action in _pending_actions(user) if action["count"] > 0]
     notices = []
-    if financial is not None or show_invoices:
-        if not settings.can_issue:
-            notices.append(
-                "Invoice issuance is in test mode. Invoice and payment figures are provisional "
-                "document records until Finance Controller and management activation."
-            )
-        test_documents = (
-            SupplierInvoice.objects.filter(is_test=True).count()
-            + CustomerInvoice.objects.filter(is_test=True).count()
-            + SupplierPayment.objects.filter(is_test=True).count()
-            + InvoiceNote.objects.filter(is_test=True).count()
-        )
-        if test_documents:
-            notices.append(
-                f"{test_documents} invoice, note or payment record(s) are marked as test data."
-            )
 
     return {
         "generated_at": timezone.now().isoformat(),

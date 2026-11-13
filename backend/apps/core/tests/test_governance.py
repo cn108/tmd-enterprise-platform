@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.core.management import call_command
 from django.db import DatabaseError, connection, transaction
 from django.utils import timezone
@@ -115,6 +115,25 @@ def test_creator_cannot_approve_under_the_policy():
             amount=Decimal("10.00"),
             creators={creator.pk},
         )
+
+
+def test_administrator_may_decide_on_a_record_they_created():
+    call_command("apply_provisional_governance")
+    administrator = User.objects.create_superuser(
+        email="admin@example.com", full_name="Administrator", password="Tmd-Pass-2026!"
+    )
+
+    outcome = register_approval(
+        document_type="purchase_order",
+        document_id=88,
+        approver=administrator,
+        amount=Decimal("10.00"),
+        creators={administrator.pk},
+    )
+
+    assert outcome.final is True
+    assert outcome.recorded == 1
+    assert ApprovalRecord.objects.filter(document_id=88, approver=administrator).exists()
 
 
 def test_role_based_rule_resolves_an_approved_mapping():
@@ -232,8 +251,12 @@ def test_automatic_event_posting_waits_for_finance_review():
 
 
 def test_tax_configuration_needs_a_different_reviewer_and_records_audit():
-    creator = User.objects.create_superuser(
+    creator = User.objects.create_user(
         email="tax.creator@example.com", full_name="Tax Creator", password="Tmd-Pass-2026!"
+    )
+    creator.user_permissions.add(
+        Permission.objects.get(content_type__app_label="core", codename="add_taxconfiguration"),
+        Permission.objects.get(content_type__app_label="core", codename="change_taxconfiguration"),
     )
     reviewer = User.objects.create_superuser(
         email="tax.reviewer@example.com", full_name="Tax Reviewer", password="Tmd-Pass-2026!"

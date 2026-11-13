@@ -67,7 +67,7 @@ const TRANSFER_STATUS: SelectOption[] = [
 export const BANKING_MODULE: ModuleConfig = {
   title: 'Banking and reconciliation',
   intro:
-    'Upload bank statements, review the bank’s own lines, match them to company records and submit reconciliations for independent approval. No bank transfer is executed and no reconciliation is posted to the ledger.',
+    'Upload bank statements, review the bank’s own lines, match them to company records and submit reconciliations for approval.',
   viewPermissions: [
     'banking.view_bankaccount',
     'banking.view_bankstatement',
@@ -484,8 +484,8 @@ export const BANKING_MODULE: ModuleConfig = {
           label: 'Approve',
           path: 'approve',
           permission: 'banking.approve_reconciliation',
-          confirm: 'Approve this reconciliation? Approval records the control decision but does not post to the ledger.',
-          success: 'Reconciliation approved. Ledger posting remains blocked pending Stage 7B.',
+          confirm: 'Approve this reconciliation?',
+          success: 'Reconciliation approved. No journal is posted by this action.',
           statuses: ['submitted'],
         },
         {
@@ -499,7 +499,7 @@ export const BANKING_MODULE: ModuleConfig = {
           reason: { label: 'Rejection reason', required: true },
         },
       ],
-      note: 'Approval does not post a journal. Stage 7B account mappings and authorisation remain required.',
+      note: 'Approval records the reviewer’s decision for this reconciliation.',
     },
     {
       id: 'reconciliation-report',
@@ -627,7 +627,7 @@ export const BANKING_MODULE: ModuleConfig = {
         { id: 'record', label: 'Record', path: 'record', permission: 'banking.approve_cashvoucher', confirm: 'Record this approved voucher as a cash movement? No ledger posting is made.', success: 'Voucher recorded.', statuses: ['approved'] },
         { id: 'reject', label: 'Reject', path: 'reject', permission: 'banking.approve_cashvoucher', confirm: 'Reject this voucher?', success: 'Voucher rejected.', statuses: ['submitted'], reason: { label: 'Rejection reason', required: true } },
       ],
-      note: 'Recording a voucher changes the cash account’s recorded balance. It does not post to the general ledger.',
+      note: 'Recording a voucher changes the cash account’s recorded balance.',
     },
     {
       id: 'replenishments',

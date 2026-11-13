@@ -7,8 +7,8 @@
       <p class="eyebrow">Management information</p>
       <h1 id="reports-heading">Reporting workspace</h1>
       <p class="module__intro">
-        Formal statements are calculated by the server from posted journal lines. Operational
-        reports state their document basis; commitments are never presented as expenses.
+        Financial statements, ledger, receivables, payables and operational reports for the
+        selected period.
       </p>
     </div>
     <div class="header-actions">
@@ -91,16 +91,12 @@
 
   @if (warnings().length) {
     <section class="warnings" aria-labelledby="warnings-heading">
-      <h2 id="warnings-heading">Data completeness warnings</h2>
+      <h2 id="warnings-heading">Data completeness</h2>
       <ul>
         @for (warning of warnings(); track warning) {
           <li>{{ warning }}</li>
         }
       </ul>
-      <p>
-        Figures affected by these warnings are not represented as complete. Missing accounting
-        mapping is not estimated.
-      </p>
     </section>
   }
 

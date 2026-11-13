@@ -1,0 +1,1094 @@
+{
+  "generatedAt": "2026-11-13T15:14:38.993Z",
+  "findings": [
+    {
+      "page": "Dashboard",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "failedRequests": [
+        "401 /api/v1/auth/me/"
+      ],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 6,
+      "heading": "Welcome back, UAT!"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 5,
+      "heading": "Procurement",
+      "tab": "Purchase requests"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Procurement",
+      "tab": "Purchase orders"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Procurement",
+      "tab": "RFQs"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 3,
+      "heading": "Procurement",
+      "tab": "RFQ invitations"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Procurement",
+      "tab": "Quotations"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Procurement",
+      "tab": "Supplier selection"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Procurement",
+      "tab": "Delivery schedules"
+    },
+    {
+      "page": "Procurement",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Procurement",
+      "tab": "Goods receipts"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 3,
+      "heading": "Inventory",
+      "tab": "Balances"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 6,
+      "heading": "Inventory",
+      "tab": "Movements"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Inventory",
+      "tab": "Stock receipts"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Reorder alerts"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Transfers"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Inventory",
+      "tab": "Issues"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Returns"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Adjustments"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Damaged stock"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Stock counts"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Reservations"
+    },
+    {
+      "page": "Inventory",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Inventory",
+      "tab": "Reorder levels"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 12,
+      "heading": "Accounting",
+      "tab": "Chart of accounts"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "uat\\s*synthetic",
+        "synthetic"
+      ],
+      "rows": 11,
+      "heading": "Accounting",
+      "tab": "Journals"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "uat\\s*synthetic",
+        "synthetic"
+      ],
+      "rows": 1,
+      "heading": "Accounting",
+      "tab": "Fiscal years"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Accounting",
+      "tab": "Accounting periods"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Accounting",
+      "tab": "Opening balances"
+    },
+    {
+      "page": "Accounting",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 4,
+      "heading": "Accounting",
+      "tab": "Posting rules"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Invoices and payments",
+      "tab": "Supplier invoices"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Invoices and payments",
+      "tab": "Customer invoices"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Invoices and payments",
+      "tab": "Credit and debit notes"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Invoices and payments",
+      "tab": "Supplier payments"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Invoices and payments",
+      "tab": "Customer receipts"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "test mode"
+      ],
+      "rows": 1,
+      "heading": "Invoices and payments",
+      "tab": "Invoice settings"
+    },
+    {
+      "page": "Invoices and payments",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Invoices and payments",
+      "tab": "NRS submissions"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Banking and reconciliation",
+      "tab": "Banking dashboard"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Banking and reconciliation",
+      "tab": "Bank accounts"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Banking and reconciliation",
+      "tab": "Statements"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Banking and reconciliation",
+      "tab": "Statement lines"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Matching suggestions"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Unmatched transactions"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Banking and reconciliation",
+      "tab": "Company bank transactions"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Banking and reconciliation",
+      "tab": "Reconciliations"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Banking and reconciliation",
+      "tab": "Reconciliation report"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Petty cash"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Cash vouchers"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Replenishments"
+    },
+    {
+      "page": "Banking",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Banking and reconciliation",
+      "tab": "Account transfers"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Project dashboard"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Profitability"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Projects"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Contracts"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Projects, costing and profitability",
+      "tab": "Contract revisions"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Budgets"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 3,
+      "heading": "Projects, costing and profitability",
+      "tab": "Milestones"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Projects, costing and profitability",
+      "tab": "Direct costs"
+    },
+    {
+      "page": "Projects",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Projects, costing and profitability",
+      "tab": "Project documents"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Work orders"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Service contracts"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Assignments"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "uat\\s*synthetic",
+        "synthetic"
+      ],
+      "rows": 1,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Progress history"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Checklists"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "HSE records"
+    },
+    {
+      "page": "Services",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "synthetic"
+      ],
+      "rows": 1,
+      "heading": "Engineering and maintenance work orders",
+      "tab": "Completion reports"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Equipment register"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Equipment categories"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Rental rates"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Rental agreements"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Reservations"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Dispatch and returns"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Inspections and damage"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Maintenance"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "uat\\s*synthetic",
+        "synthetic"
+      ],
+      "rows": 2,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Utilisation"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Operational warnings"
+    },
+    {
+      "page": "Leasing",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Equipment leasing and utilisation",
+      "tab": "Availability"
+    },
+    {
+      "page": "Reports",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 11,
+      "heading": "Reporting workspace"
+    },
+    {
+      "page": "Administration",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 13,
+      "heading": "Administration"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 8,
+      "heading": "Master data",
+      "tab": "suppliers"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Master data",
+      "tab": "customers"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 6,
+      "heading": "Welcome back, UAT!",
+      "tab": "catalogue"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Master data",
+      "tab": "warehouses"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "projects"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "supplier-categories"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 3,
+      "heading": "Master data",
+      "tab": "contacts"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [
+        "synthetic"
+      ],
+      "rows": 3,
+      "heading": "Master data",
+      "tab": "addresses"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "tax-registrations"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "supplier-bank"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "bank-changes"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "compliance"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "document-categories"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "documents"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "product-categories"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Master data",
+      "tab": "units"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "manufacturers"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 4,
+      "heading": "Master data",
+      "tab": "prices"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "specifications"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "batches"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "serials"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "certificates"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 2,
+      "heading": "Master data",
+      "tab": "storage-locations"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 6,
+      "heading": "Master data",
+      "tab": "departments"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 4,
+      "heading": "Master data",
+      "tab": "cost-centres"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "destinations"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "project-locations"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "contracts"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 0,
+      "heading": "Master data",
+      "tab": "contract-revisions"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 1,
+      "heading": "Master data",
+      "tab": "budgets"
+    },
+    {
+      "page": "Master data",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "visibleErrors": [],
+      "suspiciousCopy": [],
+      "rows": 3,
+      "heading": "Master data",
+      "tab": "milestones"
+    }
+  ]
+}

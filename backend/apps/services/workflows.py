@@ -5,6 +5,7 @@ from __future__ import annotations
 from django.db import transaction
 from django.utils import timezone
 
+from apps.core.approvals import creator_cannot_decide
 from apps.core.models import create_audit_event
 from apps.procurement.numbering import next_number
 from apps.services.models import (
@@ -215,7 +216,7 @@ def activate_contract(contract: ServiceContract, actor) -> ServiceContract:
     contract = ServiceContract.objects.select_for_update().get(pk=contract.pk)
     if contract.status != ServiceContract.Status.DRAFT:
         raise ServiceConflict("Only a draft service contract can be activated.")
-    if contract.created_by_id == actor.pk:
+    if creator_cannot_decide(actor, contract.created_by_id):
         raise ServiceConflict("A service contract cannot be activated by its creator.")
     contract.status = ServiceContract.Status.ACTIVE
     contract.approved_by = actor

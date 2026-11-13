@@ -236,7 +236,7 @@ const PROJECT_FIELDS: FieldConfig[] = [
       { value: 'on_hold', label: 'On hold' },
       { value: 'closed', label: 'Closed' },
     ],
-    help: 'The backend allows only draft → active, active ↔ on hold and then closed.',
+    help: 'A new project starts as draft; it can then be activated, put on hold and closed.'
   },
   { key: 'start_date', label: 'Start date', type: 'date' },
   { key: 'end_date', label: 'End date', type: 'date' },
@@ -396,7 +396,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
   'master-data': {
     title: 'Master data',
     intro:
-      'The records every procurement, stock and accounting transaction depends on. Changes are written to the live API and validated by the backend.',
+      'Suppliers, customers, catalogue, warehouses, projects, documents and accounting setup — the records every purchase, stock movement and journal depends on.',
     tabs: [
       {
         id: 'suppliers',
@@ -546,7 +546,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'description', label: 'Description' },
         ],
         fields: PROJECT_FIELDS,
-        note: 'New projects start as draft. Status transitions stay with the backend workflow until their approval rules are agreed.',
+        note: 'New projects start as draft.'
       },
       {
         id: 'supplier-categories',
@@ -759,7 +759,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
             reason: { label: 'Review note', required: true, key: 'review_note' },
           },
         ],
-        note: 'The account number is encrypted by the backend and never returned in clear text.',
+        note: 'Account numbers are stored encrypted and shown masked.',
       },
       {
         id: 'compliance',
@@ -856,7 +856,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
         fields: [
           { key: 'title', label: 'Title', type: 'text', required: true },
           { key: 'category', label: 'Category', type: 'select', optionsEndpoint: '/api/v1/document-categories/' },
-          { key: 'file', label: 'File', type: 'file', help: 'Required for a new document. Private: downloads are authenticated and never served from a public URL.' },
+          { key: 'file', label: 'File', type: 'file', help: 'Required for a new document. Files are private and only downloadable by signed-in users.' },
           { key: 'is_private', label: 'Private', type: 'checkbox', defaultValue: true },
           { key: 'retention_until', label: 'Retain until', type: 'date' },
           { key: 'notes', label: 'Notes', type: 'textarea' },
@@ -1334,7 +1334,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
           { key: 'terms', label: 'Terms', type: 'textarea' },
           { key: 'reason', label: 'Reason', type: 'text' },
         ],
-        note: 'Revisions are append-only; the revision number is assigned by the backend.',
+        note: 'Revisions are append-only; each revision number is assigned automatically.',
       },
       {
         id: 'budgets',
@@ -1432,7 +1432,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
   procurement: {
     title: 'Procurement',
     intro:
-      'Request, approve and track purchases. Every action below calls its lifecycle endpoint; the backend rejects an illegal transition whatever the screen offers.',
+      'Request, approve and track purchases from request through quotation and purchase order to goods received.',
     tabs: [
       {
         id: 'requests',
@@ -1808,7 +1808,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
   inventory: {
     title: 'Inventory',
     intro:
-      'The permanent stock ledger. Balances are derived from recorded movements, never typed over; each posting is permission-checked by the API.',
+      'Stock balances by item and warehouse, built from recorded goods receipts, issues, transfers and counts.',
     tabs: [
       {
         id: 'balances',
@@ -2488,7 +2488,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
             reason: { label: 'Reversal reason', required: true },
           },
         ],
-        note: 'Creation, approval and posting are separate duties. The backend enforces balancing, open periods and immutability.',
+        note: 'Creation, approval and posting are separate duties. A journal cannot post unless it balances and its period is open.'
       },
       {
         id: 'fiscal-years',

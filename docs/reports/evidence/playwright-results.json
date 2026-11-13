@@ -3,7 +3,8 @@
     "argv": [
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\node_modules\\@playwright\\test\\cli.js",
-      "test"
+      "test",
+      "e2e/readme-screenshots.spec.ts"
     ],
     "configFile": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\playwright.config.ts",
     "rootDir": "C:/Users/Chukwuka Nwabueze/TICOMCDON/frontend/e2e",
@@ -105,18 +106,18 @@
   },
   "suites": [
     {
-      "title": "uat.spec.ts",
-      "file": "uat.spec.ts",
+      "title": "readme-screenshots.spec.ts",
+      "file": "readme-screenshots.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "employee signs in and reaches every business module",
-          "ok": false,
+          "title": "capture README screenshots",
+          "ok": true,
           "tags": [],
           "tests": [
             {
-              "timeout": 30000,
+              "timeout": 300000,
               "annotations": [],
               "expectedStatus": "passed",
               "projectId": "chromium",
@@ -125,161 +126,13 @@
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 14325,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /Services/ }).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: /Services/ }).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /Services/ }).first()\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /Services/ }).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: /Services/ }).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /Services/ }).first()\u001b[22m\n\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:44:72",
-                    "location": {
-                      "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                      "column": 72,
-                      "line": 44
-                    },
-                    "snippet": " \u001b[90m 42 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m [label\u001b[33m,\u001b[39m heading] \u001b[36mof\u001b[39m modules) {\n \u001b[90m 43 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'link'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m label\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 44 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'heading'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m heading })\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 45 |\u001b[39m   }\n \u001b[90m 46 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 47 |\u001b[39m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                        "column": 72,
-                        "line": 44
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /Services/ }).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: /Services/ }).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /Services/ }).first()\u001b[22m\n\n\n  42 |   for (const [label, heading] of modules) {\n  43 |     await page.getByRole('link', { name: label, exact: true }).click();\n> 44 |     await expect(page.getByRole('heading', { name: heading }).first()).toBeVisible();\n     |                                                                        ^\n  45 |   }\n  46 | });\n  47 |\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:44:72"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-12T10:46:56.600Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-employee-signs-in-and-reaches-every-business-module-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-employee-signs-in-and-reaches-every-business-module-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-employee-signs-in-and-reaches-every-business-module-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                    "column": 72,
-                    "line": 44
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "1a03e548f9e0bb01674e-b01be336ed7e4768289e",
-          "file": "uat.spec.ts",
-          "line": 25,
-          "column": 1
-        },
-        {
-          "title": "procurement, inventory, banking, services and leasing show seeded UAT records",
-          "ok": false,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
-                {
-                  "workerIndex": 1,
-                  "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 11987,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/1,315,000|1315000/).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/1,315,000|1315000/).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/1,315,000|1315000/).first()\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/1,315,000|1315000/).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/1,315,000|1315000/).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/1,315,000|1315000/).first()\u001b[22m\n\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:60:61",
-                    "location": {
-                      "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                      "column": 61,
-                      "line": 60
-                    },
-                    "snippet": " \u001b[90m 58 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/inventory'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 59 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'heading'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[35m/Inventory/\u001b[39m })\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 60 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[35m/1,315,000|1315000/\u001b[39m)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 61 |\u001b[39m   \u001b[36mawait\u001b[39m shot(page\u001b[33m,\u001b[39m \u001b[32m'03-inventory-valuation'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 62 |\u001b[39m\n \u001b[90m 63 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/banking'\u001b[39m)\u001b[33m;\u001b[39m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                        "column": 61,
-                        "line": 60
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/1,315,000|1315000/).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/1,315,000|1315000/).first() with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/1,315,000|1315000/).first()\u001b[22m\n\n\n  58 |   await page.goto('/inventory');\n  59 |   await expect(page.getByRole('heading', { name: /Inventory/ }).first()).toBeVisible();\n> 60 |   await expect(page.getByText(/1,315,000|1315000/).first()).toBeVisible();\n     |                                                             ^\n  61 |   await shot(page, '03-inventory-valuation');\n  62 |\n  63 |   await page.goto('/banking');\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:60:61"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-12T10:47:11.968Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-procurement-inventory--0dac5-ing-show-seeded-UAT-records-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-procurement-inventory--0dac5-ing-show-seeded-UAT-records-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-procurement-inventory--0dac5-ing-show-seeded-UAT-records-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                    "column": 61,
-                    "line": 60
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "1a03e548f9e0bb01674e-7bf8caec3f52188bbe70",
-          "file": "uat.spec.ts",
-          "line": 48,
-          "column": 1
-        },
-        {
-          "title": "management report runs and exports CSV from posted journals",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
-                {
-                  "workerIndex": 2,
-                  "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 7315,
+                  "duration": 14720,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-11-12T10:47:24.743Z",
+                  "startTime": "2026-11-13T16:22:59.386Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -287,157 +140,9 @@
               "status": "expected"
             }
           ],
-          "id": "1a03e548f9e0bb01674e-45f07214b4231ad9df02",
-          "file": "uat.spec.ts",
-          "line": 79,
-          "column": 1
-        },
-        {
-          "title": "operational role has no formal financial report access",
-          "ok": false,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
-                {
-                  "workerIndex": 2,
-                  "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 11093,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Executive' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('button', { name: 'Executive' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Executive' })\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Executive' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('button', { name: 'Executive' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Executive' })\u001b[22m\n\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:96:65",
-                    "location": {
-                      "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                      "column": 65,
-                      "line": 96
-                    },
-                    "snippet": " \u001b[90m 94 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/reports'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 95 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Financial statements'\u001b[39m }))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 96 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Executive'\u001b[39m }))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 97 |\u001b[39m   \u001b[36mawait\u001b[39m shot(page\u001b[33m,\u001b[39m \u001b[32m'08-reports-operations-least-privilege'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 98 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 99 |\u001b[39m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                        "column": 65,
-                        "line": 96
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: 'Executive' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('button', { name: 'Executive' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'Executive' })\u001b[22m\n\n\n  94 |   await page.goto('/reports');\n  95 |   await expect(page.getByRole('button', { name: 'Financial statements' })).toHaveCount(0);\n> 96 |   await expect(page.getByRole('button', { name: 'Executive' })).toBeVisible();\n     |                                                                 ^\n  97 |   await shot(page, '08-reports-operations-least-privilege');\n  98 | });\n  99 |\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:96:65"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-12T10:47:32.214Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-operational-role-has-no-formal-financial-report-access-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-operational-role-has-no-formal-financial-report-access-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-operational-role-has-no-formal-financial-report-access-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                    "column": 65,
-                    "line": 96
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "1a03e548f9e0bb01674e-477ae34c86093bbdf2c0",
-          "file": "uat.spec.ts",
-          "line": 92,
-          "column": 1
-        },
-        {
-          "title": "auditor can inspect records but cannot create a purchase request",
-          "ok": false,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 30000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
-                {
-                  "workerIndex": 3,
-                  "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 11495,
-                  "error": {
-                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('button', { name: 'New purchase request' })\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('button', { name: 'New purchase request' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'New purchase request' })\u001b[22m\n\u001b[2m    24 × locator resolved to 1 element\u001b[22m\n\u001b[2m       - unexpected value \"1\"\u001b[22m\n",
-                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('button', { name: 'New purchase request' })\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('button', { name: 'New purchase request' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'New purchase request' })\u001b[22m\n\u001b[2m    24 × locator resolved to 1 element\u001b[22m\n\u001b[2m       - unexpected value \"1\"\u001b[22m\n\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:104:76",
-                    "location": {
-                      "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                      "column": 76,
-                      "line": 104
-                    },
-                    "snippet": " \u001b[90m 102 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/procurement'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 103 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'PR-2026-0001'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 104 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'New purchase request'\u001b[39m }))\u001b[33m.\u001b[39mtoHaveCount(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                                            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 105 |\u001b[39m   \u001b[36mawait\u001b[39m shot(page\u001b[33m,\u001b[39m \u001b[32m'09-procurement-auditor-read-only'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 106 |\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 107 |\u001b[39m"
-                  },
-                  "errors": [
-                    {
-                      "location": {
-                        "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                        "column": 76,
-                        "line": 104
-                      },
-                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('button', { name: 'New purchase request' })\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('button', { name: 'New purchase request' }) with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: 'New purchase request' })\u001b[22m\n\u001b[2m    24 × locator resolved to 1 element\u001b[22m\n\u001b[2m       - unexpected value \"1\"\u001b[22m\n\n\n  102 |   await page.goto('/procurement');\n  103 |   await expect(page.getByText('PR-2026-0001')).toBeVisible();\n> 104 |   await expect(page.getByRole('button', { name: 'New purchase request' })).toHaveCount(0);\n      |                                                                            ^\n  105 |   await shot(page, '09-procurement-auditor-read-only');\n  106 | });\n  107 |\n    at C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts:104:76"
-                    }
-                  ],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-12T10:47:43.937Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-auditor-can-inspect-re-5f99b-t-create-a-purchase-request-chromium\\test-failed-1.png"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-auditor-can-inspect-re-5f99b-t-create-a-purchase-request-chromium\\error-context.md"
-                    },
-                    {
-                      "name": "trace",
-                      "contentType": "application/zip",
-                      "path": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\test-results\\uat-auditor-can-inspect-re-5f99b-t-create-a-purchase-request-chromium\\trace.zip"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "C:\\Users\\Chukwuka Nwabueze\\TICOMCDON\\frontend\\e2e\\uat.spec.ts",
-                    "column": 76,
-                    "line": 104
-                  }
-                }
-              ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "1a03e548f9e0bb01674e-8bf80f3299771b14cc8b",
-          "file": "uat.spec.ts",
-          "line": 100,
+          "id": "1062fe688516c018b5f1-58db71d06b62b1194f50",
+          "file": "readme-screenshots.spec.ts",
+          "line": 30,
           "column": 1
         }
       ]
@@ -445,11 +150,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-11-12T10:46:56.065Z",
-    "duration": 59669.506,
+    "startTime": "2026-11-13T16:22:58.609Z",
+    "duration": 16084.249,
     "expected": 1,
     "skipped": 0,
-    "unexpected": 4,
+    "unexpected": 0,
     "flaky": 0
   }
 }
